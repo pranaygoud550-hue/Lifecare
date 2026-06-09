@@ -6,6 +6,7 @@ import { store } from '@/store';
 import { AuthBootstrap } from '@/components/common/AuthBootstrap';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { AppLaunchFlow } from '@/components/common/AppLaunchFlow';
+import { IntroExperience } from '@/components/intro/IntroExperience';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
@@ -14,9 +15,11 @@ function App() {
       <HelmetProvider>
         <AuthBootstrap />
         <BrowserRouter>
-          <AppLaunchFlow>
-            <AppRoutes />
-          </AppLaunchFlow>
+          <IntroExperience>
+            <AppLaunchFlow>
+              <AppRoutes />
+            </AppLaunchFlow>
+          </IntroExperience>
         </BrowserRouter>
         <ToastContainer position="top-right" autoClose={3000} theme="colored" />
       </HelmetProvider>
