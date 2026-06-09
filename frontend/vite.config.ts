@@ -6,18 +6,17 @@ import path from 'path';
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
-    rollupOptions: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 800,
+    rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/leaflet') || id.includes('node_modules/react-leaflet')) {
-            return 'leaflet';
-          }
-          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
-            return 'recharts';
-          }
-          if (id.includes('node_modules/socket.io-client')) {
-            return 'socket';
-          }
+        codeSplitting: {
+          groups: [
+            { name: 'leaflet', test: /node_modules[\\/](leaflet|react-leaflet)/ },
+            { name: 'recharts', test: /node_modules[\\/](recharts|d3-)/ },
+            { name: 'socket', test: /node_modules[\\/]socket\.io-client/ },
+            { name: 'vendor', test: /node_modules[\\/]/ },
+          ],
         },
       },
     },
