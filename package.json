@@ -2,6 +2,9 @@
   "name": "lifecare-plus",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "description": "LifeCare+ Healthcare Platform - Full-stack MERN application",
   "workspaces": [
     "frontend",
