@@ -1,0 +1,40 @@
+import { Router } from 'express';
+import authRoutes from './authRoutes.js';
+import doctorRoutes from './doctorRoutes.js';
+import appointmentRoutes from './appointmentRoutes.js';
+import pharmacyRoutes from './pharmacyRoutes.js';
+import ambulanceRoutes from './ambulanceRoutes.js';
+import transportRoutes from './transportRoutes.js';
+import paymentRoutes from './paymentRoutes.js';
+import adminRoutes from './adminRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
+import prescriptionRoutes from './prescriptionRoutes.js';
+import healthRecordRoutes from './healthRecordRoutes.js';
+import reviewRoutes from './reviewRoutes.js';
+import userRoutes from './userRoutes.js';
+import utilsRoutes from './utilsRoutes.js';
+import hospitalRoutes from './hospitalRoutes.js';
+import emergencyRoutes from './emergencyRoutes.js';
+import scanRoutes from './scanRoutes.js';
+
+const router = Router();
+
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/utils', utilsRoutes);
+router.use('/hospitals', hospitalRoutes);
+router.use('/emergency', emergencyRoutes);
+router.use('/doctors', doctorRoutes);
+router.use('/appointments', appointmentRoutes);
+router.use('/prescriptions', prescriptionRoutes);
+router.use('/health-records', healthRecordRoutes);
+router.use('/reviews', reviewRoutes);
+router.use('/pharmacy', pharmacyRoutes);
+router.use('/ambulance', ambulanceRoutes);
+router.use('/transport', transportRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/admin', adminRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/scans', scanRoutes);
+
+export default router;

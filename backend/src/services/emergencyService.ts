@@ -1,0 +1,301 @@
+import { Types } from 'mongoose';
+import { AmbulanceUnit, EmergencyRequest, Hospital, User } from '../models/index.js';
+import type { IAmbulanceUnit } from '../models/AmbulanceUnit.js';
+import type { IEmergencyRequest } from '../models/EmergencyRequest.js';
+import type { IHospital } from '../models/Hospital.js';
+import { calculateDistance } from '../utils/helpers.js';
+import { calculateETA, selectAmbulanceByEta, type EtaCalculation } from '../utils/eta.js';
+
+export interface AmbulanceWithDistance {
+  unit: IAmbulanceUnit;
+  distanceKm: number;
+  distanceMeters: number;
+  eta: EtaCalculation;
+}
+
+export interface HospitalWithDistance {
+  hospital: IHospital;
+  distanceKm: number;
+  distanceMeters: number;
+}
+
+function toGeoPoint(lat: number, lng: number) {
+  return { type: 'Point' as const, coordinates: [lng, lat] as [number, number] };
+}
+
+export function unitCoords(unit: IAmbulanceUnit): { lat: number; lng: number } {
+  const [lng, lat] = unit.currentLocation.coordinates;
+  return { lat, lng };
+}
+
+function hospitalCoords(hospital: IHospital): { lat: number; lng: number } | null {
+  if (hospital.location?.coordinates?.length === 2) {
+    const [lng, lat] = hospital.location.coordinates;
+    return { lat, lng };
+  }
+  if (hospital.coordinates?.lat != null && hospital.coordinates?.lng != null) {
+    return hospital.coordinates;
+  }
+  return null;
+}
+
+function patientCoords(request: IEmergencyRequest): { lat: number; lng: number } {
+  const [lng, lat] = request.patientLocation.coordinates;
+  return { lat, lng };
+}
+
+export async function findNearestAvailableAmbulances(
+  lat: number,
+  lng: number,
+  radiusKm = 10,
+  limit = 10
+): Promise<AmbulanceWithDistance[]> {
+  const point = toGeoPoint(lat, lng);
+
+  const units = await AmbulanceUnit.find({
+    isAvailable: true,
+    status: 'idle',
+    currentLocation: {
+      $nearSphere: {
+        $geometry: point,
+        $maxDistance: radiusKm * 1000,
+      },
+    },
+  })
+    .limit(limit)
+    .populate('driverId', 'profile phone email userType');
+
+  return units.map((unit) => {
+    const coords = unitCoords(unit);
+    const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+    const eta = calculateETA(coords.lat, coords.lng, lat, lng);
+    return {
+      unit,
+      distanceKm,
+      distanceMeters: Math.round(distanceKm * 1000),
+      eta,
+    };
+  });
+}
+
+export function selectBestAmbulanceForPatient(
+  ambulances: AmbulanceWithDistance[],
+  patientLat: number,
+  patientLng: number
+) {
+  const selection = selectAmbulanceByEta(
+    ambulances.map((row) => {
+      const coords = unitCoords(row.unit);
+      return {
+        item: row,
+        ambulanceLat: coords.lat,
+        ambulanceLng: coords.lng,
+      };
+    }),
+    patientLat,
+    patientLng
+  );
+
+  return selection;
+}
+
+export async function findNearestHospital(
+  lat: number,
+  lng: number,
+  radiusKm = 15
+): Promise<HospitalWithDistance | null> {
+  const point = toGeoPoint(lat, lng);
+
+  let hospital = await Hospital.findOne({
+    isActive: true,
+    emergencyAvailable: true,
+    location: {
+      $nearSphere: {
+        $geometry: point,
+        $maxDistance: radiusKm * 1000,
+      },
+    },
+  });
+
+  if (!hospital) {
+    hospital = await Hospital.findOne({
+      isActive: true,
+      emergencyAvailable: true,
+      'coordinates.lat': { $exists: true },
+      'coordinates.lng': { $exists: true },
+    }).sort({ createdAt: 1 });
+  }
+
+  if (!hospital) return null;
+
+  const coords = hospitalCoords(hospital);
+  if (!coords) return null;
+
+  const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+  if (distanceKm > radiusKm) return null;
+
+  return {
+    hospital,
+    distanceKm,
+    distanceMeters: Math.round(distanceKm * 1000),
+  };
+}
+
+export async function findNearbyHospitals(
+  lat: number,
+  lng: number,
+  radiusKm = 10
+): Promise<HospitalWithDistance[]> {
+  const point = toGeoPoint(lat, lng);
+
+  const hospitals = await Hospital.aggregate<
+    IHospital & { distanceMeters: number }
+  >([
+    {
+      $geoNear: {
+        near: point,
+        distanceField: 'distanceMeters',
+        maxDistance: radiusKm * 1000,
+        spherical: true,
+        query: { isActive: true, emergencyAvailable: true, location: { $exists: true } },
+      },
+    },
+    { $limit: 50 },
+  ]);
+
+  if (hospitals.length > 0) {
+    return hospitals.map((row) => ({
+      hospital: row as unknown as IHospital,
+      distanceKm: row.distanceMeters / 1000,
+      distanceMeters: Math.round(row.distanceMeters),
+    }));
+  }
+
+  const fallback = await Hospital.find({
+    isActive: true,
+    emergencyAvailable: true,
+    'coordinates.lat': { $exists: true },
+    'coordinates.lng': { $exists: true },
+  }).limit(50);
+
+  const withDistance: HospitalWithDistance[] = [];
+
+  for (const h of fallback) {
+    const coords = hospitalCoords(h);
+    if (!coords) continue;
+    const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+    if (distanceKm > radiusKm) continue;
+    withDistance.push({
+      hospital: h,
+      distanceKm,
+      distanceMeters: Math.round(distanceKm * 1000),
+    });
+  }
+
+  return withDistance.sort((a, b) => a.distanceMeters - b.distanceMeters);
+}
+
+export function formatHospitalResponse(hospital: IHospital, distanceMeters: number) {
+  const coords = hospitalCoords(hospital);
+  return {
+    _id: hospital._id,
+    name: hospital.name,
+    address: hospital.address,
+    phone: hospital.phone ?? null,
+    city: hospital.city,
+    state: hospital.state,
+    specialties: hospital.specialties,
+    emergencyAvailable: hospital.emergencyAvailable,
+    coordinates: coords,
+    distanceMeters,
+  };
+}
+
+export function formatAmbulanceResponse(
+  unit: IAmbulanceUnit,
+  distanceMeters: number,
+  etaMinutes?: number
+) {
+  const [lng, lat] = unit.currentLocation.coordinates;
+  const driver = unit.driverId as unknown as {
+    _id?: Types.ObjectId;
+    profile?: { firstName?: string; lastName?: string };
+    phone?: string;
+  };
+
+  return {
+    _id: unit._id,
+    vehicleNumber: unit.vehicleNumber,
+    status: unit.status,
+    isAvailable: unit.isAvailable,
+    currentLocation: { lat, lng },
+    distanceMeters,
+    etaMinutes: etaMinutes ?? null,
+    driver: driver?._id
+      ? {
+          _id: driver._id,
+          name: [driver.profile?.firstName, driver.profile?.lastName].filter(Boolean).join(' '),
+          phone: driver.phone ?? null,
+        }
+      : null,
+  };
+}
+
+export function getDriverName(unit: IAmbulanceUnit): string {
+  const driver = unit.driverId as unknown as {
+    profile?: { firstName?: string; lastName?: string };
+  };
+  return [driver?.profile?.firstName, driver?.profile?.lastName].filter(Boolean).join(' ') || 'Driver';
+}
+
+export async function findEmergencyRequestByIdentifier(id: string) {
+  if (/^[a-f\d]{24}$/i.test(id)) {
+    const byObjectId = await EmergencyRequest.findById(id);
+    if (byObjectId) return byObjectId;
+  }
+  return EmergencyRequest.findOne({ requestId: id });
+}
+
+export async function findActiveEmergencyForAmbulance(ambulanceId: string) {
+  return EmergencyRequest.findOne({
+    assignedAmbulanceId: ambulanceId,
+    status: { $in: ['searching', 'dispatched', 'arrived', 'pickedUp', 'atHospital'] },
+  }).sort({ requestedAt: -1 });
+}
+
+export async function recalculateLiveEta(request: IEmergencyRequest) {
+  if (!request.assignedAmbulanceId) {
+    return null;
+  }
+
+  const unit = await AmbulanceUnit.findById(request.assignedAmbulanceId).populate(
+    'driverId',
+    'profile phone'
+  );
+  if (!unit) return null;
+
+  const ambulance = unitCoords(unit);
+  const patient = patientCoords(request);
+  const eta = calculateETA(ambulance.lat, ambulance.lng, patient.lat, patient.lng);
+  const estimatedArrival = new Date(Date.now() + eta.etaMinutes * 60 * 1000);
+
+  return {
+    requestId: request.requestId,
+    status: request.status,
+    isDelayed: request.isDelayed,
+    calculatedETA: eta.etaMinutes,
+    estimatedArrival,
+    distanceKm: eta.distanceKm,
+    adjustedDistanceKm: eta.adjustedDistanceKm,
+    trafficMultiplier: eta.trafficMultiplier,
+    ambulanceLocation: ambulance,
+    patientLocation: patient,
+    assignedAmbulance: formatAmbulanceResponse(unit, Math.round(eta.distanceKm * 1000), eta.etaMinutes),
+    recalculatedAt: new Date().toISOString(),
+  };
+}
+
+export async function getPatientPhone(patientId: Types.ObjectId | string): Promise<string | null> {
+  const user = await User.findById(patientId).select('phone');
+  return user?.phone ?? null;
+}

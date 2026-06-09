@@ -1,0 +1,613 @@
+import { createApi } from '@reduxjs/toolkit/query/react';
+import { baseQueryWithReauth } from './baseQuery';
+import type {
+  User, Doctor, Appointment, Medicine, ApiResponse,
+  Prescription, HealthRecord, Notification, AdminDashboard, RevenueReport, PharmacyOrder, VitalsSummary, VitalReading,
+  PlatformHealth, Review,
+  DoctorProfileResponse,   TransportSosResponse, TransportTrackData,
+  EmergencySosDispatchData, EmergencyLiveEtaData, NearbyHospitalsResponse, EmergencyType,
+} from '@/types';
+import type { DoctorScanAnalytics, ScanReport, ScanReviewPayload } from '@/types/mediscan';
+import type { WellnessPlan, DietLogEntry, MealSlot, DietAdherenceStatus, OffPlanCategory } from '@/types/wellness';
+
+export const api = createApi({
+  reducerPath: 'api',
+  baseQuery: baseQueryWithReauth,
+  keepUnusedDataFor: 120,
+  refetchOnFocus: false,
+  refetchOnReconnect: true,
+  tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans'],
+  endpoints: (builder) => ({
+    register: builder.mutation<ApiResponse<{ user: User }>, Record<string, unknown>>({
+      query: (body) => ({ url: '/auth/register', method: 'POST', body }),
+    }),
+    logout: builder.mutation<ApiResponse<unknown>, void>({
+      query: () => ({ url: '/auth/logout', method: 'POST' }),
+    }),
+    unlockAccount: builder.mutation<ApiResponse<{ message: string }>, { token: string }>({
+      query: (body) => ({ url: '/auth/unlock-account', method: 'POST', body }),
+    }),
+    sendOtp: builder.mutation<
+      ApiResponse<{ message: string; expiresInMinutes: number; otp?: string }>,
+      { phone: string; purpose: 'login' | 'register' }
+    >({
+      query: (body) => ({ url: '/auth/send-otp', method: 'POST', body }),
+    }),
+    loginOtp: builder.mutation<ApiResponse<{ user: User }>, { phone: string; otp: string }>({
+      query: (body) => ({ url: '/auth/login-otp', method: 'POST', body }),
+    }),
+    demoLogin: builder.mutation<ApiResponse<{ user: User }>, { phone?: string }>({
+      query: (body) => ({ url: '/auth/demo-login', method: 'POST', body: body || {} }),
+    }),
+    getProfile: builder.query<ApiResponse<User>, void>({
+      query: () => '/auth/profile',
+      providesTags: ['User'],
+    }),
+    getDoctors: builder.query<
+      ApiResponse<{ doctors: Doctor[]; pagination: { page: number; limit: number; total: number; pages: number } }>,
+      Record<string, string | undefined>
+    >({
+      query: (params) => ({ url: '/doctors', params }),
+      providesTags: ['Doctors'],
+    }),
+    getFeaturedDoctors: builder.query<ApiResponse<Doctor[]>, void>({
+      query: () => '/doctors/featured',
+      providesTags: ['Doctors'],
+    }),
+    getDoctorById: builder.query<ApiResponse<DoctorProfileResponse>, string>({
+      query: (id) => `/doctors/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Doctors', id }],
+    }),
+    getDoctorAvailability: builder.query<
+      ApiResponse<{ date: string; day: string; slots: { time: string; available: boolean }[] }>,
+      { id: string; date?: string }
+    >({
+      query: ({ id, date }) => ({ url: `/doctors/${id}/availability`, params: date ? { date } : {} }),
+    }),
+    bookAppointment: builder.mutation<ApiResponse<Appointment>, Record<string, unknown>>({
+      query: (body) => ({ url: '/appointments/book', method: 'POST', body }),
+      invalidatesTags: ['Appointments'],
+    }),
+    uploadBookingReports: builder.mutation<
+      ApiResponse<{ files: { fileName: string; fileUrl: string; fileType: string }[] }>,
+      FormData
+    >({
+      query: (body) => ({ url: '/appointments/upload-reports', method: 'POST', body }),
+    }),
+    createAppointmentPaymentIntent: builder.mutation<
+      ApiResponse<{ clientSecret: string; paymentIntentId: string; amount: number }>,
+      string
+    >({
+      query: (id) => ({ url: `/appointments/${id}/payment-intent`, method: 'POST' }),
+    }),
+    confirmAppointmentPayment: builder.mutation<
+      ApiResponse<Appointment>,
+      { id: string; method: 'wallet' | 'card' | 'clinic'; paymentIntentId?: string }
+    >({
+      query: ({ id, ...body }) => ({ url: `/appointments/${id}/pay`, method: 'POST', body }),
+      invalidatesTags: ['Appointments', 'Wallet'],
+    }),
+    getAppointments: builder.query<ApiResponse<{ appointments: Appointment[]; pagination: unknown }>, { status?: string }>({
+      query: (params) => ({ url: '/appointments', params }),
+      providesTags: ['Appointments'],
+    }),
+    getAppointmentById: builder.query<ApiResponse<Appointment>, string>({
+      query: (id) => `/appointments/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Appointments', id }],
+    }),
+    cancelAppointment: builder.mutation<ApiResponse<Appointment>, { id: string; reason?: string }>({
+      query: ({ id, reason }) => ({ url: `/appointments/${id}/cancel`, method: 'PUT', body: { reason } }),
+      invalidatesTags: ['Appointments'],
+    }),
+    joinConsultation: builder.mutation<ApiResponse<{ roomId: string }>, string>({
+      query: (id) => ({ url: `/appointments/${id}/join`, method: 'POST' }),
+    }),
+    completeAppointment: builder.mutation<ApiResponse<Appointment>, string>({
+      query: (id) => ({ url: `/appointments/${id}/complete`, method: 'POST' }),
+      invalidatesTags: ['Appointments'],
+    }),
+    rateAppointment: builder.mutation<ApiResponse<Appointment>, { id: string; score: number; review?: string }>({
+      query: ({ id, score, review }) => ({ url: `/appointments/${id}/rate`, method: 'POST', body: { score, review } }),
+      invalidatesTags: ['Appointments', 'Doctors'],
+    }),
+    getMedicines: builder.query<ApiResponse<{ medicines: Medicine[]; pagination: unknown }>, Record<string, string | undefined>>({
+      query: (params) => ({ url: '/pharmacy/medicines', params }),
+      providesTags: ['Medicines'],
+    }),
+    getMedicineById: builder.query<ApiResponse<Medicine>, string>({
+      query: (id) => `/pharmacy/medicines/${id}`,
+    }),
+    getPharmacyOrders: builder.query<ApiResponse<PharmacyOrder[]>, void>({
+      query: () => '/pharmacy/orders',
+      providesTags: ['Orders'],
+    }),
+    getPharmacyOrderById: builder.query<ApiResponse<PharmacyOrder>, string>({
+      query: (id) => `/pharmacy/orders/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Orders', id }],
+    }),
+    createPharmacyOrder: builder.mutation<ApiResponse<PharmacyOrder>, Record<string, unknown>>({
+      query: (body) => ({ url: '/pharmacy/orders', method: 'POST', body }),
+      invalidatesTags: ['Orders', 'Wallet'],
+    }),
+    createPaymentIntent: builder.mutation<ApiResponse<{ clientSecret: string; paymentIntentId: string }>, { amount: number; metadata?: Record<string, string> }>({
+      query: (body) => ({ url: '/payments/create-intent', method: 'POST', body }),
+    }),
+    verifyPayment: builder.mutation<ApiResponse<unknown>, { paymentIntentId: string; type: string; referenceId: string }>({
+      query: (body) => ({ url: '/payments/verify', method: 'POST', body }),
+    }),
+    requestAmbulance: builder.mutation<ApiResponse<unknown>, Record<string, unknown>>({
+      query: (body) => ({ url: '/ambulance/request', method: 'POST', body }),
+      invalidatesTags: ['Ambulance'],
+    }),
+    requestEmergencySos: builder.mutation<ApiResponse<TransportSosResponse>, Record<string, unknown>>({
+      query: (body) => ({ url: '/transport/sos', method: 'POST', body }),
+    }),
+    requestTransport: builder.mutation<ApiResponse<TransportSosResponse>, Record<string, unknown>>({
+      query: (body) => ({ url: '/transport/request', method: 'POST', body }),
+    }),
+    getTransportTrack: builder.query<ApiResponse<TransportTrackData>, string>({
+      query: (id) => `/transport/${id}/track`,
+    }),
+    getTransportByToken: builder.query<ApiResponse<TransportTrackData>, string>({
+      query: (token) => `/transport/track/${token}`,
+    }),
+    getTransportById: builder.query<ApiResponse<unknown>, string>({
+      query: (id) => `/transport/${id}`,
+    }),
+    acceptTransport: builder.mutation<ApiResponse<unknown>, string>({
+      query: (id) => ({ url: `/transport/${id}/accept`, method: 'PUT' }),
+    }),
+    updateTransportStatus: builder.mutation<ApiResponse<unknown>, { id: string; status: string; location?: { lat: number; lng: number } }>({
+      query: ({ id, ...body }) => ({ url: `/transport/${id}/status`, method: 'PUT', body }),
+    }),
+    verifyTransportOtp: builder.mutation<ApiResponse<unknown>, { id: string; otp: string }>({
+      query: ({ id, otp }) => ({ url: `/transport/${id}/verify-otp`, method: 'POST', body: { otp } }),
+    }),
+    getDriverTransportRequests: builder.query<ApiResponse<unknown[]>, void>({
+      query: () => '/transport/driver/requests',
+    }),
+    cancelTransport: builder.mutation<ApiResponse<unknown>, string>({
+      query: (id) => ({ url: `/transport/${id}/cancel`, method: 'PUT' }),
+    }),
+    regenerateTrackingLink: builder.mutation<ApiResponse<{ trackingToken: string; trackingUrl: string }>, string>({
+      query: (id) => ({ url: `/transport/${id}/tracking-link`, method: 'POST' }),
+    }),
+    triggerSOS: builder.mutation<
+      ApiResponse<EmergencySosDispatchData>,
+      { patientLat: number; patientLng: number; emergencyType: EmergencyType; patientId: string }
+    >({
+      query: (body) => ({ url: '/emergency/sos', method: 'POST', body }),
+      invalidatesTags: ['Emergency'],
+    }),
+    getEmergencyNearbyHospitals: builder.query<
+      ApiResponse<NearbyHospitalsResponse>,
+      { lat: number; lng: number; radius?: number }
+    >({
+      query: ({ lat, lng, radius = 10 }) => ({
+        url: '/emergency/nearby-hospitals',
+        params: { lat, lng, radius },
+      }),
+    }),
+    getLiveETA: builder.query<ApiResponse<EmergencyLiveEtaData>, string>({
+      query: (id) => `/emergency/requests/${id}/eta`,
+      providesTags: (_r, _e, id) => [{ type: 'Emergency', id }],
+    }),
+    cancelEmergency: builder.mutation<
+      ApiResponse<{ requestId: string; status: string }>,
+      string
+    >({
+      query: (id) => ({ url: `/emergency/requests/${id}/cancel`, method: 'PUT' }),
+      invalidatesTags: ['Emergency'],
+    }),
+    getDriverEmergencyActive: builder.query<
+      ApiResponse<{
+        unit: { id: string; vehicleNumber: string; status: string } | null;
+        request: {
+          requestId: string;
+          status: string;
+          pickupOtp?: string;
+          patientLocation: { lat: number; lng: number };
+        } | null;
+      }>,
+      void
+    >({
+      query: () => '/emergency/driver/active-request',
+      providesTags: ['Emergency'],
+    }),
+    verifyEmergencyOtp: builder.mutation<ApiResponse<unknown>, { id: string; otp: string }>({
+      query: ({ id, otp }) => ({
+        url: `/emergency/requests/${id}/verify-otp`,
+        method: 'POST',
+        body: { otp },
+      }),
+      invalidatesTags: ['Emergency'],
+    }),
+    getPlatformStats: builder.query<ApiResponse<{ activeDoctors: number; completedAppointments: number; happyPatients: number; livesSaved: number }>, void>({
+      query: () => '/admin/stats',
+    }),
+    getSpecialties: builder.query<ApiResponse<string[]>, void>({
+      query: () => '/admin/specialties',
+    }),
+    searchCities: builder.query<ApiResponse<import('@/types').CitySearchResult[]>, { q?: string; limit?: string }>({
+      query: (params) => ({ url: '/utils/cities', params }),
+    }),
+    getCityDetails: builder.query<
+      ApiResponse<{ city: string; state: string; doctorCount: number; hospitalCount: number; topHospitals: import('@/types').Hospital[] }>,
+      string
+    >({
+      query: (city) => `/utils/cities/${encodeURIComponent(city)}`,
+    }),
+    getHospitals: builder.query<
+      ApiResponse<{ hospitals: import('@/types').Hospital[]; pagination: { page: number; limit: number; total: number; pages: number } }>,
+      Record<string, string | undefined>
+    >({
+      query: (params) => ({ url: '/hospitals', params }),
+    }),
+    getHospitalById: builder.query<ApiResponse<import('@/types').Hospital>, string>({
+      query: (id) => `/hospitals/${id}`,
+    }),
+    // Phase 2: Prescriptions
+    getPrescriptions: builder.query<ApiResponse<Prescription[]>, void>({
+      query: () => '/prescriptions',
+      providesTags: ['Prescriptions'],
+    }),
+    getPrescriptionById: builder.query<ApiResponse<Prescription>, string>({
+      query: (id) => `/prescriptions/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Prescriptions', id }],
+    }),
+    createPrescription: builder.mutation<ApiResponse<Prescription>, Record<string, unknown>>({
+      query: (body) => ({ url: '/prescriptions', method: 'POST', body }),
+      invalidatesTags: ['Prescriptions'],
+    }),
+    // Phase 2: Health Records
+    getHealthRecords: builder.query<ApiResponse<HealthRecord[]>, { recordType?: string; search?: string }>({
+      query: (params) => ({ url: '/health-records', params }),
+      providesTags: ['HealthRecords'],
+    }),
+    uploadHealthRecord: builder.mutation<ApiResponse<HealthRecord>, FormData>({
+      query: (body) => ({ url: '/health-records', method: 'POST', body }),
+      invalidatesTags: ['HealthRecords'],
+    }),
+    deleteHealthRecord: builder.mutation<ApiResponse<unknown>, string>({
+      query: (id) => ({ url: `/health-records/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['HealthRecords'],
+    }),
+    // Phase 2: Notifications
+    getNotifications: builder.query<
+      ApiResponse<Notification[]> & { meta?: { unreadCount: number } },
+      { type?: string; limit?: string } | void
+    >({
+      query: (params) => ({ url: '/notifications', params: params || {} }),
+      providesTags: ['Notifications'],
+    }),
+    markNotificationRead: builder.mutation<ApiResponse<unknown>, string>({
+      query: (id) => ({ url: `/notifications/${id}/read`, method: 'PUT' }),
+      invalidatesTags: ['Notifications'],
+    }),
+    markAllNotificationsRead: builder.mutation<ApiResponse<unknown>, void>({
+      query: () => ({ url: '/notifications/read-all', method: 'PUT' }),
+      invalidatesTags: ['Notifications'],
+    }),
+    // Phase 2: Wallet
+    getWallet: builder.query<
+      ApiResponse<{
+        balance: number;
+        transactions: import('@/types').WalletTransaction[];
+        monthlySummary: import('@/types').WalletMonthlySummary;
+        stripeEnabled: boolean;
+      }>,
+      void
+    >({
+      query: () => '/users/wallet',
+      providesTags: ['Wallet'],
+    }),
+    createWalletTopUpIntent: builder.mutation<
+      ApiResponse<{ clientSecret: string; paymentIntentId: string; amount: number }>,
+      { amount: number }
+    >({
+      query: (body) => ({ url: '/users/wallet/topup-intent', method: 'POST', body }),
+    }),
+    confirmWalletTopUp: builder.mutation<
+      ApiResponse<{ balance: number; alreadyProcessed?: boolean }>,
+      { paymentIntentId: string }
+    >({
+      query: (body) => ({ url: '/users/wallet/confirm-topup', method: 'POST', body }),
+      invalidatesTags: ['Wallet'],
+    }),
+    addWalletMoney: builder.mutation<ApiResponse<{ balance: number }>, { amount: number }>({
+      query: (body) => ({ url: '/users/wallet/add-money', method: 'POST', body }),
+      invalidatesTags: ['Wallet'],
+    }),
+    getWalletTransactions: builder.query<
+      ApiResponse<{
+        transactions: import('@/types').WalletTransaction[];
+        monthlySummary: import('@/types').WalletMonthlySummary;
+        pagination: { page: number; limit: number; total: number; pages: number };
+      }>,
+      { page?: string }
+    >({
+      query: (params) => ({ url: '/users/wallet/transactions', params }),
+      providesTags: ['Wallet'],
+    }),
+    requestWalletRefund: builder.mutation<ApiResponse<unknown>, string>({
+      query: (transactionId) => ({
+        url: `/users/wallet/transactions/${transactionId}/refund`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Wallet'],
+    }),
+    getMedicalHistory: builder.query<ApiResponse<User['medicalHistory']>, void>({
+      query: () => '/users/medical-history',
+      providesTags: ['User'],
+    }),
+    updateMedicalHistory: builder.mutation<ApiResponse<User>, Record<string, unknown>>({
+      query: (body) => ({ url: '/users/medical-history', method: 'PUT', body }),
+      invalidatesTags: ['User', 'Wellness'],
+    }),
+    getVitals: builder.query<ApiResponse<VitalsSummary>, { type?: string; days?: string } | void>({
+      query: (params) => ({ url: '/users/vitals', params: params || {} }),
+      providesTags: ['Vitals'],
+    }),
+    logVital: builder.mutation<ApiResponse<VitalReading>, Record<string, unknown>>({
+      query: (body) => ({ url: '/users/vitals', method: 'POST', body }),
+      invalidatesTags: ['Vitals', 'Wellness'],
+    }),
+    getWellnessPlan: builder.query<ApiResponse<WellnessPlan>, void>({
+      query: () => '/users/wellness-plan',
+      providesTags: ['Wellness'],
+    }),
+    logDietEntry: builder.mutation<
+      ApiResponse<DietLogEntry>,
+      {
+        mealSlot: MealSlot;
+        status: DietAdherenceStatus;
+        actualFood?: string;
+        offPlanDescription?: string;
+        offPlanCategory?: OffPlanCategory;
+      }
+    >({
+      query: (body) => ({ url: '/users/diet-log', method: 'POST', body }),
+      invalidatesTags: ['Wellness', 'DietLog'],
+    }),
+    getTodayDietLog: builder.query<ApiResponse<DietLogEntry[]>, void>({
+      query: () => '/users/diet-log/today',
+      providesTags: ['DietLog'],
+    }),
+    deleteVital: builder.mutation<ApiResponse<unknown>, string>({
+      query: (id) => ({ url: `/users/vitals/${id}`, method: 'DELETE' }),
+      invalidatesTags: ['Vitals'],
+    }),
+    // Phase 2: Admin
+    getAdminDashboard: builder.query<ApiResponse<AdminDashboard>, void>({
+      query: () => '/admin/dashboard',
+      providesTags: ['Admin'],
+    }),
+    getAdminUsers: builder.query<ApiResponse<{ users: User[]; pagination: unknown }>, { userType?: string; page?: string }>({
+      query: (params) => ({ url: '/admin/users', params }),
+      providesTags: ['Admin'],
+    }),
+    verifyUser: builder.mutation<ApiResponse<User>, string>({
+      query: (id) => ({ url: `/admin/users/${id}/verify`, method: 'PUT' }),
+      invalidatesTags: ['Admin'],
+    }),
+    blockUser: builder.mutation<ApiResponse<User>, { id: string; isBlocked: boolean }>({
+      query: ({ id, isBlocked }) => ({ url: `/admin/users/${id}/block`, method: 'PUT', body: { isBlocked } }),
+      invalidatesTags: ['Admin'],
+    }),
+    getRevenueReport: builder.query<ApiResponse<RevenueReport>, void>({
+      query: () => '/admin/reports/revenue',
+      providesTags: ['Admin'],
+    }),
+    getAdminHealth: builder.query<ApiResponse<PlatformHealth>, void>({
+      query: () => '/admin/health',
+      providesTags: ['Admin'],
+    }),
+    getPendingDoctorVerifications: builder.query<ApiResponse<User[]>, void>({
+      query: () => '/admin/doctors/pending-verification',
+      providesTags: ['Admin'],
+    }),
+    approveDoctorVerification: builder.mutation<ApiResponse<User>, string>({
+      query: (id) => ({ url: `/admin/doctors/${id}/approve`, method: 'PUT' }),
+      invalidatesTags: ['Admin', 'Doctors'],
+    }),
+    rejectDoctorVerification: builder.mutation<ApiResponse<User>, { id: string; reason: string }>({
+      query: ({ id, reason }) => ({
+        url: `/admin/doctors/${id}/reject`,
+        method: 'PUT',
+        body: { reason },
+      }),
+      invalidatesTags: ['Admin', 'Doctors'],
+    }),
+    getPendingReviews: builder.query<ApiResponse<Review[]>, void>({
+      query: () => '/admin/reviews/pending',
+      providesTags: ['Admin'],
+    }),
+    moderateReview: builder.mutation<ApiResponse<Review>, { id: string; status: 'approved' | 'rejected' }>({
+      query: ({ id, status }) => ({
+        url: `/admin/reviews/${id}/moderate`,
+        method: 'PUT',
+        body: { status },
+      }),
+      invalidatesTags: ['Admin', 'Doctors'],
+    }),
+    getDoctorVerificationStatus: builder.query<
+      ApiResponse<{
+        verificationStatus: string;
+        verified: boolean;
+        rejectionReason?: string;
+        verificationDocuments?: User['doctorDetails'] extends infer D
+          ? D extends { verificationDocuments?: infer V }
+            ? V
+            : never
+          : never;
+      }>,
+      void
+    >({
+      query: () => '/doctors/verification/status',
+      providesTags: ['User'],
+    }),
+    submitDoctorVerification: builder.mutation<ApiResponse<unknown>, FormData>({
+      query: (body) => ({
+        url: '/doctors/verification/documents',
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['User', 'Admin'],
+    }),
+    uploadScan: builder.mutation<
+      ApiResponse<ScanReport & { analysisStatus?: string }>,
+      FormData
+    >({
+      query: (body) => ({ url: '/scans/upload', method: 'POST', body }),
+      invalidatesTags: ['Scans', 'Wellness'],
+    }),
+    getMyScanReports: builder.query<ApiResponse<ScanReport[]>, void>({
+      query: () => '/scans/my-reports',
+      providesTags: ['Scans'],
+    }),
+    getScanReportById: builder.query<ApiResponse<ScanReport>, string>({
+      query: (id) => `/scans/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'Scans', id }],
+    }),
+    shareScanWithDoctor: builder.mutation<
+      ApiResponse<ScanReport>,
+      { id: string; doctorId?: string }
+    >({
+      query: ({ id, doctorId }) => ({
+        url: `/scans/${id}/share`,
+        method: 'PATCH',
+        body: doctorId ? { doctorId } : {},
+      }),
+      invalidatesTags: ['Scans'],
+    }),
+    getDoctorScans: builder.query<
+      ApiResponse<ScanReport[]>,
+      { status?: string; scanType?: string } | void
+    >({
+      query: (params) => ({
+        url: '/scans/doctor/scans',
+        params: params ?? {},
+      }),
+      providesTags: ['Scans'],
+    }),
+    getDoctorPendingScans: builder.query<ApiResponse<ScanReport[]>, void>({
+      query: () => '/scans/doctor/pending',
+      providesTags: ['Scans'],
+    }),
+    getDoctorScanAnalytics: builder.query<ApiResponse<DoctorScanAnalytics>, void>({
+      query: () => '/scans/doctor/analytics',
+      providesTags: ['Scans'],
+    }),
+    reviewDoctorScan: builder.mutation<ApiResponse<ScanReport>, { id: string } & ScanReviewPayload>({
+      query: ({ id, ...body }) => ({
+        url: `/scans/${id}/review`,
+        method: 'PATCH',
+        body,
+      }),
+      invalidatesTags: ['Scans'],
+    }),
+  }),
+});
+
+export const {
+  useRegisterMutation,
+  useLogoutMutation,
+  useUnlockAccountMutation,
+  useSendOtpMutation,
+  useLoginOtpMutation,
+  useDemoLoginMutation,
+  useGetProfileQuery,
+  useGetDoctorsQuery,
+  useGetFeaturedDoctorsQuery,
+  useGetDoctorByIdQuery,
+  useGetDoctorAvailabilityQuery,
+  useBookAppointmentMutation,
+  useUploadBookingReportsMutation,
+  useCreateAppointmentPaymentIntentMutation,
+  useConfirmAppointmentPaymentMutation,
+  useGetAppointmentsQuery,
+  useGetAppointmentByIdQuery,
+  useCancelAppointmentMutation,
+  useJoinConsultationMutation,
+  useCompleteAppointmentMutation,
+  useRateAppointmentMutation,
+  useGetMedicinesQuery,
+  useGetMedicineByIdQuery,
+  useGetPharmacyOrdersQuery,
+  useGetPharmacyOrderByIdQuery,
+  useCreatePharmacyOrderMutation,
+  useCreatePaymentIntentMutation,
+  useVerifyPaymentMutation,
+  useRequestAmbulanceMutation,
+  useRequestEmergencySosMutation,
+  useRequestTransportMutation,
+  useGetTransportTrackQuery,
+  useLazyGetTransportTrackQuery,
+  useGetTransportByTokenQuery,
+  useLazyGetTransportByTokenQuery,
+  useGetTransportByIdQuery,
+  useAcceptTransportMutation,
+  useUpdateTransportStatusMutation,
+  useVerifyTransportOtpMutation,
+  useGetDriverTransportRequestsQuery,
+  useCancelTransportMutation,
+  useRegenerateTrackingLinkMutation,
+  useTriggerSOSMutation,
+  useGetEmergencyNearbyHospitalsQuery,
+  useLazyGetEmergencyNearbyHospitalsQuery,
+  useGetLiveETAQuery,
+  useCancelEmergencyMutation,
+  useGetDriverEmergencyActiveQuery,
+  useVerifyEmergencyOtpMutation,
+  useGetPlatformStatsQuery,
+  useGetSpecialtiesQuery,
+  useSearchCitiesQuery,
+  useLazySearchCitiesQuery,
+  useGetCityDetailsQuery,
+  useGetHospitalsQuery,
+  useGetHospitalByIdQuery,
+  useGetPrescriptionsQuery,
+  useGetPrescriptionByIdQuery,
+  useCreatePrescriptionMutation,
+  useGetHealthRecordsQuery,
+  useUploadHealthRecordMutation,
+  useDeleteHealthRecordMutation,
+  useGetNotificationsQuery,
+  useMarkNotificationReadMutation,
+  useMarkAllNotificationsReadMutation,
+  useGetWalletQuery,
+  useCreateWalletTopUpIntentMutation,
+  useConfirmWalletTopUpMutation,
+  useAddWalletMoneyMutation,
+  useGetWalletTransactionsQuery,
+  useRequestWalletRefundMutation,
+  useGetMedicalHistoryQuery,
+  useUpdateMedicalHistoryMutation,
+  useGetVitalsQuery,
+  useLogVitalMutation,
+  useDeleteVitalMutation,
+  useGetWellnessPlanQuery,
+  useLogDietEntryMutation,
+  useGetTodayDietLogQuery,
+  useGetAdminDashboardQuery,
+  useGetAdminUsersQuery,
+  useVerifyUserMutation,
+  useBlockUserMutation,
+  useGetRevenueReportQuery,
+  useGetAdminHealthQuery,
+  useGetPendingDoctorVerificationsQuery,
+  useApproveDoctorVerificationMutation,
+  useRejectDoctorVerificationMutation,
+  useGetPendingReviewsQuery,
+  useModerateReviewMutation,
+  useGetDoctorVerificationStatusQuery,
+  useSubmitDoctorVerificationMutation,
+  useUploadScanMutation,
+  useGetMyScanReportsQuery,
+  useGetScanReportByIdQuery,
+  useShareScanWithDoctorMutation,
+  useGetDoctorScansQuery,
+  useGetDoctorPendingScansQuery,
+  useGetDoctorScanAnalyticsQuery,
+  useReviewDoctorScanMutation,
+} = api;

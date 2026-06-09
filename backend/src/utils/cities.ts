@@ -1,0 +1,30 @@
+export const INDIAN_CITIES = [
+  { city: 'Mumbai', state: 'Maharashtra' },
+  { city: 'Delhi', state: 'Delhi' },
+  { city: 'Bangalore', state: 'Karnataka' },
+  { city: 'Hyderabad', state: 'Telangana' },
+  { city: 'Chennai', state: 'Tamil Nadu' },
+  { city: 'Kolkata', state: 'West Bengal' },
+  { city: 'Pune', state: 'Maharashtra' },
+  { city: 'Ahmedabad', state: 'Gujarat' },
+  { city: 'Jaipur', state: 'Rajasthan' },
+  { city: 'Lucknow', state: 'Uttar Pradesh' },
+  { city: 'Chandigarh', state: 'Chandigarh' },
+  { city: 'Kochi', state: 'Kerala' },
+  { city: 'Indore', state: 'Madhya Pradesh' },
+  { city: 'Bhopal', state: 'Madhya Pradesh' },
+  { city: 'Visakhapatnam', state: 'Andhra Pradesh' },
+  { city: 'Surat', state: 'Gujarat' },
+  { city: 'Nagpur', state: 'Maharashtra' },
+  { city: 'Patna', state: 'Bihar' },
+  { city: 'Vadodara', state: 'Gujarat' },
+  { city: 'Coimbatore', state: 'Tamil Nadu' },
+  { city: 'Guwahati', state: 'Assam' },
+  { city: 'Thiruvananthapuram', state: 'Kerala' },
+  { city: 'Noida', state: 'Uttar Pradesh' },
+  { city: 'Gurgaon', state: 'Haryana' },
+  { city: 'Faridabad', state: 'Haryana' },
+];
+
+export const slugify = (text: string): string =>
+  text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');

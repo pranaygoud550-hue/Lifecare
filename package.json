@@ -1,0 +1,32 @@
+{
+  "name": "lifecare-plus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LifeCare+ Healthcare Platform - Full-stack MERN application",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "kill-api-port": "lsof -ti:5001 2>/dev/null | xargs kill -9 2>/dev/null || true",
+    "db:up": "sh scripts/start-mongo.sh",
+    "db:down": "docker compose stop mongodb",
+    "db:logs": "docker compose logs -f mongodb",
+    "db:wait": "sh scripts/wait-for-mongo.sh",
+    "db:seed": "npm run seed -w backend",
+    "db:setup": "npm run db:up && npm run db:wait && npm run db:seed",
+    "dev": "sh scripts/ensure-mongo-for-dev.sh && npm run kill-api-port && concurrently -k \"npm run dev -w backend\" \"sh scripts/wait-for-api.sh && npm run dev -w frontend\"",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run kill-api-port && npm run dev -w backend",
+    "dev:no-docker": "npm run kill-api-port && concurrently -k \"npm run dev -w backend\" \"sh scripts/wait-for-api.sh && npm run dev -w frontend\"",
+    "build": "npm run build -w backend && npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "start:backend": "npm start -w backend",
+    "start:frontend": "npm start -w frontend",
+    "lint": "npm run lint -w frontend && npm run lint -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
