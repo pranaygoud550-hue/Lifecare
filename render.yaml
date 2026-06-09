@@ -1,0 +1,32 @@
+# LifeCare+ — Render Blueprint
+# Recommended: backend on Render + frontend on Vercel (Socket.io needs a long-running server).
+# In Render Dashboard: New → Blueprint → connect pranaygoud550-hue/Lifecare
+
+services:
+  - type: web
+    name: lifecare-api
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build -w backend
+    startCommand: npm start -w backend
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20"
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false

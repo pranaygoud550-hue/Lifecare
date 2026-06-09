@@ -1,8 +1,14 @@
 import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { setServers as setDnsServers } from 'node:dns';
 import dotenv from 'dotenv';
 import { config } from './index.js';
+import {
+  atlasConnectionHints,
+  encodeMongoUri,
+  isAtlasUri,
+} from './mongoUri.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '../../.env') });
@@ -25,9 +31,19 @@ export function markDatabaseConnected(connected: boolean): void {
 let memoryServer: { stop: () => Promise<boolean>; getUri: (db?: string) => string } | null = null;
 
 const MAX_RETRIES = 8;
-const ATLAS_DEV_RETRIES = 1;
-const RETRY_DELAY_MS = 1000;
+const ATLAS_DEV_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 const LOCAL_FALLBACK_URI = 'mongodb://127.0.0.1:27017/lifecare-plus';
+
+function logAtlasHints(error: unknown): void {
+  const message = error instanceof Error ? error.message : String(error);
+  const hints = atlasConnectionHints(message);
+  if (hints.length === 0) return;
+  console.error('   Atlas checklist:');
+  for (const hint of hints) {
+    console.error(`     • ${hint}`);
+  }
+}
 
 async function connectWithUri(
   uri: string,
@@ -37,12 +53,16 @@ async function connectWithUri(
     await mongoose.disconnect();
   }
 
-  const isAtlas = uri.startsWith('mongodb+srv');
+  const isAtlas = isAtlasUri(uri);
+  if (isAtlas) {
+    setDnsServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+  }
+
   await mongoose.connect(uri, {
     serverSelectionTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
     connectTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
-    // Force IPv4 for Atlas — avoids TLS "alert internal error" on some networks
-    family: isAtlas ? 4 : 4,
+    family: 4,
+    autoSelectFamily: false,
   });
 
   isDatabaseConnected = true;
@@ -85,6 +105,7 @@ async function tryConnectWithRetries(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error(`MongoDB (${attempt}/${maxRetries}): ${message}`);
+      if (uri.startsWith('mongodb+srv')) logAtlasHints(error);
 
       if (attempt < maxRetries) {
         console.log(`   Retrying in ${RETRY_DELAY_MS / 1000}s...`);
@@ -102,13 +123,13 @@ export const connectDB = async (): Promise<void> => {
     return;
   }
 
-  const uri = normalizeMongoUri(config.mongodbUri);
+  const uri = encodeMongoUri(normalizeMongoUri(config.mongodbUri));
   mongoose.set('strictQuery', true);
 
-  const isAtlas = uri.startsWith('mongodb+srv');
+  const isAtlas = isAtlasUri(uri);
   const isDev = config.nodeEnv === 'development';
   const primaryRetries = isDev && isAtlas ? ATLAS_DEV_RETRIES : MAX_RETRIES;
-  const primaryTimeoutMs = isDev && isAtlas ? 5000 : 15000;
+  const primaryTimeoutMs = isDev && isAtlas ? 12000 : 15000;
 
   if (await tryConnectWithRetries(uri, primaryRetries, primaryTimeoutMs)) {
     return;

@@ -10,6 +10,7 @@
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
     "seed": "tsx src/utils/seed.ts",
+    "db:test": "tsx scripts/test-mongo.ts",
     "test": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.ts --runInBand",
     "test:watch": "NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules npx jest --config jest.config.ts --runInBand --watch"
   },
