@@ -24,9 +24,9 @@ import type { User } from '@/types';
 type Step = 'phone' | 'code';
 
 const DEMO_ACCOUNTS = [
-  { phone: '9876543210', label: 'Patient', description: 'Video consult · SOS · Pharmacy checkout' },
-  { phone: '9876543216', label: 'Doctor (Dr. Kavitha)', description: 'Accept consults · prescriptions' },
-  { phone: '9999999999', label: 'Admin', description: 'Live dashboard · user management' },
+  { phone: '9876543210', label: 'Patient', description: 'Book appointments & pharmacy' },
+  { phone: '9876543211', label: 'Doctor', description: 'Consultations & prescriptions' },
+  { phone: '9999999999', label: 'Admin', description: 'Dashboard & user management' },
 ] as const;
 
 function getPostLoginPath(user: User): string {
