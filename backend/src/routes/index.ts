@@ -16,6 +16,10 @@ import utilsRoutes from './utilsRoutes.js';
 import hospitalRoutes from './hospitalRoutes.js';
 import emergencyRoutes from './emergencyRoutes.js';
 import scanRoutes from './scanRoutes.js';
+import navigationRoutes from './navigationRoutes.js';
+
+import reminderRoutes from './reminderRoutes.js';
+import ambulanceSyncRoutes from './ambulanceSyncRoutes.js';
 
 const router = Router();
 
@@ -31,10 +35,13 @@ router.use('/health-records', healthRecordRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/pharmacy', pharmacyRoutes);
 router.use('/ambulance', ambulanceRoutes);
+router.use('/ambulance', ambulanceSyncRoutes);
 router.use('/transport', transportRoutes);
 router.use('/payments', paymentRoutes);
 router.use('/admin', adminRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/scans', scanRoutes);
+router.use('/navigation', navigationRoutes);
+router.use('/reminders', reminderRoutes);
 
 export default router;

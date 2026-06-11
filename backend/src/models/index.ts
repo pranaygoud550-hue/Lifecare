@@ -16,4 +16,7 @@ export { VitalReading } from './VitalReading.js';
 export { TokenBlacklist } from './TokenBlacklist.js';
 export { RefreshToken } from './RefreshToken.js';
 export { ScanReport } from './ScanReport.js';
+export { Scan } from './Scan.js';
 export { DietLog } from './DietLog.js';
+export { MedicationReminder } from './MedicationReminder.js';
+export { EmergencyRecord } from './EmergencyRecord.js';

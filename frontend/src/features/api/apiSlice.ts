@@ -8,6 +8,8 @@ import type {
   EmergencySosDispatchData, EmergencyLiveEtaData, NearbyHospitalsResponse, EmergencyType,
 } from '@/types';
 import type { DoctorScanAnalytics, ScanReport, ScanReviewPayload } from '@/types/mediscan';
+import type { ChestScan } from '@/types/chestScan';
+import type { GoogleHospitalPlace, NavigationRouteData, NavigationEtaData, SmartHospitalRecommendation } from '@/types/googleMaps';
 import type { WellnessPlan, DietLogEntry, MealSlot, DietAdherenceStatus, OffPlanCategory } from '@/types/wellness';
 
 export const api = createApi({
@@ -139,6 +141,17 @@ export const api = createApi({
       query: (body) => ({ url: '/ambulance/request', method: 'POST', body }),
       invalidatesTags: ['Ambulance'],
     }),
+    getEmergencyHistory: builder.query<ApiResponse<unknown[]>, void>({
+      query: () => '/ambulance/history',
+      providesTags: ['Emergency'],
+    }),
+    getEmergencyRecord: builder.query<ApiResponse<unknown>, string>({
+      query: (id) => `/ambulance/history/${id}`,
+      providesTags: ['Emergency'],
+    }),
+    createRapidCarePrefillToken: builder.mutation<ApiResponse<{ token: string }>, void>({
+      query: () => ({ url: '/auth/rapidcare-token', method: 'POST' }),
+    }),
     requestEmergencySos: builder.mutation<ApiResponse<TransportSosResponse>, Record<string, unknown>>({
       query: (body) => ({ url: '/transport/sos', method: 'POST', body }),
     }),
@@ -222,6 +235,16 @@ export const api = createApi({
       }),
       invalidatesTags: ['Emergency'],
     }),
+    markDriverArrived: builder.mutation<
+      ApiResponse<{ requestId: string; status: string; message: string }>,
+      string
+    >({
+      query: (id) => ({
+        url: `/emergency/requests/${id}/arrived`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Emergency'],
+    }),
     getPlatformStats: builder.query<ApiResponse<{ activeDoctors: number; completedAppointments: number; happyPatients: number; livesSaved: number }>, void>({
       query: () => '/admin/stats',
     }),
@@ -246,6 +269,66 @@ export const api = createApi({
     getHospitalById: builder.query<ApiResponse<import('@/types').Hospital>, string>({
       query: (id) => `/hospitals/${id}`,
     }),
+    getNearbyGoogleHospitals: builder.query<
+      ApiResponse<{
+        count: number;
+        radiusKm: number;
+        source: string;
+        hospitals: GoogleHospitalPlace[];
+      }>,
+      {
+        lat: number;
+        lng: number;
+        radius?: number;
+        type?: 'all' | 'hospital' | 'clinic' | 'pharmacy' | 'diagnostic';
+        sort?: 'distance' | 'rating' | 'open';
+        openNow?: boolean;
+      }
+    >({
+      query: ({ lat, lng, radius = 5, type, sort, openNow }) => ({
+        url: '/hospitals/nearby',
+        params: {
+          lat,
+          lng,
+          radius,
+          ...(type ? { type } : {}),
+          ...(sort ? { sort } : {}),
+          ...(openNow ? { openNow: 'true' } : {}),
+        },
+      }),
+      providesTags: ['Emergency'],
+    }),
+    getGooglePlaceDetails: builder.query<ApiResponse<GoogleHospitalPlace>, string>({
+      query: (placeId) => `/hospitals/${placeId}`,
+    }),
+    recommendSmartHospital: builder.query<
+      ApiResponse<SmartHospitalRecommendation>,
+      { patientId?: string; lat: number; lng: number; radius?: number }
+    >({
+      query: ({ patientId, ...params }) => ({
+        url: '/hospitals/recommend',
+        params: { ...params, ...(patientId ? { patientId } : {}) },
+      }),
+    }),
+    getNavigationRoute: builder.mutation<
+      ApiResponse<NavigationRouteData>,
+      {
+        originLat: number;
+        originLng: number;
+        destLat: number;
+        destLng: number;
+        mode?: 'driving' | 'walking' | 'ambulance';
+      }
+    >({
+      query: (body) => ({ url: '/navigation/route', method: 'POST', body }),
+    }),
+    getNavigationEta: builder.query<ApiResponse<NavigationEtaData>, string>({
+      query: (requestId) => ({
+        url: '/navigation/eta',
+        params: { requestId },
+      }),
+      providesTags: (_r, _e, id) => [{ type: 'Emergency', id: `nav-${id}` }],
+    }),
     // Phase 2: Prescriptions
     getPrescriptions: builder.query<ApiResponse<Prescription[]>, void>({
       query: () => '/prescriptions',
@@ -258,6 +341,41 @@ export const api = createApi({
     createPrescription: builder.mutation<ApiResponse<Prescription>, Record<string, unknown>>({
       query: (body) => ({ url: '/prescriptions', method: 'POST', body }),
       invalidatesTags: ['Prescriptions'],
+    }),
+    getMedicationReminders: builder.query<
+      ApiResponse<
+        Array<{
+          _id: string;
+          medicineName: string;
+          dosage: string;
+          times: string[];
+          isActive: boolean;
+          beforeAfterFood?: string;
+        }>
+      >,
+      void
+    >({
+      query: () => '/reminders',
+      providesTags: ['Prescriptions'],
+    }),
+    enablePrescriptionReminders: builder.mutation<ApiResponse<unknown>, string>({
+      query: (prescriptionId) => ({
+        url: `/reminders/from-prescription/${prescriptionId}`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['Prescriptions'],
+    }),
+    getMyDoctorAvailability: builder.query<
+      ApiResponse<Array<{ day: string; slots: Array<{ startTime: string; endTime: string }> }>>,
+      void
+    >({
+      query: () => '/doctors/me/availability',
+    }),
+    updateMyDoctorAvailability: builder.mutation<
+      ApiResponse<unknown>,
+      { availability: Array<{ day: string; slots: Array<{ startTime: string; endTime: string }> }> }
+    >({
+      query: (body) => ({ url: '/doctors/me/availability', method: 'PATCH', body }),
     }),
     // Phase 2: Health Records
     getHealthRecords: builder.query<ApiResponse<HealthRecord[]>, { recordType?: string; search?: string }>({
@@ -346,6 +464,16 @@ export const api = createApi({
     }),
     getVitals: builder.query<ApiResponse<VitalsSummary>, { type?: string; days?: string } | void>({
       query: (params) => ({ url: '/users/vitals', params: params || {} }),
+      providesTags: ['Vitals'],
+    }),
+    getPatientVitalsForDoctor: builder.query<
+      ApiResponse<VitalsSummary & { patientId: string }>,
+      { patientId: string; days?: string }
+    >({
+      query: ({ patientId, days = '30' }) => ({
+        url: `/doctors/patients/${patientId}/vitals`,
+        params: { days },
+      }),
       providesTags: ['Vitals'],
     }),
     logVital: builder.mutation<ApiResponse<VitalReading>, Record<string, unknown>>({
@@ -454,6 +582,33 @@ export const api = createApi({
       }),
       invalidatesTags: ['User', 'Admin'],
     }),
+    analyzeChestScan: builder.mutation<ApiResponse<ChestScan>, FormData>({
+      query: (body) => ({ url: '/scans/analyze', method: 'POST', body }),
+      invalidatesTags: ['Scans'],
+    }),
+    getMyChestScans: builder.query<ApiResponse<ChestScan[]>, void>({
+      query: () => '/scans/my-scans',
+      providesTags: ['Scans'],
+    }),
+    getDoctorPatientScans: builder.query<ApiResponse<ChestScan[]>, void>({
+      query: () => '/scans/doctor/patient-scans',
+      providesTags: ['Scans'],
+    }),
+    getPatientChestScansForDoctor: builder.query<ApiResponse<ChestScan[]>, string>({
+      query: (patientId) => `/scans/patient/${patientId}`,
+      providesTags: ['Scans'],
+    }),
+    addChestScanNote: builder.mutation<
+      ApiResponse<ChestScan>,
+      { id: string; doctorNote: string }
+    >({
+      query: ({ id, doctorNote }) => ({
+        url: `/scans/chest/${id}/note`,
+        method: 'PATCH',
+        body: { doctorNote },
+      }),
+      invalidatesTags: ['Scans'],
+    }),
     uploadScan: builder.mutation<
       ApiResponse<ScanReport & { analysisStatus?: string }>,
       FormData
@@ -470,7 +625,7 @@ export const api = createApi({
       providesTags: (_r, _e, id) => [{ type: 'Scans', id }],
     }),
     shareScanWithDoctor: builder.mutation<
-      ApiResponse<ScanReport>,
+      ApiResponse<ScanReport | ChestScan>,
       { id: string; doctorId?: string }
     >({
       query: ({ id, doctorId }) => ({
@@ -539,6 +694,9 @@ export const {
   useCreatePaymentIntentMutation,
   useVerifyPaymentMutation,
   useRequestAmbulanceMutation,
+  useGetEmergencyHistoryQuery,
+  useGetEmergencyRecordQuery,
+  useCreateRapidCarePrefillTokenMutation,
   useRequestEmergencySosMutation,
   useRequestTransportMutation,
   useGetTransportTrackQuery,
@@ -559,6 +717,7 @@ export const {
   useCancelEmergencyMutation,
   useGetDriverEmergencyActiveQuery,
   useVerifyEmergencyOtpMutation,
+  useMarkDriverArrivedMutation,
   useGetPlatformStatsQuery,
   useGetSpecialtiesQuery,
   useSearchCitiesQuery,
@@ -566,9 +725,18 @@ export const {
   useGetCityDetailsQuery,
   useGetHospitalsQuery,
   useGetHospitalByIdQuery,
+  useGetNearbyGoogleHospitalsQuery,
+  useGetGooglePlaceDetailsQuery,
+  useRecommendSmartHospitalQuery,
+  useGetNavigationRouteMutation,
+  useGetNavigationEtaQuery,
   useGetPrescriptionsQuery,
   useGetPrescriptionByIdQuery,
   useCreatePrescriptionMutation,
+  useGetMedicationRemindersQuery,
+  useEnablePrescriptionRemindersMutation,
+  useGetMyDoctorAvailabilityQuery,
+  useUpdateMyDoctorAvailabilityMutation,
   useGetHealthRecordsQuery,
   useUploadHealthRecordMutation,
   useDeleteHealthRecordMutation,
@@ -584,6 +752,7 @@ export const {
   useGetMedicalHistoryQuery,
   useUpdateMedicalHistoryMutation,
   useGetVitalsQuery,
+  useGetPatientVitalsForDoctorQuery,
   useLogVitalMutation,
   useDeleteVitalMutation,
   useGetWellnessPlanQuery,
@@ -602,6 +771,11 @@ export const {
   useModerateReviewMutation,
   useGetDoctorVerificationStatusQuery,
   useSubmitDoctorVerificationMutation,
+  useAnalyzeChestScanMutation,
+  useGetMyChestScansQuery,
+  useGetDoctorPatientScansQuery,
+  useGetPatientChestScansForDoctorQuery,
+  useAddChestScanNoteMutation,
   useUploadScanMutation,
   useGetMyScanReportsQuery,
   useGetScanReportByIdQuery,

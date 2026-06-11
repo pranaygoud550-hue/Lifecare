@@ -12,6 +12,10 @@ import {
   quickDemoLogin,
   unlockAccountHandler,
 } from '../controllers/authController.js';
+import {
+  getPatientSummaryByToken,
+  createRapidCarePrefillToken,
+} from '../controllers/patientSummaryController.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -39,5 +43,7 @@ router.post('/unlock-account', validate(unlockAccountSchema), unlockAccountHandl
 router.post('/logout', authenticate, logout);
 router.get('/profile', authenticate, getProfile);
 router.put('/profile', authenticate, validate(updateProfileSchema), updateProfile);
+router.get('/patient-summary/:token', getPatientSummaryByToken);
+router.post('/rapidcare-token', authenticate, createRapidCarePrefillToken);
 
 export default router;

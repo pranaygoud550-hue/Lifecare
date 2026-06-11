@@ -47,6 +47,14 @@ export function DashboardOverviewSection({
 
       <DashboardLivePill liveCount={liveCount} />
 
+      <button
+        type="button"
+        onClick={() => onTabChange('emergency')}
+        className="text-xs font-semibold text-red-600 hover:underline"
+      >
+        {t('dashboard.viewEmergencyHistory', 'View emergency history →')}
+      </button>
+
       <DashboardQuickActions onTabChange={onTabChange} />
 
       {latestVitals.length > 0 && (
