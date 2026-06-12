@@ -2,21 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'react-toastify';
-import { Heart, ArrowRight, Zap } from 'lucide-react';
+import { Heart, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OtpInput } from '@/components/auth/OtpInput';
-import {
-  useLoginOtpMutation,
-  useSendOtpMutation,
-  useDemoLoginMutation,
-} from '@/features/api/apiSlice';
+import { useLoginOtpMutation, useSendOtpMutation } from '@/features/api/apiSlice';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { DEMO_ACCOUNTS, getPostLoginPath } from '@/lib/demoAuth';
+import { getPostLoginPath } from '@/lib/demoAuth';
 import { formatPhoneDisplay, isValidIndianMobile, normalizePhone } from '@/lib/phone';
 import { useApiReady, useRetryOnFetchError } from '@/hooks/useApiReady';
 import type { User } from '@/types';
@@ -37,7 +33,6 @@ export function LoginPage() {
 
   const [sendOtp, { isLoading: sendingOtp }] = useSendOtpMutation();
   const [loginOtp, { isLoading: verifyingOtp }] = useLoginOtpMutation();
-  const [demoLogin, { isLoading: demoLoading }] = useDemoLoginMutation();
   const { checking: apiChecking } = useApiReady();
   const retryOnFetchError = useRetryOnFetchError();
 
@@ -69,18 +64,9 @@ export function LoginPage() {
         toast.success('OTP sent to your mobile');
       }
     } catch (err: unknown) {
-      const message = getApiErrorMessage(err, 'Could not send OTP');
-      if (isDevDemoPhone(normalized)) {
-        toast.error(`${message} — or tap Patient demo below for instant sign-in`);
-      } else {
-        toast.error(message);
-      }
+      toast.error(getApiErrorMessage(err, 'Could not send OTP'));
     }
   };
-
-  function isDevDemoPhone(p: string) {
-    return ['9876543210', '9876543211', '9999999999'].includes(normalizePhone(p));
-  }
 
   const handleVerifyCode = async () => {
     if (otp.length !== 6) return;
@@ -105,15 +91,6 @@ export function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [otp, step]);
 
-  const handleDemoLogin = async (phone: string) => {
-    try {
-      const result = await demoLogin({ phone }).unwrap();
-      afterAuth(result.data);
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, 'Demo sign-in failed'));
-    }
-  };
-
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4">
       <Card className="w-full max-w-md shadow-lg">
@@ -127,57 +104,24 @@ export function LoginPage() {
 
         <CardContent className="space-y-5">
           {step === 'phone' && (
-            <>
-              <form onSubmit={handleGetCode} className="space-y-4">
-                <div>
-                  <Label htmlFor="phone">{t('auth.mobileNumber')}</Label>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    autoComplete="tel"
-                    placeholder="9876543210"
-                    className="mt-1.5"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                  <p className="text-xs text-muted mt-1">
-                    Demo patient: <button type="button" className="text-primary font-medium hover:underline" onClick={() => setPhone('9876543210')}>9876543210</button>
-                  </p>
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={sendingOtp || apiChecking}>
-                  {sendingOtp ? t('common.loading') : t('auth.getCode')}
-                  {!sendingOtp && <ArrowRight className="h-4 w-4" />}
-                </Button>
-              </form>
-
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-border" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted">or try a demo account</span>
-                </div>
+            <form onSubmit={handleGetCode} className="space-y-4">
+              <div>
+                <Label htmlFor="phone">{t('auth.mobileNumber')}</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="10-digit mobile number"
+                  className="mt-1.5"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
               </div>
-
-              <div className="space-y-2">
-                {DEMO_ACCOUNTS.map((account) => (
-                  <Button
-                    key={account.phone}
-                    type="button"
-                    variant={account.label === 'Patient' ? 'secondary' : 'outline'}
-                    className="w-full h-auto py-3 flex flex-col items-start gap-0.5 text-left"
-                    onClick={() => handleDemoLogin(account.phone)}
-                    disabled={demoLoading}
-                  >
-                    <span className="flex items-center gap-2 font-medium">
-                      <Zap className="h-4 w-4 shrink-0" />
-                      {demoLoading ? 'Signing in...' : `${account.label} demo`}
-                    </span>
-                    <span className="text-xs font-normal text-muted pl-6">{account.description}</span>
-                  </Button>
-                ))}
-              </div>
-            </>
+              <Button type="submit" className="w-full gap-2" disabled={sendingOtp || apiChecking}>
+                {sendingOtp ? t('common.loading') : t('auth.getCode')}
+                {!sendingOtp && <ArrowRight className="h-4 w-4" />}
+              </Button>
+            </form>
           )}
 
           {step === 'code' && (

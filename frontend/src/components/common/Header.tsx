@@ -25,6 +25,9 @@ export function Header() {
   const [logoutApi] = useLogoutMutation();
   const navigate = useNavigate();
   const location = useLocation();
+  const isAuthRoute = ['/login', '/register', '/unlock-account'].some((p) =>
+    location.pathname.startsWith(p)
+  );
 
   const showCareNav = isAuthenticated && user && !['admin', 'pharmacy', 'ambulance'].includes(user.userType);
 
@@ -184,7 +187,7 @@ export function Header() {
         </nav>
 
         <div className="hidden md:flex items-center gap-2 shrink-0">
-          <NeedHelpButton variant="header" />
+          {!isAuthRoute && <NeedHelpButton variant="header" />}
 
           {isAuthenticated ? (
             <>

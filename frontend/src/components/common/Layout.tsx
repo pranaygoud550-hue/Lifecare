@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Header } from './Header';
 import { PatientCareNav } from './PatientCareNav';
 import { Footer } from './Footer';
@@ -10,8 +10,12 @@ import { PatientTopBar } from '@/components/patient/PatientTopBar';
 import { PatientBottomNav } from '@/components/patient/PatientBottomNav';
 import { usePatientAppShell } from '@/hooks/usePatientAppShell';
 
+const AUTH_ROUTES = ['/login', '/register', '/unlock-account'];
+
 export function Layout() {
   const patientShell = usePatientAppShell();
+  const { pathname } = useLocation();
+  const isAuthRoute = AUTH_ROUTES.some((p) => pathname.startsWith(p));
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -23,8 +27,8 @@ export function Layout() {
       </main>
       {!patientShell && <Footer />}
       {patientShell && <PatientBottomNav />}
-      <NeedHelpProvider patientShell={patientShell} />
-      <OneTapEmergencyProvider />
+      {!isAuthRoute && <NeedHelpProvider patientShell={patientShell} />}
+      {!isAuthRoute && <OneTapEmergencyProvider />}
       <InstallPrompt />
     </div>
   );
