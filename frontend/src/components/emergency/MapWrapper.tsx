@@ -9,6 +9,7 @@ export interface MapWrapperProps {
   patientLocation: MapCoordinate;
   ambulanceLocation?: MapCoordinate | null;
   hospitalLocation?: HospitalMapLocation | null;
+  routePath?: [number, number][] | null;
   className?: string;
 }
 

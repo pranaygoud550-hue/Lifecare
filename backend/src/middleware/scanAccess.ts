@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { Scan } from '../models/Scan.js';
 import { ScanReport } from '../models/ScanReport.js';
 import type { IScanReport } from '../models/ScanReport.js';
 
@@ -24,13 +25,26 @@ export const requireScanPatientOwner = async (
       return;
     }
 
-    const report = await ScanReport.findById(req.params.id).select('patientId');
-    if (!report) {
-      res.status(404).json({ success: false, message: 'Scan report not found' });
+    const scanId = String(req.params.id);
+    const patientId = req.user!.userId;
+
+    const chestScan = await Scan.findById(scanId).select('patientId');
+    if (chestScan) {
+      if (chestScan.patientId.toString() !== patientId) {
+        res.status(403).json({ success: false, message: 'You can only share your own scans.' });
+        return;
+      }
+      next();
       return;
     }
 
-    if (report.patientId.toString() !== req.user!.userId) {
+    const report = await ScanReport.findById(scanId).select('patientId');
+    if (!report) {
+      res.status(404).json({ success: false, message: 'Scan not found' });
+      return;
+    }
+
+    if (report.patientId.toString() !== patientId) {
       res.status(403).json({ success: false, message: 'You can only view your own scan reports.' });
       return;
     }

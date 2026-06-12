@@ -20,6 +20,7 @@ import navigationRoutes from './navigationRoutes.js';
 
 import reminderRoutes from './reminderRoutes.js';
 import ambulanceSyncRoutes from './ambulanceSyncRoutes.js';
+import rapidcareRoutes from './rapidcareRoutes.js';
 
 const router = Router();
 
@@ -43,5 +44,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/scans', scanRoutes);
 router.use('/navigation', navigationRoutes);
 router.use('/reminders', reminderRoutes);
+router.use('/rapidcare', rapidcareRoutes);
 
 export default router;

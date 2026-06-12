@@ -10,6 +10,9 @@ const LoginPage = lazy(() => import('@/pages/LoginPage').then((m) => ({ default:
 const RegisterPage = lazy(() => import('@/pages/RegisterPage').then((m) => ({ default: m.RegisterPage })));
 const DoctorsPage = lazy(() => import('@/pages/DoctorsPage').then((m) => ({ default: m.DoctorsPage })));
 const HospitalMapPage = lazy(() => import('@/pages/HospitalMapPage').then((m) => ({ default: m.HospitalMapPage })));
+const PatientHospitalsPage = lazy(() =>
+  import('@/pages/patient/PatientHospitalsPage').then((m) => ({ default: m.PatientHospitalsPage }))
+);
 const DoctorDetailPage = lazy(() => import('@/pages/DoctorDetailPage').then((m) => ({ default: m.DoctorDetailPage })));
 const BookingPage = lazy(() => import('@/pages/BookingPage').then((m) => ({ default: m.BookingPage })));
 const AppointmentsPage = lazy(() => import('@/pages/AppointmentsPage').then((m) => ({ default: m.AppointmentsPage })));
@@ -57,6 +60,12 @@ const PatientProfilePage = lazy(() =>
 const DoctorScansPage = lazy(() =>
   import('@/pages/DoctorScansPage').then((m) => ({ default: m.DoctorScansPage }))
 );
+const ScanAnalysisPage = lazy(() =>
+  import('@/pages/patient/ScanAnalysisPage').then((m) => ({ default: m.ScanAnalysisPage }))
+);
+const ScanHistoryPage = lazy(() =>
+  import('@/pages/patient/ScanHistoryPage').then((m) => ({ default: m.ScanHistoryPage }))
+);
 
 function PageLoad({ variant }: { variant?: 'default' | 'dashboard' | 'list' }) {
   return <PageSkeleton variant={variant} />;
@@ -98,6 +107,32 @@ export function AppRoutes() {
             />
             <Route path="dashboard/mediscan" element={<Suspense fallback={<PageLoad variant="dashboard" />}><MediScanPage /></Suspense>} />
             <Route path="dashboard/wellness" element={<Suspense fallback={<PageLoad variant="dashboard" />}><WellnessPage /></Suspense>} />
+            <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
+              <Route
+                path="patient/hospitals"
+                element={
+                  <Suspense fallback={<PageLoad variant="list" />}>
+                    <PatientHospitalsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="patient/scan-analysis"
+                element={
+                  <Suspense fallback={<PageLoad variant="dashboard" />}>
+                    <ScanAnalysisPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="patient/scan-history"
+                element={
+                  <Suspense fallback={<PageLoad variant="dashboard" />}>
+                    <ScanHistoryPage />
+                  </Suspense>
+                }
+              />
+            </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
               <Route

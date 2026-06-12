@@ -12,6 +12,7 @@ import {
   getDoctorScanAnalytics,
   scanReportToJSON,
 } from '../services/scanService.js';
+import { shareScanWithDoctor as shareChestScanRecord } from '../services/chestScanService.js';
 import type { ScanType } from '../types/scan.js';
 
 type RequestWithScan = Request & { scanReport?: IScanReport };
@@ -78,14 +79,23 @@ export const getScanReportById = asyncHandler(async (req: Request, res: Response
 });
 
 export const shareScanReport = asyncHandler(async (req: Request, res: Response) => {
-  const report = await shareReportWithDoctor(
-    String(req.params.id),
-    req.user!.userId,
-    req.body.doctorId
-  );
+  const scanId = String(req.params.id);
+  const patientId = req.user!.userId;
+  const doctorId = req.body.doctorId;
 
+  const chestScan = await shareChestScanRecord(scanId, patientId, doctorId);
+  if (chestScan) {
+    res.json({
+      success: true,
+      message: 'Scan shared with your doctor',
+      data: chestScan,
+    });
+    return;
+  }
+
+  const report = await shareReportWithDoctor(scanId, patientId, doctorId);
   if (!report) {
-    res.status(404).json({ success: false, message: 'Scan report not found' });
+    res.status(404).json({ success: false, message: 'Scan not found' });
     return;
   }
 

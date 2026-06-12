@@ -380,8 +380,10 @@ export const unlockAccount = async (token: string) => {
 };
 
 export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
-  if (process.env.NODE_ENV === 'production') {
-    throw Object.assign(new Error('Not available'), { statusCode: 403 });
+  const allowDemo =
+    process.env.NODE_ENV !== 'production' || process.env.ALLOW_DEMO_LOGIN === 'true';
+  if (!allowDemo) {
+    throw Object.assign(new Error('Demo login disabled in production'), { statusCode: 403 });
   }
   const normalizedPhone = normalizePhone(phone);
   if (!isDevDemoPhone(normalizedPhone)) {

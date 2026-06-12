@@ -13,7 +13,7 @@ import { DashboardOverviewSection } from '@/components/dashboard/DashboardOvervi
 import { HealthVitalsDashboard } from '@/components/dashboard/HealthVitalsDashboard';
 import { DashboardCareSection } from '@/components/dashboard/DashboardCareSection';
 import { DashboardProfileSection } from '@/components/dashboard/DashboardProfileSection';
-import { EmergencyHistorySection } from '@/components/dashboard/EmergencyHistorySection';
+import { EmergencyHistory } from '@/components/patient/EmergencyHistory';
 import { RapidCareWidget } from '@/components/dashboard/RapidCareWidget';
 import type { ScanReport } from '@/types/mediscan';
 import type { Appointment, Prescription, VitalReading } from '@/types';
@@ -122,7 +122,7 @@ export function PatientDashboard() {
           </>
         )}
 
-        {activeTab === 'emergency' && <EmergencyHistorySection />}
+        {activeTab === 'emergency' && <EmergencyHistory />}
 
         {activeTab === 'vitals' && (
           <div id="vitals" className="space-y-6">

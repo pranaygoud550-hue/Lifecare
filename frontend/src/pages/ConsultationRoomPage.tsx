@@ -17,6 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getInitials, formatDate } from '@/lib/utils';
 import { useWebRTC } from '@/hooks/useWebRTC';
+import { PatientVitalsPanel } from '@/components/consultation/PatientVitalsPanel';
 import type { User as UserType } from '@/types';
 
 interface ChatMessage {
@@ -270,6 +271,8 @@ export function ConsultationRoomPage() {
           </Card>
         )}
       </div>
+
+      {isDoctor && other?._id && <PatientVitalsPanel patientId={other._id} />}
 
       <div className="flex items-center justify-center gap-4 py-4 bg-card border-t border-border">
         <Button

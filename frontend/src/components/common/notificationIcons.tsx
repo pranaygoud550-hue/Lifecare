@@ -26,9 +26,22 @@ const iconMap: Record<string, typeof Bell> = {
   promotional: AlertCircle,
   scan: Scan,
   scan_urgent: Scan,
+  RAPIDCARE_UPDATE: Ambulance,
+  emergency_sync: Ambulance,
 };
 
-export function NotificationIcon({ type, className }: { type: string; className?: string }) {
+export function NotificationIcon({
+  type,
+  className,
+  data,
+}: {
+  type: string;
+  className?: string;
+  data?: Record<string, unknown>;
+}) {
+  if (type === 'RAPIDCARE_UPDATE' || (data?.icon as string) === '🚑') {
+    return <span className={cn('text-base leading-none', className)} aria-hidden>🚑</span>;
+  }
   const Icon = iconMap[type] || Bell;
   return <Icon className={cn('h-4 w-4 shrink-0', className)} />;
 }

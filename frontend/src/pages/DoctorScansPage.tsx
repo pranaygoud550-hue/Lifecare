@@ -1,23 +1,31 @@
 import { useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Link, NavLink } from 'react-router-dom';
-import { ArrowLeft, Brain, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Brain, LayoutDashboard, Users } from 'lucide-react';
 import { ScanAnalyticsDashboard } from '@/components/doctor/mediscan/ScanAnalyticsDashboard';
 import { PendingScansTable } from '@/components/doctor/mediscan/PendingScansTable';
 import { ScanReviewModal } from '@/components/doctor/mediscan/ScanReviewModal';
-import { useGetDoctorScansQuery } from '@/features/api/apiSlice';
+import { PatientScansTab } from '@/components/doctor/PatientScansTab';
+import {
+  useGetDoctorScansQuery,
+  useGetDoctorPatientScansQuery,
+} from '@/features/api/apiSlice';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ScanReport } from '@/types/mediscan';
 
-const DOCTOR_TABS = [
+const DOCTOR_NAV_TABS = [
   { to: '/dashboard', label: 'Overview', icon: LayoutDashboard, end: true },
   { to: '/dashboard/doctor/scans', label: 'AI Scans', icon: Brain },
 ];
 
+type ScanSection = 'ai-scans' | 'patient-scans';
+
 export function DoctorScansPage() {
   const [reviewScan, setReviewScan] = useState<ScanReport | null>(null);
+  const [activeSection, setActiveSection] = useState<ScanSection>('ai-scans');
   const { data, refetch } = useGetDoctorScansQuery();
+  const { data: patientScansData } = useGetDoctorPatientScansQuery();
 
   const pendingQueue = useMemo(
     () =>
@@ -28,6 +36,7 @@ export function DoctorScansPage() {
   );
 
   const pendingCount = pendingQueue.length;
+  const patientScanCount = patientScansData?.data?.length ?? 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background">
@@ -37,7 +46,7 @@ export function DoctorScansPage() {
       <div className="border-b border-border bg-card/90 sticky top-16 z-30">
         <div className="container-custom">
           <nav className="flex gap-1 overflow-x-auto py-2" aria-label="Doctor dashboard">
-            {DOCTOR_TABS.map((tab) => (
+            {DOCTOR_NAV_TABS.map((tab) => (
               <NavLink
                 key={tab.to}
                 to={tab.to}
@@ -80,13 +89,56 @@ export function DoctorScansPage() {
             AI Scans
           </h1>
           <p className="text-muted mt-1">
-            Review MediScan AI results, confirm or override predictions, and finalize reports for patients.
+            Review MediScan AI results and chest X-rays shared by your patients.
           </p>
         </div>
 
-        <ScanAnalyticsDashboard />
+        <div className="flex gap-2 border-b border-border">
+          <button
+            type="button"
+            onClick={() => setActiveSection('ai-scans')}
+            className={cn(
+              'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+              activeSection === 'ai-scans'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-foreground'
+            )}
+          >
+            MediScan Reports
+            {pendingCount > 0 && (
+              <Badge variant="warning" className="ml-2">
+                {pendingCount}
+              </Badge>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('patient-scans')}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors',
+              activeSection === 'patient-scans'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted hover:text-foreground'
+            )}
+          >
+            <Users className="h-4 w-4" />
+            Patient Scans
+            {patientScanCount > 0 && (
+              <Badge variant="secondary" className="ml-1">
+                {patientScanCount}
+              </Badge>
+            )}
+          </button>
+        </div>
 
-        <PendingScansTable onReview={setReviewScan} />
+        {activeSection === 'ai-scans' ? (
+          <>
+            <ScanAnalyticsDashboard />
+            <PendingScansTable onReview={setReviewScan} />
+          </>
+        ) : (
+          <PatientScansTab />
+        )}
       </div>
 
       {reviewScan && (

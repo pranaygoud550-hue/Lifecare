@@ -8,6 +8,7 @@ import {
   getDriverActiveRequest,
   patchDriverAvailability,
   verifyEmergencyOtp,
+  markDriverArrivedRequest,
 } from '../controllers/emergencyController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -75,6 +76,14 @@ router.post(
   authorize('ambulance'),
   validate(emergencyRequestIdParamSchema),
   verifyEmergencyOtp
+);
+
+router.post(
+  '/requests/:id/arrived',
+  authenticate,
+  authorize('ambulance'),
+  validate(emergencyRequestIdParamSchema),
+  markDriverArrivedRequest
 );
 
 export default router;

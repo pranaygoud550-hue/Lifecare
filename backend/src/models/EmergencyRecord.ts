@@ -1,48 +1,64 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+export type RapidCareEventType =
+  | 'BOOKING_CREATED'
+  | 'DRIVER_ASSIGNED'
+  | 'DRIVER_ARRIVING'
+  | 'COMPLETED';
+
 export interface IEmergencyRecord extends Document {
-  rapidcareBookingId: string;
   patientId?: Types.ObjectId;
   guestPhone?: string;
   guestName?: string;
+  bookingId: string;
+  source: 'rapidcare';
+  eventType: RapidCareEventType;
   patientName: string;
   patientPhone: string;
-  pickupLocation: string;
-  hospital: string;
-  vehicleType: string;
   condition: string;
-  dispatchTime: Date;
-  arrivalTime: Date;
-  responseTimeMinutes: number;
-  driverName: string;
-  vehicleNumber: string;
+  pickupAddress: string;
+  destinationHospital: string;
+  vehicleType: string;
+  driverName?: string;
+  vehicleNumber?: string;
   fare: number;
   paymentStatus: string;
-  source: 'rapidcare' | 'lifecare_sos';
+  dispatchTime?: Date;
+  arrivalTime?: Date;
+  completedTime?: Date;
+  responseTimeMinutes?: number;
+  sharedWithDoctor: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
 
 const emergencyRecordSchema = new Schema<IEmergencyRecord>(
   {
-    rapidcareBookingId: { type: String, required: true, unique: true, index: true },
     patientId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
-    guestPhone: String,
+    guestPhone: { type: String, index: true },
     guestName: String,
+    bookingId: { type: String, required: true, unique: true, index: true },
+    source: { type: String, enum: ['rapidcare'], default: 'rapidcare' },
+    eventType: {
+      type: String,
+      enum: ['BOOKING_CREATED', 'DRIVER_ASSIGNED', 'DRIVER_ARRIVING', 'COMPLETED'],
+      required: true,
+    },
     patientName: { type: String, required: true },
     patientPhone: { type: String, required: true },
-    pickupLocation: { type: String, required: true },
-    hospital: { type: String, required: true },
-    vehicleType: { type: String, required: true },
     condition: { type: String, required: true },
-    dispatchTime: { type: Date, required: true },
-    arrivalTime: { type: Date, required: true },
-    responseTimeMinutes: { type: Number, required: true },
-    driverName: { type: String, required: true },
-    vehicleNumber: { type: String, required: true },
-    fare: { type: Number, required: true },
-    paymentStatus: { type: String, required: true },
-    source: { type: String, enum: ['rapidcare', 'lifecare_sos'], default: 'rapidcare' },
+    pickupAddress: { type: String, required: true },
+    destinationHospital: { type: String, required: true },
+    vehicleType: { type: String, required: true },
+    driverName: String,
+    vehicleNumber: String,
+    fare: { type: Number, default: 0 },
+    paymentStatus: { type: String, default: 'pending' },
+    dispatchTime: Date,
+    arrivalTime: Date,
+    completedTime: Date,
+    responseTimeMinutes: Number,
+    sharedWithDoctor: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

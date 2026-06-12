@@ -11,6 +11,7 @@ import { PatientDashboard } from '@/components/dashboard/PatientDashboard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DoctorScheduleEditor } from '@/components/doctor/DoctorScheduleEditor';
 import { getInitials } from '@/lib/utils';
 
 const ROLE_KEYS: Record<string, string> = {
@@ -143,21 +144,26 @@ function StaffDashboard() {
         </Card>
 
         {user.userType === 'doctor' && user.doctorDetails && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{t('dashboard.doctorStats')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p>
-                <span className="text-muted">{t('dashboard.specialization')}:</span>{' '}
-                {user.doctorDetails.specializations?.join(', ')}
-              </p>
-              <p>
-                <span className="text-muted">{t('dashboard.rating')}:</span> {user.doctorDetails.rating} (
-                {user.doctorDetails.reviewCount} {t('dashboard.reviews')})
-              </p>
-            </CardContent>
-          </Card>
+          <>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">{t('dashboard.doctorStats')}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>
+                  <span className="text-muted">{t('dashboard.specialization')}:</span>{' '}
+                  {user.doctorDetails.specializations?.join(', ')}
+                </p>
+                <p>
+                  <span className="text-muted">{t('dashboard.rating')}:</span> {user.doctorDetails.rating} (
+                  {user.doctorDetails.reviewCount} {t('dashboard.reviews')})
+                </p>
+              </CardContent>
+            </Card>
+            <div className="lg:col-span-2">
+              <DoctorScheduleEditor />
+            </div>
+          </>
         )}
 
         <Card>

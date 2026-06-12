@@ -431,6 +431,21 @@ export interface EmergencyHospitalInfo {
   distanceMeters: number;
 }
 
+export interface SmartHospitalRecommendation {
+  reason: string;
+  scanContext: {
+    prediction: string;
+    confidence: number;
+    explanation: string;
+  } | null;
+  alternatives?: Array<{
+    place_id?: string;
+    name: string;
+    distance?: string;
+    specialtyTags?: string[];
+  }>;
+}
+
 export interface EmergencySosDispatchData {
   requestId: string;
   estimatedArrival: string;
@@ -441,6 +456,7 @@ export interface EmergencySosDispatchData {
   assignedAmbulance: EmergencyAmbulanceInfo;
   candidateAmbulances?: EmergencyAmbulanceInfo[];
   trackLink: string;
+  smartRecommendation?: SmartHospitalRecommendation | null;
 }
 
 export interface EmergencyLiveEtaData {

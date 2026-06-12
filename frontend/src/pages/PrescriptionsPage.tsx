@@ -1,8 +1,8 @@
-import { FileText, Download, Calendar, User, Plus } from 'lucide-react';
+import { FileText, Download, Calendar, User, Plus, Bell } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { useGetPrescriptionsQuery, useCreatePrescriptionMutation } from '@/features/api/apiSlice';
+import { useGetPrescriptionsQuery, useCreatePrescriptionMutation, useEnablePrescriptionRemindersMutation } from '@/features/api/apiSlice';
 import { useAppSelector } from '@/hooks/redux';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,7 @@ export function PrescriptionsPage() {
 
   const { data, isLoading, refetch } = useGetPrescriptionsQuery();
   const [createPrescription, { isLoading: creating }] = useCreatePrescriptionMutation();
+  const [enableReminders, { isLoading: enablingReminders }] = useEnablePrescriptionRemindersMutation();
 
   const prescriptions = data?.data || [];
 
@@ -50,6 +51,18 @@ export function PrescriptionsPage() {
   const getDoctor = (p: Prescription): UserType | null => {
     if (typeof p.doctorId === 'object') return p.doctorId as UserType;
     return null;
+  };
+
+  const handleEnableReminders = async (prescriptionId: string) => {
+    try {
+      if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
+      }
+      await enableReminders(prescriptionId).unwrap();
+      toast.success('Medicine reminders enabled — browser notifications at dose times');
+    } catch {
+      toast.error('Could not enable reminders');
+    }
   };
 
   return (
@@ -163,14 +176,27 @@ export function PrescriptionsPage() {
                         </p>
                       )}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 shrink-0"
-                      onClick={() => downloadPrescriptionPdf(rx, doctor)}
-                    >
-                      <Download className="h-4 w-4" /> Download
-                    </Button>
+                    <div className="flex flex-col gap-2 shrink-0">
+                      {!isDoctor && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="gap-1"
+                          disabled={enablingReminders}
+                          onClick={() => void handleEnableReminders(rx._id)}
+                        >
+                          <Bell className="h-4 w-4" /> Remind me
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        onClick={() => downloadPrescriptionPdf(rx, doctor)}
+                      >
+                        <Download className="h-4 w-4" /> Download
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

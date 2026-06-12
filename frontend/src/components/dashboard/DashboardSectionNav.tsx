@@ -19,7 +19,7 @@ export function DashboardSectionNav({
     { id: 'overview', label: t('dashboard.tabOverview'), hint: t('dashboard.tabOverviewHint'), icon: LayoutGrid },
     { id: 'vitals', label: t('dashboard.tabVitals'), hint: t('dashboard.tabVitalsHint'), icon: Activity },
     { id: 'care', label: t('dashboard.tabCare'), hint: t('dashboard.tabCareHint'), icon: Calendar },
-    { id: 'emergency', label: t('dashboard.tabEmergency', 'Emergency'), hint: t('dashboard.tabEmergencyHint', 'RapidCare history'), icon: Ambulance },
+    { id: 'emergency', label: t('dashboard.tabEmergency', '🚑 Emergency History'), hint: t('dashboard.tabEmergencyHint', 'RapidCare trips'), icon: Ambulance },
     { id: 'profile', label: t('dashboard.tabProfile'), hint: t('dashboard.tabProfileHint'), icon: User },
   ];
 

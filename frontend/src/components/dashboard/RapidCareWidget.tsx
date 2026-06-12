@@ -15,7 +15,7 @@ export function RapidCareWidget() {
   const [iframeUrl, setIframeUrl] = useState('');
   const [createToken, { isLoading }] = useCreateRapidCarePrefillTokenMutation();
 
-  async function openBooking(type: 'emergency' | 'scheduled') {
+  async function openBooking(type: 'emergency' | 'uncomfortable' | 'consultancy') {
     let url = `${RAPIDCARE_URL}/book?type=${type}`;
     if (user) {
       const name = [user.profile?.firstName, user.profile?.lastName].filter(Boolean).join(' ');
@@ -73,7 +73,7 @@ export function RapidCareWidget() {
                   variant="outline"
                   disabled={isLoading}
                   className="border-white/40 bg-transparent text-white hover:bg-white/10"
-                  onClick={() => openBooking('scheduled')}
+                  onClick={() => openBooking('consultancy')}
                 >
                   <Calendar className="mr-1.5 h-4 w-4" />
                   {t('dashboard.rapidcareSchedule', 'Schedule')}

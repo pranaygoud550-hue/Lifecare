@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Droplets, Heart, Wind, LineChart } from 'lucide-react';
+import { Activity, Droplets, Heart, Wind, LineChart, Scale } from 'lucide-react';
 import { useGetVitalsQuery } from '@/features/api/apiSlice';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { VitalSummaryCards } from '@/components/vitals/VitalSummaryCards';
@@ -22,6 +22,7 @@ export function HealthVitalsDashboard() {
       { type: 'blood_pressure' as const, icon: Activity, title: t('dashboard.bloodPressure'), subtitle: t('dashboard.bloodPressureDesc'), color: 'border-red-200/50' },
       { type: 'heart_rate' as const, icon: Heart, title: t('dashboard.heartHealth'), subtitle: t('dashboard.heartHealthDesc'), color: 'border-rose-200/50' },
       { type: 'oxygen' as const, icon: Wind, title: t('dashboard.oxygen'), subtitle: t('dashboard.oxygenDesc'), color: 'border-sky-200/50' },
+      { type: 'weight' as const, icon: Scale, title: 'Weight', subtitle: 'Track body weight trends over time', color: 'border-violet-200/50' },
     ],
     [t]
   );

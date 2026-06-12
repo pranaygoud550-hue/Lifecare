@@ -5,6 +5,10 @@ import { appointmentPaths } from './paths/appointments.js';
 import { emergencyPaths } from './paths/emergency.js';
 import { pharmacyPaths } from './paths/pharmacy.js';
 import { paymentPaths } from './paths/payments.js';
+import { hospitalPaths } from './paths/hospitals.js';
+import { navigationPaths } from './paths/navigation.js';
+import { reminderPaths } from './paths/reminders.js';
+import { doctorExtraPaths } from './paths/doctors.js';
 
 export function buildOpenApiSpec() {
   const localUrl = `http://localhost:${config.port}`;
@@ -44,6 +48,10 @@ export function buildOpenApiSpec() {
       { name: 'Emergency', description: 'SOS dispatch and ambulance tracking' },
       { name: 'Pharmacy', description: 'Medicine catalog and orders' },
       { name: 'Payments', description: 'Stripe payments and coupons' },
+      { name: 'Hospitals', description: 'Google Places hospital discovery' },
+      { name: 'Navigation', description: 'Google Directions ambulance routing' },
+      { name: 'Reminders', description: 'Medicine reminder schedules' },
+      { name: 'Doctors', description: 'Doctor schedule and patient vitals' },
     ],
     paths: {
       ...authPaths,
@@ -51,6 +59,10 @@ export function buildOpenApiSpec() {
       ...emergencyPaths,
       ...pharmacyPaths,
       ...paymentPaths,
+      ...hospitalPaths,
+      ...navigationPaths,
+      ...reminderPaths,
+      ...doctorExtraPaths,
     },
     components: {
       securitySchemes: {

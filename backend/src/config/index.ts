@@ -52,6 +52,12 @@ export const config = {
   /** Base URL for locally stored files (MediScan fetch, etc.) */
   backendUrl,
   mediscan: {
-    apiUrl: process.env.MEDISCAN_API_URL || 'http://localhost:8000',
+    apiUrl: process.env.MEDISCAN_API_URL || 'https://mediscan-api.onrender.com',
+  },
+  google: {
+    placesApiKey: process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',
+    mapsApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_PLACES_API_KEY || '',
+    placesCacheTtlSeconds: 600,
+    directionsCacheTtlSeconds: 120,
   },
 };

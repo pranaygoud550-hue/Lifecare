@@ -77,6 +77,9 @@ interface EmergencyState {
   hasArrivedAlert: boolean;
   pickupOtp: string | null;
   dispatchSnapshot: EmergencySosDispatchData | null;
+  smartRecommendation: import('@/types').SmartHospitalRecommendation | null;
+  navigationRoutePath: [number, number][] | null;
+  nextNavInstruction: string | null;
 }
 
 const initialTriage: TriageAnswers = {
@@ -112,6 +115,9 @@ const initialState: EmergencyState = {
   hasArrivedAlert: false,
   pickupOtp: null,
   dispatchSnapshot: null,
+  smartRecommendation: null,
+  navigationRoutePath: null,
+  nextNavInstruction: null,
 };
 
 function trackingFromDispatch(
@@ -140,6 +146,7 @@ function trackingFromDispatch(
     vehicleNumber: ambulance.vehicleNumber,
     driverPhone: ambulance.driver?.phone ?? null,
     dispatchSnapshot: dispatch,
+    smartRecommendation: dispatch.smartRecommendation ?? null,
   };
 }
 
@@ -289,6 +296,24 @@ const emergencySlice = createSlice({
     updateEta: (state, action: PayloadAction<number | null>) => {
       state.eta = action.payload;
     },
+    updateNavigationRoute: (
+      state,
+      action: PayloadAction<{
+        path?: [number, number][] | null;
+        eta?: number | null;
+        nextInstruction?: string | null;
+      }>
+    ) => {
+      if (action.payload.path !== undefined) {
+        state.navigationRoutePath = action.payload.path;
+      }
+      if (action.payload.eta != null) {
+        state.eta = action.payload.eta;
+      }
+      if (action.payload.nextInstruction !== undefined) {
+        state.nextNavInstruction = action.payload.nextInstruction;
+      }
+    },
     clearEmergency: (state) => {
       state.requestId = null;
       state.status = 'searching';
@@ -304,6 +329,9 @@ const emergencySlice = createSlice({
       state.hasArrivedAlert = false;
       state.pickupOtp = null;
       state.dispatchSnapshot = null;
+      state.smartRecommendation = null;
+      state.navigationRoutePath = null;
+      state.nextNavInstruction = null;
     },
     activateOneTapEmergency: (
       state,
@@ -353,6 +381,7 @@ export const {
   setEmergencyArrived,
   dismissArrivedAlert,
   updateEta,
+  updateNavigationRoute,
   clearEmergency,
   activateOneTapEmergency,
 } = emergencySlice.actions;

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ShieldCheck, Award, Truck, Headphones } from 'lucide-react';
 
-export function TrustStrip() {
+export function TrustStrip({ id }: { id?: string }) {
   const { t } = useTranslation();
 
   const items = [
@@ -12,7 +12,7 @@ export function TrustStrip() {
   ];
 
   return (
-    <section className="border-y border-border bg-white py-6">
+    <section id={id} className="border-y border-border bg-white py-6 scroll-mt-20">
       <div className="container-custom">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           {items.map(({ icon: Icon, label, sub }) => (

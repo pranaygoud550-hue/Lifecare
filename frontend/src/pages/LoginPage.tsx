@@ -16,25 +16,12 @@ import {
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { isPatientProfileIncomplete } from '@/lib/medicalFormUtils';
+import { DEMO_ACCOUNTS, getPostLoginPath } from '@/lib/demoAuth';
 import { formatPhoneDisplay, isValidIndianMobile, normalizePhone } from '@/lib/phone';
 import { useApiReady, useRetryOnFetchError } from '@/hooks/useApiReady';
 import type { User } from '@/types';
 
 type Step = 'phone' | 'code';
-
-const DEMO_ACCOUNTS = [
-  { phone: '9876543210', label: 'Patient', description: 'Book appointments & pharmacy' },
-  { phone: '9876543211', label: 'Doctor', description: 'Consultations & prescriptions' },
-  { phone: '9999999999', label: 'Admin', description: 'Dashboard & user management' },
-] as const;
-
-function getPostLoginPath(user: User): string {
-  if (isPatientProfileIncomplete(user)) return '/dashboard/profile';
-  if (user.userType === 'admin') return '/admin';
-  if (user.userType === 'ambulance') return '/attendant';
-  return '/dashboard';
-}
 
 export function LoginPage() {
   const { t } = useTranslation();

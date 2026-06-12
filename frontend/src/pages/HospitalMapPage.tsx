@@ -1,9 +1,9 @@
-import { HospitalNearbyMap } from '@/components/hospital/HospitalNearbyMap';
+import { GoogleHospitalsExplorer } from '@/components/hospital/GoogleHospitalsExplorer';
 
 export function HospitalMapPage() {
   return (
     <div className="container-custom py-8">
-      <HospitalNearbyMap />
+      <GoogleHospitalsExplorer />
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { LandingHero } from '@/components/landing/LandingHero';
+import { PageSEO } from '@/components/seo/PageSEO';
+import { HeroSection } from '@/components/home/HeroSection';
 import { TrustStrip } from '@/components/landing/TrustStrip';
 import { MediScanShowcaseSection } from '@/components/landing/MediScanShowcaseSection';
 import { ServicesOverview } from '@/components/landing/ServicesOverview';
@@ -11,8 +12,9 @@ import { AppDownloadSection } from '@/components/landing/AppDownloadSection';
 export function HomePage() {
   return (
     <>
-      <LandingHero />
-      <TrustStrip />
+      <PageSEO titleKey="seo.homeTitle" descriptionKey="seo.homeDescription" path="/" />
+      <HeroSection />
+      <TrustStrip id="how-it-works" />
       <MediScanShowcaseSection />
       <ServicesOverview />
       <SpecializationsSection />

@@ -406,18 +406,27 @@ export async function handleDriverAccepted(
   }
 }
 
-export async function handleDriverArrived(
+/** Mark driver arrived — shared by socket handler and REST API. */
+export async function markDriverArrived(
   io: Server,
-  socket: AuthenticatedSocket,
-  payload: { requestId: string }
-): Promise<void> {
-  if (!socket.data.authenticated || socket.data.userType !== 'ambulance') return;
+  requestId: string,
+  driverUserId: string
+): Promise<{ ok: boolean; message?: string }> {
+  const request = await findEmergencyRequestByIdentifier(requestId);
+  if (!request) return { ok: false, message: 'Emergency request not found' };
 
-  const request = await findEmergencyRequestByIdentifier(payload.requestId);
-  if (!request) return;
+  const verified = await verifyAssignedDriver(request, driverUserId);
+  if (!verified.ok || !verified.unit) {
+    return { ok: false, message: 'You are not assigned to this emergency' };
+  }
 
-  const verified = await verifyAssignedDriver(request, socket.data.userId!);
-  if (!verified.ok || !verified.unit) return;
+  if (!['dispatched', 'searching'].includes(request.status)) {
+    return { ok: false, message: `Cannot mark arrived from status: ${request.status}` };
+  }
+
+  if (!request.pickupOtp) {
+    request.pickupOtp = generatePickupOtp();
+  }
 
   request.status = 'arrived';
   request.arrivedAt = new Date();
@@ -426,16 +435,29 @@ export async function handleDriverArrived(
 
   const arrivedPayload = {
     requestId: request.requestId,
-    status: 'arrived',
+    status: 'arrived' as const,
     message: 'Ambulance has arrived at your location',
+    pickupOtp: request.pickupOtp,
   };
 
   io.to(emergencyRoom(request.requestId)).emit('emergency:arrived', arrivedPayload);
   emitToUserId(io, String(request.patientId), 'emergency:arrived', arrivedPayload);
   io.to(emergencyRoom(request.requestId)).emit('emergency:statusUpdate', {
     ...(await buildDriverPayload(verified.unit, request)),
+    pickupOtp: request.pickupOtp,
     message: 'Ambulance has arrived at your location',
   });
+
+  return { ok: true };
+}
+
+export async function handleDriverArrived(
+  io: Server,
+  socket: AuthenticatedSocket,
+  payload: { requestId: string }
+): Promise<void> {
+  if (!socket.data.authenticated || socket.data.userType !== 'ambulance') return;
+  await markDriverArrived(io, payload.requestId, socket.data.userId!);
 }
 
 export async function handleDriverPickedUp(

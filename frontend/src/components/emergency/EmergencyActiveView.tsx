@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useVisiblePollingInterval } from '@/hooks/usePageVisible';
 import {
-  Ambulance, Building2, Clock, Loader2, Phone,
+  Ambulance, Building2, Brain, Clock, Loader2, Phone, Sparkles,
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { useEmergencySocket } from '@/hooks/useEmergencySocket';
 import {
   useCancelEmergencyMutation,
   useGetLiveETAQuery,
+  useGetNavigationEtaQuery,
 } from '@/features/api/apiSlice';
 import {
   clearEmergency,
@@ -19,6 +20,7 @@ import {
   updateAmbulanceLocation,
   updateEta,
   updateStatus,
+  updateNavigationRoute,
 } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
 import type { EmergencyRequestStatus } from '@/types';
@@ -76,7 +78,9 @@ export function EmergencyActiveView() {
     isDelayed,
     hasArrivedAlert,
     dispatchSnapshot,
+    smartRecommendation,
     pickupOtp,
+    navigationRoutePath,
   } = useAppSelector((s) => s.emergency);
 
   useEmergencySocket();
@@ -84,8 +88,12 @@ export function EmergencyActiveView() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
-  const etaPollMs = useVisiblePollingInterval(15000);
+  const etaPollMs = useVisiblePollingInterval(10000);
   const { data: etaData, isFetching: etaFetching } = useGetLiveETAQuery(requestId ?? '', {
+    skip: !requestId,
+    pollingInterval: etaPollMs,
+  });
+  const { data: navData } = useGetNavigationEtaQuery(requestId ?? '', {
     skip: !requestId,
     pollingInterval: etaPollMs,
   });
@@ -93,7 +101,8 @@ export function EmergencyActiveView() {
   const [cancelEmergency, { isLoading: cancelling }] = useCancelEmergencyMutation();
 
   const liveEta = etaData?.data;
-  const calculatedMinutes = liveEta?.calculatedETA ?? eta ?? dispatchSnapshot?.calculatedETA ?? null;
+  const navEta = navData?.data;
+  const calculatedMinutes = navEta?.calculatedETA ?? liveEta?.calculatedETA ?? eta ?? dispatchSnapshot?.calculatedETA ?? null;
   const estimatedArrival = liveEta?.estimatedArrival ?? dispatchSnapshot?.estimatedArrival;
   const currentStatus = liveEta?.status ?? status;
 
@@ -113,6 +122,17 @@ export function EmergencyActiveView() {
       dispatch(updateEta(liveEta.calculatedETA));
     }
   }, [liveEta, dispatch]);
+
+  useEffect(() => {
+    if (!navEta) return;
+    dispatch(
+      updateNavigationRoute({
+        path: navEta.decodedPath ?? null,
+        eta: navEta.calculatedETA ?? null,
+        nextInstruction: navEta.steps?.[0] ?? null,
+      })
+    );
+  }, [navEta, dispatch]);
 
   useEffect(() => {
     if (!estimatedArrival) {
@@ -214,6 +234,7 @@ export function EmergencyActiveView() {
               patientLocation={patientLocation}
               ambulanceLocation={ambulanceLocation}
               hospitalLocation={hospitalLocation}
+              routePath={navigationRoutePath ?? navEta?.decodedPath ?? null}
             />
           </section>
 
@@ -231,17 +252,45 @@ export function EmergencyActiveView() {
           </section>
 
           {hospitalLocation && (
-            <section className="rounded-2xl bg-red-900/40 border border-red-500/20 p-4">
+            <section className="rounded-2xl bg-red-900/40 border border-red-500/20 p-4 space-y-3">
               <div className="flex items-start gap-3">
                 <Building2 className="h-5 w-5 text-red-300 shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-xs text-red-200 uppercase tracking-wide mb-1">Nearest hospital</p>
+                  <p className="text-xs text-red-200 uppercase tracking-wide mb-1">
+                    {smartRecommendation ? 'AI-recommended hospital' : 'Nearest hospital'}
+                  </p>
                   <p className="font-semibold">{hospitalLocation.name}</p>
                   {dispatchSnapshot?.nearestHospital?.address && (
                     <p className="text-sm text-red-100 mt-1">{dispatchSnapshot.nearestHospital.address}</p>
                   )}
                 </div>
               </div>
+
+              {smartRecommendation && (
+                <div className="rounded-xl bg-violet-950/50 border border-violet-400/30 p-3 text-sm">
+                  <p className="flex items-center gap-2 font-semibold text-violet-200 mb-2">
+                    <Sparkles className="h-4 w-4" />
+                    Smart match from your MediScan
+                  </p>
+                  <p className="text-violet-100/90 leading-relaxed">{smartRecommendation.reason}</p>
+                  {smartRecommendation.scanContext && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1 bg-violet-900/60 px-2 py-1 rounded-full">
+                        <Brain className="h-3 w-3" />
+                        {smartRecommendation.scanContext.prediction}
+                      </span>
+                      <span className="text-violet-300">
+                        {smartRecommendation.scanContext.confidence}% confidence
+                      </span>
+                    </div>
+                  )}
+                  {smartRecommendation.alternatives && smartRecommendation.alternatives.length > 0 && (
+                    <p className="text-xs text-violet-300/80 mt-2">
+                      Alternatives: {smartRecommendation.alternatives.map((a) => a.name).join(' · ')}
+                    </p>
+                  )}
+                </div>
+              )}
             </section>
           )}
 

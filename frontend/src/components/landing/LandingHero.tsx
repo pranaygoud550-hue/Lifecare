@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search, Shield, Clock, Video, Pill, Ambulance, ArrowRight } from 'lucide-react';
+import { DemoLoginButtons } from '@/components/landing/DemoLoginButtons';
 import { Button } from '@/components/ui/button';
 
 export function LandingHero() {
@@ -48,7 +49,7 @@ export function LandingHero() {
               </Link>
             </div>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-3 mb-8">
               <Link to="/doctors">
                 <Button variant="outline" className="gap-2 bg-white">
                   <Video className="h-4 w-4 text-primary" /> {t('nav.videoConsult')}
@@ -64,6 +65,10 @@ export function LandingHero() {
                   <Ambulance className="h-4 w-4" /> {t('nav.sosAmbulance')}
                 </Button>
               </Link>
+            </div>
+
+            <div className="mb-8">
+              <DemoLoginButtons />
             </div>
           </div>
 

@@ -47,6 +47,9 @@ export function NotificationBell() {
     else if (n.type === 'prescription') navigate('/prescriptions');
     else if (n.type === 'wallet') navigate('/wallet');
     else if (n.type === 'ambulance') navigate('/emergency');
+    else if (n.type === 'RAPIDCARE_UPDATE' || n.type === 'emergency_sync') {
+      navigate('/dashboard?tab=emergency');
+    }
   };
 
   return (
@@ -100,7 +103,7 @@ export function NotificationBell() {
                         !n.isRead ? 'bg-primary/15 text-primary' : 'bg-muted/30 text-muted'
                       )}
                     >
-                      <NotificationIcon type={n.type} />
+                      <NotificationIcon type={n.type} data={n.data as Record<string, unknown>} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium leading-tight">{n.title}</p>
@@ -108,7 +111,15 @@ export function NotificationBell() {
                       <p className="text-[10px] text-muted mt-1">{formatTimeAgo(n.sentAt)}</p>
                     </div>
                     {!n.isRead && (
-                      <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" aria-hidden />
+                      <span
+                        className={cn(
+                          'h-2 w-2 rounded-full shrink-0 mt-2',
+                          (n.type === 'RAPIDCARE_UPDATE' && (n.data as { urgent?: boolean })?.urgent)
+                            ? 'bg-red-500'
+                            : 'bg-primary'
+                        )}
+                        aria-hidden
+                      />
                     )}
                   </button>
                 ))

@@ -7,6 +7,7 @@ import {
   setEmergencyArrived,
   updateEta,
   clearEmergency,
+  updateNavigationRoute,
 } from '@/features/emergency/emergencySlice';
 import {
   getSocket,
@@ -26,6 +27,14 @@ interface EmergencyStatusPayload {
   status?: EmergencyRequestStatus;
   pickupOtp?: string;
   message?: string;
+}
+
+interface NavigationEtaPayload {
+  requestId?: string;
+  calculatedETA?: number | null;
+  decodedPath?: [number, number][] | null;
+  nextInstruction?: string | null;
+  ambulanceLocation?: { lat: number; lng: number };
 }
 
 export function useEmergencySocket() {
@@ -88,6 +97,26 @@ export function useEmergencySocket() {
       toast.info(payload.message || 'Reassigned to another ambulance');
     };
 
+    const onNavigationEta = (payload: NavigationEtaPayload) => {
+      if (payload.requestId && payload.requestId !== requestId) return;
+      dispatch(
+        updateNavigationRoute({
+          path: payload.decodedPath ?? undefined,
+          eta: payload.calculatedETA ?? undefined,
+          nextInstruction: payload.nextInstruction ?? undefined,
+        })
+      );
+      if (payload.ambulanceLocation) {
+        dispatch(
+          updateAmbulanceLocation({
+            lat: payload.ambulanceLocation.lat,
+            lng: payload.ambulanceLocation.lng,
+            eta: payload.calculatedETA ?? undefined,
+          })
+        );
+      }
+    };
+
     socket.on('ambulance:locationUpdate', onLocationUpdate);
     socket.on('emergency:statusUpdate', onStatusUpdate);
     socket.on('emergency:arrived', onArrived);
@@ -95,6 +124,8 @@ export function useEmergencySocket() {
     socket.on('emergency:cancelled', onCancelled);
     socket.on('emergency:reassigned', onReassigned);
     socket.on('emergency:completed', onCancelled);
+
+    socket.on('navigation:etaUpdate', onNavigationEta);
 
     return () => {
       socket.off('ambulance:locationUpdate', onLocationUpdate);
@@ -104,6 +135,7 @@ export function useEmergencySocket() {
       socket.off('emergency:cancelled', onCancelled);
       socket.off('emergency:reassigned', onReassigned);
       socket.off('emergency:completed', onCancelled);
+      socket.off('navigation:etaUpdate', onNavigationEta);
       leaveEmergencyRoom(requestId);
     };
   }, [dispatch, isActive, requestId]);

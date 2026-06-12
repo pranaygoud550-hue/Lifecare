@@ -5,7 +5,10 @@ import {
   getDoctorAvailability,
   getFeaturedDoctors,
   getDoctorDashboard,
+  getMyAvailability,
+  updateMyAvailability,
 } from '../controllers/doctorController.js';
+import { getPatientVitalsForDoctor } from '../controllers/vitalsController.js';
 import {
   submitVerificationDocuments,
   getMyVerificationStatus,
@@ -24,6 +27,14 @@ const router = Router();
 router.get('/', optionalAuth, validate(doctorsQuerySchema), getDoctors);
 router.get('/featured', getFeaturedDoctors);
 router.get('/dashboard', authenticate, authorize('doctor'), getDoctorDashboard);
+router.get('/me/availability', authenticate, authorize('doctor'), getMyAvailability);
+router.patch('/me/availability', authenticate, authorize('doctor'), updateMyAvailability);
+router.get(
+  '/patients/:patientId/vitals',
+  authenticate,
+  authorize('doctor'),
+  getPatientVitalsForDoctor
+);
 router.get('/verification/status', authenticate, authorize('doctor'), getMyVerificationStatus);
 router.post(
   '/verification/documents',

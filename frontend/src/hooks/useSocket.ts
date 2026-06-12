@@ -22,8 +22,10 @@ export function useSocket(onNotification?: (notification: Notification) => void)
     };
 
     socket.on('notification', onNotif);
+    socket.on('notification:new', onNotif);
     return () => {
       socket.off('notification', onNotif);
+      socket.off('notification:new', onNotif);
     };
   }, [isAuthenticated, user?._id]);
 

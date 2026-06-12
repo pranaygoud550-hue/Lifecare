@@ -117,6 +117,7 @@ export interface LiveTrackingMapProps {
   patientLocation: MapCoordinate;
   ambulanceLocation?: MapCoordinate | null;
   hospitalLocation?: HospitalMapLocation | null;
+  routePath?: [number, number][] | null;
   className?: string;
 }
 
@@ -124,6 +125,7 @@ export function LiveTrackingMap({
   patientLocation,
   ambulanceLocation,
   hospitalLocation,
+  routePath,
   className,
 }: LiveTrackingMapProps) {
   const [hospitalMarkerIcon, setHospitalMarkerIcon] = useState<L.DivIcon | null>(null);
@@ -135,12 +137,13 @@ export function LiveTrackingMap({
   }, [hospitalLocation?.name, hospitalLocation?.lat, hospitalLocation?.lng]);
 
   const routeLine = useMemo(() => {
+    if (routePath && routePath.length > 1) return routePath;
     if (!ambulanceLocation) return [];
     return [
       [ambulanceLocation.lat, ambulanceLocation.lng],
       [patientLocation.lat, patientLocation.lng],
     ] as [number, number][];
-  }, [ambulanceLocation, patientLocation]);
+  }, [routePath, ambulanceLocation, patientLocation]);
 
   return (
     <div className={className ?? 'h-72 w-full rounded-2xl overflow-hidden border border-red-500/30 z-0'}>
@@ -164,14 +167,13 @@ export function LiveTrackingMap({
 
         <Marker position={[patientLocation.lat, patientLocation.lng]} icon={patientIcon} zIndexOffset={900} />
 
-        {routeLine.length === 2 && (
+        {routeLine.length >= 2 && (
           <Polyline
             positions={routeLine}
             pathOptions={{
-              color: '#ef4444',
-              weight: 4,
-              opacity: 0.85,
-              dashArray: '10 10',
+              color: '#2563eb',
+              weight: 5,
+              opacity: 0.9,
             }}
           />
         )}

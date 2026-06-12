@@ -103,6 +103,25 @@ export const emergencyPaths = {
       },
     },
   },
+  '/api/emergency/requests/{id}/arrived': {
+    post: {
+      tags: ['Emergency'],
+      summary: 'Driver marks ambulance arrived',
+      description: '**Auth required** · Role: `ambulance` · Triggers OTP flow for patient.',
+      security: bearerSecurity,
+      parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+      responses: {
+        200: okResponse({
+          type: 'object',
+          properties: {
+            requestId: { type: 'string' },
+            status: { type: 'string', example: 'arrived' },
+          },
+        }),
+        ...authErrors,
+      },
+    },
+  },
   '/api/emergency/requests/{id}/verify-otp': {
     post: {
       tags: ['Emergency'],

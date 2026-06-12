@@ -6,6 +6,7 @@ import { store } from '@/store';
 import { AuthBootstrap } from '@/components/common/AuthBootstrap';
 import { AppRoutes } from '@/routes/AppRoutes';
 import { AppLaunchFlow } from '@/components/common/AppLaunchFlow';
+import { MedicationReminderEngine } from '@/components/common/MedicationReminderEngine';
 import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
@@ -13,6 +14,7 @@ function App() {
     <Provider store={store}>
       <HelmetProvider>
         <AuthBootstrap />
+        <MedicationReminderEngine />
         <BrowserRouter>
           <AppLaunchFlow>
             <AppRoutes />

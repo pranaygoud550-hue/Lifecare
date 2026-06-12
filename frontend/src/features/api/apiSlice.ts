@@ -149,6 +149,14 @@ export const api = createApi({
       query: (id) => `/ambulance/history/${id}`,
       providesTags: ['Emergency'],
     }),
+    getRapidCareHistory: builder.query<ApiResponse<unknown[]>, string>({
+      query: (patientId) => `/rapidcare/history/${patientId}`,
+      providesTags: ['Emergency'],
+    }),
+    shareRapidCareReport: builder.mutation<ApiResponse<unknown>, string>({
+      query: (bookingId) => ({ url: `/rapidcare/${bookingId}/share`, method: 'PATCH' }),
+      invalidatesTags: ['Emergency'],
+    }),
     createRapidCarePrefillToken: builder.mutation<ApiResponse<{ token: string }>, void>({
       query: () => ({ url: '/auth/rapidcare-token', method: 'POST' }),
     }),
@@ -696,6 +704,8 @@ export const {
   useRequestAmbulanceMutation,
   useGetEmergencyHistoryQuery,
   useGetEmergencyRecordQuery,
+  useGetRapidCareHistoryQuery,
+  useShareRapidCareReportMutation,
   useCreateRapidCarePrefillTokenMutation,
   useRequestEmergencySosMutation,
   useRequestTransportMutation,

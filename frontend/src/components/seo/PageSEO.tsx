@@ -16,7 +16,7 @@ export function PageSEO({ titleKey, descriptionKey, path = '', image, noIndex }:
   const title = t(titleKey);
   const description = t(descriptionKey);
   const url = `${SITE_URL.replace(/\/$/, '')}${path.startsWith('/') ? path : `/${path}`}`;
-  const ogImage = image || `${SITE_URL}/icons/icon-512.png`;
+  const ogImage = image || `${SITE_URL.replace(/\/$/, '')}/og-image.svg`;
 
   return (
     <Helmet>

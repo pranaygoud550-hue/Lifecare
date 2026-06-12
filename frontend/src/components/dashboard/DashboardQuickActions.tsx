@@ -28,6 +28,14 @@ export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: Dash
       iconClass: 'text-primary',
     },
     {
+      id: 'chest-scan',
+      label: 'Chest X-Ray AI',
+      icon: ScanLine,
+      to: '/patient/scan-analysis',
+      className: 'hover:border-emerald-400/50 bg-emerald-50/30',
+      iconClass: 'text-emerald-600',
+    },
+    {
       id: 'mediscan',
       label: t('dashboard.actionMediscan'),
       icon: ScanLine,

@@ -68,6 +68,51 @@
     animation: splash-logo-pulse-draw 1.6s ease-out 0.45s forwards;
   }
 
+  /* LifeCare+ cinematic splash */
+  .lc-splash-heart {
+    opacity: 0;
+    animation: heartPulse 1.8s ease-in-out 0.3s infinite, lc-fade-in 0.5s ease-out 0.3s forwards;
+  }
+
+  .lc-splash-ecg-path {
+    stroke-dasharray: 1000;
+    stroke-dashoffset: 1000;
+    animation: ecgDraw 0.8s ease-out 0.8s forwards;
+  }
+
+  .lc-splash-letter {
+    opacity: 0;
+    animation: letterDrop 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .lc-splash-tagline {
+    opacity: 0;
+    animation: taglineFadeUp 0.6s ease-out 1.9s forwards;
+  }
+
+  .lc-splash-stats {
+    opacity: 0;
+    animation: statsFade 0.55s ease-out 2.3s forwards;
+  }
+
+  .lc-splash-progress {
+    width: 0;
+    animation: progressSweep 1s ease-in-out 2.8s forwards;
+  }
+
+  .lc-splash-exit {
+    animation: splashExit 0.4s ease-in forwards;
+  }
+
+  .lc-hero-fade-up {
+    opacity: 0;
+    animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+
+  .lc-hero-float-card {
+    animation: floatCard 5s ease-in-out infinite;
+  }
+
   .animate-pulse-urgent {
     animation: pulse-urgent 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
@@ -202,6 +247,110 @@
   }
   50% {
     top: 88%;
+    opacity: 1;
+  }
+}
+
+@keyframes heartPulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.85;
+  }
+}
+
+@keyframes ecgDraw {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes letterDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes taglineFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes statsFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes progressSweep {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes splashExit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floatCard {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes lc-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
     opacity: 1;
   }
 }

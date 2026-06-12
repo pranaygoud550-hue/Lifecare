@@ -287,11 +287,14 @@ export const getDoctorAvailability = asyncHandler(async (req: Request, res: Resp
 
   const bookedTimes = bookedSlots.map((a) => a.scheduledTime);
 
-  let availableSlots = TIME_SLOTS;
+  let availableSlots: string[] = [];
   if (dayAvailability?.slots?.length) {
-    const start = dayAvailability.slots[0].startTime;
-    const end = dayAvailability.slots[0].endTime;
-    availableSlots = TIME_SLOTS.filter((slot) => slot >= start && slot < end);
+    const ranges = dayAvailability.slots;
+    availableSlots = TIME_SLOTS.filter((slot) =>
+      ranges.some((r) => slot >= r.startTime && slot < r.endTime)
+    );
+  } else if (!doctor.doctorDetails?.availability?.length) {
+    availableSlots = TIME_SLOTS;
   }
 
   const slots = availableSlots.map((time) => ({
@@ -347,4 +350,35 @@ export const getDoctorDashboard = asyncHandler(async (req: Request, res: Respons
       stats: { totalAppointments, completedAppointments },
     },
   });
+});
+
+export const getMyAvailability = asyncHandler(async (req: Request, res: Response) => {
+  const doctor = await User.findOne({ _id: req.user!.userId, userType: 'doctor' }).select(
+    'doctorDetails.availability'
+  );
+  if (!doctor) {
+    res.status(404).json({ success: false, message: 'Doctor not found' });
+    return;
+  }
+  res.json({ success: true, data: doctor.doctorDetails?.availability ?? [] });
+});
+
+export const updateMyAvailability = asyncHandler(async (req: Request, res: Response) => {
+  const { availability } = req.body as {
+    availability: Array<{ day: string; slots: Array<{ startTime: string; endTime: string }> }>;
+  };
+
+  const doctor = await User.findOne({ _id: req.user!.userId, userType: 'doctor' });
+  if (!doctor) {
+    res.status(404).json({ success: false, message: 'Doctor not found' });
+    return;
+  }
+
+  if (!doctor.doctorDetails) {
+    doctor.doctorDetails = {} as NonNullable<typeof doctor.doctorDetails>;
+  }
+  doctor.doctorDetails.availability = availability;
+  await doctor.save();
+
+  res.json({ success: true, data: doctor.doctorDetails.availability });
 });

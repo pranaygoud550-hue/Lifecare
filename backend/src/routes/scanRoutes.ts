@@ -9,20 +9,49 @@ import {
   getDoctorScanList,
   getDoctorScanAnalyticsHandler,
 } from '../controllers/scanController.js';
+import {
+  analyzeChestScan,
+  getMyChestScans,
+  getPatientChestScansForDoctor,
+  getDoctorPatientScans,
+  reviewChestScan,
+} from '../controllers/chestScanController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { requireScanPatientOwner, requireScanViewer } from '../middleware/scanAccess.js';
 import { scanUploadMiddleware } from '../middleware/uploadMiddleware.js';
+import { analyzeUploadMiddleware } from '../middleware/analyzeUploadMiddleware.js';
 import {
   scanUploadBodySchema,
   scanShareSchema,
   scanReviewSchema,
   doctorScansQuerySchema,
+  chestScanNoteSchema,
 } from '../utils/schemas.js';
 
 const router = Router();
 
 router.use(authenticate);
+
+router.post(
+  '/analyze',
+  authorize('patient'),
+  ...analyzeUploadMiddleware,
+  analyzeChestScan
+);
+
+router.get('/my-scans', authorize('patient'), getMyChestScans);
+
+router.get('/patient/:patientId', authorize('doctor'), getPatientChestScansForDoctor);
+
+router.get('/doctor/patient-scans', authorize('doctor'), getDoctorPatientScans);
+
+router.patch(
+  '/chest/:id/note',
+  authorize('doctor'),
+  validate(chestScanNoteSchema),
+  reviewChestScan
+);
 
 router.post(
   '/upload',

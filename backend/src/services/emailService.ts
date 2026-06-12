@@ -170,6 +170,27 @@ export async function sendDoctorRejectedEmail(params: {
   return sendGenericEmail(params.to, subject, html);
 }
 
+export async function sendRapidCareDoctorAlertEmail(params: {
+  to: string;
+  doctorName: string;
+  patientName: string;
+  condition: string;
+  hospital: string;
+}) {
+  const subject = `🚨 Your patient ${params.patientName} has requested emergency transport`;
+  const html = `
+    <h2>🚨 Patient emergency transport</h2>
+    <p>Hi ${params.doctorName},</p>
+    <p>Your patient <strong>${params.patientName}</strong> has requested emergency transport via RapidCare.</p>
+    <ul>
+      <li><strong>Condition:</strong> ${params.condition}</li>
+      <li><strong>Going to:</strong> ${params.hospital}</li>
+    </ul>
+    <p>— LifeCare+ · RapidCare integration</p>
+  `;
+  return sendGenericEmail(params.to, subject, html);
+}
+
 async function sendGenericEmail(to: string, subject: string, html: string) {
   if (!transporter) {
     console.log(`[LifeCare+ Email] ${subject}\nTo: ${to}`);

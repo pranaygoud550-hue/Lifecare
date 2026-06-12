@@ -1,77 +1,129 @@
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { CitySearchInput } from '@/components/search/CitySearchInput';
+import { Lock, Star, Building2 } from 'lucide-react';
+import { DemoLoginButtons } from '@/components/landing/DemoLoginButtons';
+
+const STATS = [
+  { value: '98%', label: 'Patient satisfaction' },
+  { value: '< 10 min', label: 'Average wait time' },
+  { value: '24/7', label: 'Doctor availability' },
+  { value: '500+', label: 'Hospitals network' },
+] as const;
+
+const DOCTORS = [
+  { initials: 'AS', color: 'bg-teal-600' },
+  { initials: 'RK', color: 'bg-emerald-500' },
+  { initials: 'PM', color: 'bg-cyan-600' },
+] as const;
+
+const TRUST = [
+  { icon: Lock, text: 'HIPAA compliant' },
+  { icon: Star, text: '4.9/5 from 12,000 reviews' },
+  { icon: Building2, text: '500+ partner hospitals' },
+] as const;
 
 export function HeroSection() {
-  const [search, setSearch] = useState('');
-  const [city, setCity] = useState('');
-  const navigate = useNavigate();
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    const params = new URLSearchParams();
-    if (search) params.set('search', search);
-    if (city) params.set('city', city);
-    navigate(`/doctors?${params.toString()}`);
-  };
-
   return (
-    <section className="relative bg-gradient-to-br from-primary/5 via-background to-secondary/5 py-16 md:py-24 overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(0,102,255,0.08),transparent_50%)]" />
-      <div className="container-custom relative">
-        <div className="max-w-3xl mx-auto text-center">
-          <Badge className="mb-4">Trusted by 1M+ patients nationwide</Badge>
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6">
-            Healthcare at Your{' '}
-            <span className="text-primary">Doorstep</span>
-          </h1>
-          <p className="text-lg text-muted mb-8 max-w-2xl mx-auto">
-            24/7 Emergency & Consultation Services. Connect with verified doctors,
-            find hospitals in your city, and request ambulances — all from home.
-          </p>
+    <section className="relative min-h-[100svh] overflow-hidden bg-white">
+      <div className="pointer-events-none absolute -right-32 top-0 h-[480px] w-[480px] rounded-full bg-[#E1F5EE]/60 blur-3xl" aria-hidden />
+      <div className="pointer-events-none absolute -left-24 bottom-0 h-[320px] w-[320px] rounded-full bg-[#E1F5EE]/40 blur-3xl" aria-hidden />
 
-          <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-2xl mx-auto mb-8">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted z-10" />
-              <Input
-                placeholder="Search doctors, specialties, hospitals..."
-                className="pl-10 h-12"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
+      <div className="container-custom relative flex min-h-[100svh] items-center py-16 lg:py-20">
+        <div className="grid w-full items-center gap-12 lg:grid-cols-[3fr_2fr] lg:gap-16">
+          {/* Left — 60% */}
+          <div className="max-w-2xl">
+            <span className="lc-hero-fade-up inline-flex items-center gap-2 rounded-full border border-[#1D9E75]/25 bg-[#E1F5EE] px-4 py-1.5 text-sm font-medium text-[#1D9E75]">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#1D9E75]" aria-hidden />
+              Trusted by 50,000+ patients
+            </span>
+
+            <h1
+              className="lc-hero-fade-up mt-6 text-[2.75rem] font-medium leading-[1.12] tracking-tight text-[#0f172a] sm:text-5xl lg:text-[3rem]"
+              style={{ animationDelay: '80ms' }}
+            >
+              Healthcare that comes to you
+            </h1>
+
+            <p
+              className="lc-hero-fade-up mt-5 max-w-xl text-lg leading-relaxed text-[#64748b]"
+              style={{ animationDelay: '160ms' }}
+            >
+              Book appointments, consult doctors, manage prescriptions and health records — all in one
+              secure place.
+            </p>
+
+            <div
+              className="lc-hero-fade-up mt-8 flex flex-col gap-3 sm:flex-row sm:items-center"
+              style={{ animationDelay: '240ms' }}
+            >
+              <Link
+                to="/doctors"
+                className="inline-flex h-12 items-center justify-center rounded-xl bg-[#1D9E75] px-8 text-base font-semibold text-white shadow-lg shadow-[#1D9E75]/25 transition hover:bg-[#188a66] hover:shadow-[#1D9E75]/35"
+              >
+                Book appointment
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex h-12 items-center justify-center rounded-xl border-2 border-[#e2e8f0] bg-white px-8 text-base font-semibold text-[#0f172a] transition hover:border-[#1D9E75]/40 hover:bg-[#E1F5EE]/50"
+              >
+                Learn how it works
+              </a>
             </div>
-            <CitySearchInput
-              value={city}
-              onChange={(c) => setCity(c)}
-              placeholder="Search city..."
-              inputClassName="h-12"
-              className="flex-1"
-            />
-            <Button type="submit" size="lg" className="h-12 px-8">
-              Search
-            </Button>
-          </form>
 
-          <div className="flex flex-wrap justify-center gap-4">
-            <Link to="/doctors">
-              <Button variant="default" size="lg">Find a Doctor</Button>
-            </Link>
-            <Link to="/pharmacy">
-              <Button variant="secondary" size="lg">Order Medicines</Button>
-            </Link>
-            <Link to="/ambulance">
-              <Button variant="danger" size="lg">Emergency Ambulance</Button>
-            </Link>
+            <ul
+              className="lc-hero-fade-up mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-x-6 sm:gap-y-2"
+              style={{ animationDelay: '320ms' }}
+            >
+              {TRUST.map(({ icon: Icon, text }) => (
+                <li key={text} className="flex items-center gap-2 text-sm text-[#64748b]">
+                  <Icon className="h-4 w-4 shrink-0 text-[#1D9E75]" aria-hidden />
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="lc-hero-fade-up mt-8" style={{ animationDelay: '400ms' }}>
+              <DemoLoginButtons />
+            </div>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm text-muted">
-            <div><span className="font-bold text-foreground text-lg">10,000+</span><br />Verified Doctors</div>
-            <div><span className="font-bold text-foreground text-lg">24/7</span><br />Available</div>
-            <div><span className="font-bold text-foreground text-lg">1M+</span><br />Lives Saved</div>
+          {/* Right — 40% */}
+          <div className="relative mx-auto w-full max-w-md lg:mx-0 lg:max-w-none">
+            <div className="lc-hero-float-card rounded-2xl border border-[#e2e8f0] bg-white p-6 shadow-[0_24px_48px_-12px_rgba(15,23,42,0.12)] sm:p-8">
+              <p className="mb-5 text-xs font-semibold uppercase tracking-widest text-[#64748b]">
+                Live platform metrics
+              </p>
+              <div className="grid grid-cols-2 gap-5">
+                {STATS.map((stat, i) => (
+                  <div
+                    key={stat.label}
+                    className="lc-hero-fade-up"
+                    style={{ animationDelay: `${400 + i * 70}ms` }}
+                  >
+                    <p className="text-2xl font-bold text-[#0f172a] sm:text-3xl">{stat.value}</p>
+                    <p className="mt-1 text-sm text-[#64748b]">{stat.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="lc-hero-fade-up mt-6 flex items-center gap-3"
+              style={{ animationDelay: '680ms' }}
+            >
+              <div className="flex -space-x-3">
+                {DOCTORS.map((d) => (
+                  <span
+                    key={d.initials}
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-white text-xs font-bold text-white shadow-md ${d.color}`}
+                  >
+                    {d.initials}
+                  </span>
+                ))}
+              </div>
+              <p className="text-sm font-medium text-[#0f172a]">
+                Our doctors are <span className="text-[#1D9E75]">online now</span>
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -79,10 +131,4 @@ export function HeroSection() {
   );
 }
 
-function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <span className={`inline-flex items-center rounded-full bg-primary/10 text-primary px-3 py-1 text-sm font-medium ${className}`}>
-      {children}
-    </span>
-  );
-}
+export default HeroSection;

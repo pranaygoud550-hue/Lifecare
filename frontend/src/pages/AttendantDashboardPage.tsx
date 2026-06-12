@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { MapPin, Phone, Check, X, Navigation, ClipboardList } from 'lucide-react';
 import {
@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { joinDriverRoom } from '@/lib/socket';
 import { useAppSelector } from '@/hooks/redux';
-import { useEffect } from 'react';
+import { DriverNavigationPanel } from '@/components/emergency/DriverNavigationPanel';
 
 const CHECKLISTS: Record<string, string[]> = {
   basic_ambulance: ['Oxygen cylinder', 'First aid kit', 'Stretcher', 'BP monitor'],
@@ -118,7 +118,15 @@ export function AttendantDashboardPage() {
       <p className="text-lg text-muted mb-8">Incoming requests & active trip</p>
 
       {emergencyRequest && ['dispatched', 'arrived'].includes(emergencyRequest.status) && (
-        <section className="mb-8">
+        <section className="mb-8 space-y-4">
+          {emergencyRequest.status === 'dispatched' && emergencyRequest.patientLocation && (
+            <DriverNavigationPanel
+              requestId={emergencyRequest.requestId}
+              patientLocation={emergencyRequest.patientLocation}
+              status={emergencyRequest.status}
+              onArrived={() => refetchEmergency()}
+            />
+          )}
           <Card className="border-2 border-red-400">
             <CardHeader>
               <CardTitle className="text-xl">Emergency SOS — {emergencyRequest.requestId}</CardTitle>

@@ -7,6 +7,7 @@ import { config } from './config/index.js';
 import { createApp } from './app.js';
 import { initializeSocket } from './services/socketService.js';
 import { startCronJobs } from './services/cronService.js';
+import { startNavigationEtaBroadcast } from './services/navigationEtaService.js';
 
 dotenv.config();
 
@@ -56,6 +57,7 @@ const startServer = async () => {
     await autoSeedIfEmpty();
     if (config.nodeEnv !== 'test') {
       startCronJobs();
+      startNavigationEtaBroadcast();
     }
     if (!isDatabaseConnected) {
       console.warn('Warning: database not connected — demo OTP still works');

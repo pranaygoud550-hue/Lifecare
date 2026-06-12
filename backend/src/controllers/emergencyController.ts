@@ -9,6 +9,7 @@ import {
   clearDriverAcceptTimeout,
   emergencyRoom as buildEmergencyRoom,
   scheduleDriverAcceptTimeout,
+  markDriverArrived,
 } from '../services/emergencyRealtimeService.js';
 import { startEmergencyDemoFlow, stopLocationSimulation } from '../services/emergencyDemoService.js';
 import type { EmergencyType } from '../models/EmergencyRequest.js';
@@ -25,6 +26,8 @@ import {
   getDriverName,
   unitCoords,
 } from '../services/emergencyService.js';
+import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
+import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
 
 function resolvePatientId(body: { patientId?: string; userId?: string }): string | null {
   return body.patientId ?? body.userId ?? null;
@@ -75,7 +78,41 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
 
   const assigned = selection.selected;
   const { eta, isDelayed, triedCount } = selection;
-  const nearestHospitalResult = await findNearestHospital(patientLat, patientLng, 15);
+
+  let nearestHospitalPayload: Record<string, unknown> | null = null;
+  let smartRecommendation: Awaited<ReturnType<typeof recommendHospitalForPatient>> | null = null;
+
+  if (isGooglePlacesConfigured()) {
+    smartRecommendation = await recommendHospitalForPatient(patientId, patientLat, patientLng, 15);
+    if (smartRecommendation.recommendation) {
+      const h = smartRecommendation.recommendation;
+      nearestHospitalPayload = {
+        place_id: h.place_id,
+        name: h.name,
+        address: h.address,
+        phone: h.phone,
+        rating: h.rating,
+        emergencyAvailable: h.isEmergency,
+        coordinates: h.coordinates,
+        distanceMeters: h.distanceMeters,
+        photo_url: h.photo_url,
+        specialties: h.specialtyTags,
+        googlePlaceId: h.place_id,
+        recommendationReason: smartRecommendation.reason,
+        scanContext: smartRecommendation.scanContext,
+      };
+    }
+  }
+
+  const nearestHospitalResult = nearestHospitalPayload
+    ? null
+    : await findNearestHospital(patientLat, patientLng, 15);
+  if (!nearestHospitalPayload && nearestHospitalResult) {
+    nearestHospitalPayload = formatHospitalResponse(
+      nearestHospitalResult.hospital,
+      nearestHospitalResult.distanceMeters
+    );
+  }
   const requestId = generateEmergencyRequestId();
   const now = new Date();
   const estimatedArrival = new Date(now.getTime() + eta.etaMinutes * 60 * 1000);
@@ -96,7 +133,9 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     calculatedETA: eta.etaMinutes,
     isDelayed,
     distanceToAmbulanceKm: eta.distanceKm,
-    distanceToHospitalKm: nearestHospitalResult?.distanceKm,
+    distanceToHospitalKm: nearestHospitalPayload
+      ? Number(nearestHospitalPayload.distanceMeters) / 1000
+      : nearestHospitalResult?.distanceKm,
   });
 
   await AmbulanceUnit.findByIdAndUpdate(assigned.unit._id, {
@@ -121,9 +160,7 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     isDelayed,
     distanceMeters: assigned.distanceMeters,
     acceptDeadlineSeconds: 60,
-    nearestHospital: nearestHospitalResult
-      ? formatHospitalResponse(nearestHospitalResult.hospital, nearestHospitalResult.distanceMeters)
-      : null,
+    nearestHospital: nearestHospitalPayload,
   });
 
   emitToUser(patientId, 'emergency:searching', {
@@ -154,8 +191,13 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
       calculatedETA: eta.etaMinutes,
       isDelayed,
       ambulancesEvaluated: triedCount,
-      nearestHospital: nearestHospitalResult
-        ? formatHospitalResponse(nearestHospitalResult.hospital, nearestHospitalResult.distanceMeters)
+      nearestHospital: nearestHospitalPayload,
+      smartRecommendation: smartRecommendation
+        ? {
+            reason: smartRecommendation.reason,
+            scanContext: smartRecommendation.scanContext,
+            alternatives: smartRecommendation.alternatives.slice(0, 3),
+          }
         : null,
       assignedAmbulance: formatAmbulanceResponse(assigned.unit, assigned.distanceMeters, eta.etaMinutes),
       candidateAmbulances: nearbyAmbulances.map((a) =>
@@ -423,6 +465,21 @@ export const patchDriverAvailability = asyncHandler(async (req: Request, res: Re
       isAvailable: unit.isAvailable,
       status: unit.status,
     },
+  });
+});
+
+export const markDriverArrivedRequest = asyncHandler(async (req: Request, res: Response) => {
+  const result = await markDriverArrived(getIO(), String(req.params.id), req.user!.userId);
+  if (!result.ok) {
+    res.status(result.message?.includes('not assigned') ? 403 : 400).json({
+      success: false,
+      message: result.message ?? 'Could not mark arrived',
+    });
+    return;
+  }
+  res.json({
+    success: true,
+    data: { requestId: req.params.id, status: 'arrived', message: 'Ambulance marked as arrived' },
   });
 });
 

@@ -247,6 +247,20 @@ lifecare-plus/
 
 ---
 
+## RapidCare (separate ambulance app)
+
+RapidCare lives in a **sibling folder**, not inside this repo: `~/Desktop/rapidcare-app`.
+
+| | LifeCare+ | RapidCare |
+|---|---|---|
+| **Folder** | `save/` | `rapidcare-app/` |
+| **Local URL** | http://localhost:5173 | http://localhost:3000 |
+| **API** | :5001 | :5002 |
+
+Completed RapidCare trips sync automatically into the patient dashboard (Emergency tab + health records). Set matching `LIFECARE_WEBHOOK_SECRET` on both backends and `VITE_RAPIDCARE_URL=http://localhost:3000` in `frontend/.env`.
+
+---
+
 ## Scripts
 
 | Command | Description |

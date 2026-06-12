@@ -11,3 +11,6 @@ coverage/
 .idea/
 uploads/
 *.pem
+
+# RapidCare is a separate repo at ../rapidcare-app (not part of LifeCare+)
+rapidcare-app/

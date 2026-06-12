@@ -363,6 +363,62 @@ export const driverAvailabilitySchema = z.object({
   }),
 });
 
+export const nearbyGooglePlacesQuerySchema = z.object({
+  query: z
+    .object({
+      lat: z.coerce.number().min(-90).max(90),
+      lng: z.coerce.number().min(-180).max(180),
+      radius: z.coerce.number().positive().max(100).optional().default(5),
+      type: z.enum(['all', 'hospital', 'clinic', 'pharmacy', 'diagnostic']).optional(),
+      sort: z.enum(['distance', 'rating', 'open']).optional(),
+      openNow: z.enum(['true', 'false']).optional(),
+    })
+    .refine((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng), {
+      message: 'lat and lng are required',
+    }),
+});
+
+export const googlePlaceDetailsParamSchema = z.object({
+  params: z.object({
+    place_id: z.string().min(10),
+  }),
+});
+
+export const smartHospitalQuerySchema = z.object({
+  query: z
+    .object({
+      patientId: objectId.optional(),
+      lat: z.coerce.number().min(-90).max(90),
+      lng: z.coerce.number().min(-180).max(180),
+      radius: z.coerce.number().positive().max(100).optional().default(15),
+    })
+    .refine((q) => Number.isFinite(q.lat) && Number.isFinite(q.lng), {
+      message: 'lat and lng are required',
+    }),
+});
+
+export const navigationRouteBodySchema = z.object({
+  body: z.object({
+    originLat: z.number().min(-90).max(90),
+    originLng: z.number().min(-180).max(180),
+    destLat: z.number().min(-90).max(90),
+    destLng: z.number().min(-180).max(180),
+    mode: z.enum(['driving', 'walking', 'ambulance']).optional().default('driving'),
+  }),
+});
+
+export const navigationEtaQuerySchema = z.object({
+  query: z
+    .object({
+      requestId: z.string().min(1).optional(),
+      id: z.string().min(1).optional(),
+    })
+    .refine((q) => Boolean(q.requestId || q.id), {
+      message: 'requestId is required',
+      path: ['requestId'],
+    }),
+});
+
 // —— Prescriptions ——
 export const createPrescriptionSchema = z.object({
   body: z.object({
@@ -661,6 +717,20 @@ export const scanShareSchema = z.object({
   params: z.object({ id: objectIdParam }),
   body: z.object({
     doctorId: objectId.optional(),
+  }),
+});
+
+export const chestScanShareSchema = z.object({
+  params: z.object({ id: objectIdParam }),
+  body: z.object({
+    doctorId: objectId.optional(),
+  }),
+});
+
+export const chestScanNoteSchema = z.object({
+  params: z.object({ id: objectIdParam }),
+  body: z.object({
+    doctorNote: safeStr(4000),
   }),
 });
 
