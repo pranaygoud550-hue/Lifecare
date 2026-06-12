@@ -14,6 +14,7 @@ import { PatientMedicalForm, type PatientMedicalFormValues } from '@/components/
 import { useRegisterMutation, useSendOtpMutation, useSubmitDoctorVerificationMutation } from '@/features/api/apiSlice';
 import { useAppDispatch } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
+import { storeAuthTokens } from '@/lib/authTokens';
 import { buildMedicalHistoryPayload } from '@/lib/medicalFormUtils';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { cn } from '@/lib/utils';
@@ -129,6 +130,7 @@ export function RegisterPage() {
       payload.registrationNumber = registrationNumber;
     }
     const result = await registerUser(payload).unwrap();
+    storeAuthTokens(result.data.accessToken, result.data.refreshToken);
     dispatch(setUser(result.data.user));
     if (accountData.userType !== 'doctor') {
       toast.success('Account created successfully!');

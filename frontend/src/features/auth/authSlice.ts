@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '@/types';
+import { clearAuthTokens } from '@/lib/authTokens';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -43,6 +44,7 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.authStatus = 'anonymous';
       localStorage.removeItem(USER_KEY);
+      clearAuthTokens();
     },
     updateUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
@@ -54,6 +56,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         localStorage.removeItem(USER_KEY);
+        clearAuthTokens();
       }
     },
   },

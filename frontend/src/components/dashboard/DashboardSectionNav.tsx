@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
-import { Activity, Ambulance, Calendar, LayoutGrid, User } from 'lucide-react';
+import { Activity, Calendar, LayoutGrid, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type DashboardTab = 'overview' | 'vitals' | 'care' | 'emergency' | 'profile';
+export type DashboardTab = 'overview' | 'vitals' | 'care' | 'profile';
 
 export function DashboardSectionNav({
   active,
@@ -19,7 +19,6 @@ export function DashboardSectionNav({
     { id: 'overview', label: t('dashboard.tabOverview'), hint: t('dashboard.tabOverviewHint'), icon: LayoutGrid },
     { id: 'vitals', label: t('dashboard.tabVitals'), hint: t('dashboard.tabVitalsHint'), icon: Activity },
     { id: 'care', label: t('dashboard.tabCare'), hint: t('dashboard.tabCareHint'), icon: Calendar },
-    { id: 'emergency', label: t('dashboard.tabEmergency', '🚑 Emergency History'), hint: t('dashboard.tabEmergencyHint', 'RapidCare trips'), icon: Ambulance },
     { id: 'profile', label: t('dashboard.tabProfile'), hint: t('dashboard.tabProfileHint'), icon: User },
   ];
 

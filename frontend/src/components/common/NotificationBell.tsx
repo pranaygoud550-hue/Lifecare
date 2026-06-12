@@ -48,7 +48,7 @@ export function NotificationBell() {
     else if (n.type === 'wallet') navigate('/wallet');
     else if (n.type === 'ambulance') navigate('/emergency');
     else if (n.type === 'RAPIDCARE_UPDATE' || n.type === 'emergency_sync') {
-      navigate('/dashboard?tab=emergency');
+      navigate('/notifications');
     }
   };
 

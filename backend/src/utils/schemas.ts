@@ -34,6 +34,19 @@ const appointmentTimeString = z
 
 const safeStr = (max = 2000) => z.string().max(max).transform(sanitizeText);
 const safeStrOpt = (max = 2000) => safeStr(max).optional();
+
+const optionalPositiveNumber = (max: number) =>
+  z.preprocess((val) => {
+    if (val === '' || val === null || val === undefined) return undefined;
+    const n = Number(val);
+    return Number.isFinite(n) && n > 0 ? n : undefined;
+  }, z.number().positive().max(max).optional());
+
+const optionalCleanString = (max: number) =>
+  z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    safeStrOpt(max)
+  );
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID');
 const objectIdParam = z.string().min(1, 'ID is required');
 
@@ -145,19 +158,19 @@ export const registerWithOtpSchema = z.object({
 export const updateMedicalHistorySchema = z.object({
   body: z.object({
     bloodGroup: safeStr(10),
-    heightCm: z.number().positive().max(300).optional(),
-    weightKg: z.number().positive().max(500).optional(),
+    heightCm: optionalPositiveNumber(300),
+    weightKg: optionalPositiveNumber(500),
     organDonor: z.boolean().optional(),
-    smokingStatus: safeStrOpt(50),
-    alcoholUse: safeStrOpt(50),
+    smokingStatus: optionalCleanString(50),
+    alcoholUse: optionalCleanString(50),
     allergies: z.array(safeStr(200)).max(50).optional(),
     chronicConditions: z.array(safeStr(200)).max(50).optional(),
     currentMedications: z.array(safeStr(200)).max(50).optional(),
     familyHistory: z.array(safeStr(200)).max(50).optional(),
-    insuranceProvider: safeStrOpt(120),
-    insuranceNumber: safeStrOpt(80),
-    dateOfBirth: z.string().optional(),
-    gender: safeStrOpt(30),
+    insuranceProvider: optionalCleanString(120),
+    insuranceNumber: optionalCleanString(80),
+    dateOfBirth: optionalCleanString(10),
+    gender: optionalCleanString(30),
   }),
 });
 

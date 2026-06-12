@@ -13,6 +13,7 @@ import {
 import { stripe, isStripeConfigured } from '../services/stripeService.js';
 import { fulfillWalletTopUp } from '../services/paymentHandlers.js';
 import { notifyWalletCredited } from '../services/notificationService.js';
+import { resolveUserById } from '../services/userResolver.js';
 import { config } from '../config/index.js';
 
 export const getWallet = asyncHandler(async (req: Request, res: Response) => {
@@ -289,7 +290,7 @@ export const payWithWallet = asyncHandler(async (req: Request, res: Response) =>
 });
 
 export const updateMedicalHistory = asyncHandler(async (req: Request, res: Response) => {
-  const existing = await User.findById(req.user!.userId);
+  const existing = await resolveUserById(req.user!.userId);
   if (!existing) {
     res.status(404).json({ success: false, message: 'User not found' });
     return;
@@ -318,7 +319,7 @@ export const updateMedicalHistory = asyncHandler(async (req: Request, res: Respo
     updates['profile.gender'] = gender;
   }
 
-  const user = await User.findByIdAndUpdate(req.user!.userId, { $set: updates }, { new: true }).select(
+  const user = await User.findByIdAndUpdate(existing._id, { $set: updates }, { new: true }).select(
     '-password'
   );
 
@@ -331,6 +332,6 @@ export const updateMedicalHistory = asyncHandler(async (req: Request, res: Respo
 });
 
 export const getMedicalHistory = asyncHandler(async (req: Request, res: Response) => {
-  const user = await User.findById(req.user!.userId).select('medicalHistory');
+  const user = await resolveUserById(req.user!.userId);
   res.json({ success: true, data: user?.medicalHistory || {} });
 });

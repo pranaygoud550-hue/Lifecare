@@ -16,6 +16,7 @@ export function Layout() {
   const patientShell = usePatientAppShell();
   const { pathname } = useLocation();
   const isAuthRoute = AUTH_ROUTES.some((p) => pathname.startsWith(p));
+  const isPatientDashboardHome = pathname === '/dashboard';
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -27,8 +28,8 @@ export function Layout() {
       </main>
       {!patientShell && <Footer />}
       {patientShell && <PatientBottomNav />}
-      {!isAuthRoute && <NeedHelpProvider patientShell={patientShell} />}
-      {!isAuthRoute && <OneTapEmergencyProvider />}
+      {!isAuthRoute && !isPatientDashboardHome && <NeedHelpProvider patientShell={patientShell} />}
+      {!isAuthRoute && !isPatientDashboardHome && <OneTapEmergencyProvider />}
       <InstallPrompt />
     </div>
   );

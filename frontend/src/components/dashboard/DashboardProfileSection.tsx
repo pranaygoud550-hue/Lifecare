@@ -19,6 +19,7 @@ import {
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { updateUser } from '@/features/auth/authSlice';
 import { buildMedicalHistoryPayload, formatDateForInput } from '@/lib/medicalFormUtils';
+import { getApiErrorMessage } from '@/lib/apiError';
 import type { User } from '@/types';
 
 const optionalPositiveNumber = z.preprocess((val) => {
@@ -93,8 +94,8 @@ export function DashboardProfileSection() {
       const result = await updateMedical(buildMedicalHistoryPayload(form)).unwrap();
       dispatch(updateUser(result.data));
       toast.success(t('dashboard.savedSuccess'));
-    } catch {
-      toast.error(t('dashboard.saveFailed'));
+    } catch (err: unknown) {
+      toast.error(getApiErrorMessage(err, t('dashboard.saveFailed')));
     }
   };
 

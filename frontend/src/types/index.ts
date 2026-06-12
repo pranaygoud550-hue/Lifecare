@@ -487,6 +487,12 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface AuthSessionData {
+  user: User;
+  accessToken?: string;
+  refreshToken?: string;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   pagination: {

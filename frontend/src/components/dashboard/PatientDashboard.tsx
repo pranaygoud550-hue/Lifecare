@@ -13,13 +13,11 @@ import { DashboardOverviewSection } from '@/components/dashboard/DashboardOvervi
 import { HealthVitalsDashboard } from '@/components/dashboard/HealthVitalsDashboard';
 import { DashboardCareSection } from '@/components/dashboard/DashboardCareSection';
 import { DashboardProfileSection } from '@/components/dashboard/DashboardProfileSection';
-import { EmergencyHistory } from '@/components/patient/EmergencyHistory';
-import { RapidCareWidget } from '@/components/dashboard/RapidCareWidget';
 import type { ScanReport } from '@/types/mediscan';
 import type { Appointment, Prescription, VitalReading } from '@/types';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
 
-const VALID_TABS: DashboardTab[] = ['overview', 'vitals', 'care', 'emergency', 'profile'];
+const VALID_TABS: DashboardTab[] = ['overview', 'vitals', 'care', 'profile'];
 
 export function PatientDashboard() {
   const { t } = useTranslation();
@@ -110,7 +108,6 @@ export function PatientDashboard() {
 
         {activeTab === 'overview' && (
           <>
-            <RapidCareWidget />
             <DashboardOverviewSection
               latestVitals={latestVitals}
               scans={scans}
@@ -121,8 +118,6 @@ export function PatientDashboard() {
             />
           </>
         )}
-
-        {activeTab === 'emergency' && <EmergencyHistory />}
 
         {activeTab === 'vitals' && (
           <div id="vitals" className="space-y-6">

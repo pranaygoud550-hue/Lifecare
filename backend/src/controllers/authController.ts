@@ -19,6 +19,7 @@ import {
   revokeTokenPair,
 } from '../services/tokenService.js';
 import { setAuthCookies, clearAuthCookies } from '../utils/cookies.js';
+import { resolveUserById } from '../services/userResolver.js';
 
 function respondWithAuth(res: Response, result: { user: unknown; tokens: { accessToken: string; refreshToken: string } }) {
   setAuthCookies(res, result.tokens.accessToken, result.tokens.refreshToken);
@@ -84,7 +85,11 @@ export const refreshTokenHandler = asyncHandler(async (req: Request, res: Respon
   setAuthCookies(res, newPair.accessToken, newPair.refreshToken);
   res.json({
     success: true,
-    data: { message: 'Token refreshed' },
+    data: {
+      message: 'Token refreshed',
+      accessToken: newPair.accessToken,
+      refreshToken: newPair.refreshToken,
+    },
   });
 });
 
@@ -106,8 +111,7 @@ export const unlockAccountHandler = asyncHandler(async (req: Request, res: Respo
 });
 
 export const getProfile = asyncHandler(async (req: Request, res: Response) => {
-  const { User } = await import('../models/index.js');
-  const user = await User.findById(req.user!.userId);
+  const user = await resolveUserById(req.user!.userId);
   if (!user) {
     res.status(404).json({ success: false, message: 'User not found' });
     return;

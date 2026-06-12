@@ -13,6 +13,7 @@ import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { getPostLoginPath } from '@/lib/demoAuth';
+import { storeAuthTokens } from '@/lib/authTokens';
 import { formatPhoneDisplay, isValidIndianMobile, normalizePhone } from '@/lib/phone';
 import { useApiReady, useRetryOnFetchError } from '@/hooks/useApiReady';
 import type { User } from '@/types';
@@ -36,7 +37,8 @@ export function LoginPage() {
   const { checking: apiChecking } = useApiReady();
   const retryOnFetchError = useRetryOnFetchError();
 
-  const afterAuth = (data: { user: User }) => {
+  const afterAuth = (data: { user: User; accessToken?: string; refreshToken?: string }) => {
+    storeAuthTokens(data.accessToken, data.refreshToken);
     dispatch(setUser(data.user));
     toast.success(`Signed in as ${data.user.profile.firstName} (${data.user.userType})`);
     navigate(getPostLoginPath(data.user));

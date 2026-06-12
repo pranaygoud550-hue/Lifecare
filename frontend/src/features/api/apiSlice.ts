@@ -1,7 +1,7 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { baseQueryWithReauth } from './baseQuery';
 import type {
-  User, Doctor, Appointment, Medicine, ApiResponse,
+  User, Doctor, Appointment, Medicine, ApiResponse, AuthSessionData,
   Prescription, HealthRecord, Notification, AdminDashboard, RevenueReport, PharmacyOrder, VitalsSummary, VitalReading,
   PlatformHealth, Review,
   DoctorProfileResponse,   TransportSosResponse, TransportTrackData,
@@ -20,7 +20,7 @@ export const api = createApi({
   refetchOnReconnect: true,
   tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans'],
   endpoints: (builder) => ({
-    register: builder.mutation<ApiResponse<{ user: User }>, Record<string, unknown>>({
+    register: builder.mutation<ApiResponse<AuthSessionData>, Record<string, unknown>>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
     }),
     logout: builder.mutation<ApiResponse<unknown>, void>({
@@ -35,10 +35,10 @@ export const api = createApi({
     >({
       query: (body) => ({ url: '/auth/send-otp', method: 'POST', body }),
     }),
-    loginOtp: builder.mutation<ApiResponse<{ user: User }>, { phone: string; otp: string }>({
+    loginOtp: builder.mutation<ApiResponse<AuthSessionData>, { phone: string; otp: string }>({
       query: (body) => ({ url: '/auth/login-otp', method: 'POST', body }),
     }),
-    demoLogin: builder.mutation<ApiResponse<{ user: User }>, { phone?: string }>({
+    demoLogin: builder.mutation<ApiResponse<AuthSessionData>, { phone?: string }>({
       query: (body) => ({ url: '/auth/demo-login', method: 'POST', body: body || {} }),
     }),
     getProfile: builder.query<ApiResponse<User>, void>({

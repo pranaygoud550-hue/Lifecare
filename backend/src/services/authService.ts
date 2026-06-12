@@ -7,7 +7,7 @@ import { issueTokenPair, type TokenPair } from './tokenService.js';
 import { sendAccountUnlockEmail } from './emailService.js';
 import type { UserType } from '../types/index.js';
 import { isDbReady } from '../config/dbStatus.js';
-import { devLoginTokens, isDevDemoPhone } from './devAuthFallback.js';
+import { devLoginTokens, ensureDevDemoUserInDb, isDevDemoPhone } from './devAuthFallback.js';
 import { normalizePhone } from '../utils/phone.js';
 
 const MAX_FAILED_ATTEMPTS = 10;
@@ -391,7 +391,10 @@ export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
   }
 
   if (isDbReady()) {
-    const user = await User.findOne({ phone: normalizedPhone });
+    let user = await User.findOne({ phone: normalizedPhone });
+    if (!user) {
+      user = await ensureDevDemoUserInDb(normalizedPhone);
+    }
     if (user && !user.isBlocked) {
       user.isPhoneVerified = true;
       await user.save();

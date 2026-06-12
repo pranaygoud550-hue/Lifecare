@@ -1,14 +1,11 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Activity, Stethoscope, ScanLine, LifeBuoy } from 'lucide-react';
-import { useAppDispatch } from '@/hooks/redux';
-import { openEmergency } from '@/features/emergency/emergencySlice';
+import { Activity, Stethoscope, ScanLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
 
 export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: DashboardTab) => void }) {
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
 
   const actions = [
     {
@@ -42,14 +39,6 @@ export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: Dash
       to: '/dashboard/mediscan',
       className: 'hover:border-emerald-400/50 bg-emerald-50/30',
       iconClass: 'text-emerald-600',
-    },
-    {
-      id: 'sos',
-      label: t('dashboard.actionSos'),
-      icon: LifeBuoy,
-      onClick: () => dispatch(openEmergency()),
-      className: 'hover:border-red-300 bg-red-50/50',
-      iconClass: 'text-red-600',
     },
   ];
 

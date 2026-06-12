@@ -4,6 +4,7 @@ import {
   type FetchArgs,
   type FetchBaseQueryError,
 } from '@reduxjs/toolkit/query/react';
+import { getAccessToken, getRefreshToken, storeAuthTokens } from '@/lib/authTokens';
 
 /** Ensures absolute API URLs always include the /api prefix (backend mounts routes under /api). */
 export function resolveApiBaseUrl(): string {
@@ -19,7 +20,17 @@ export function resolveApiBaseUrl(): string {
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: resolveApiBaseUrl(),
   credentials: 'include',
+  prepareHeaders: (headers) => {
+    const token = getAccessToken();
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  },
 });
+
+type RefreshPayload = {
+  success?: boolean;
+  data?: { accessToken?: string; refreshToken?: string; message?: string };
+};
 
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
@@ -29,13 +40,20 @@ export const baseQueryWithReauth: BaseQueryFn<
   let result = await rawBaseQuery(args, api, extraOptions);
 
   if (result.error && result.error.status === 401) {
+    const storedRefresh = getRefreshToken();
     const refresh = await rawBaseQuery(
-      { url: '/auth/refresh-token', method: 'POST', body: {} },
+      {
+        url: '/auth/refresh-token',
+        method: 'POST',
+        body: storedRefresh ? { refreshToken: storedRefresh } : {},
+      },
       api,
       extraOptions
     );
 
-    if (refresh.data) {
+    const payload = refresh.data as RefreshPayload | undefined;
+    if (payload?.data?.accessToken) {
+      storeAuthTokens(payload.data.accessToken, payload.data.refreshToken);
       result = await rawBaseQuery(args, api, extraOptions);
     }
   }

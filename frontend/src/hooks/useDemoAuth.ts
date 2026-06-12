@@ -5,6 +5,7 @@ import { useDemoLoginMutation } from '@/features/api/apiSlice';
 import { useAppDispatch } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { storeAuthTokens } from '@/lib/authTokens';
 import { DEMO_ACCOUNTS, getPostLoginPath } from '@/lib/demoAuth';
 import type { User } from '@/types';
 
@@ -20,6 +21,7 @@ export function useDemoAuth() {
       try {
         const result = await demoLogin({ phone }).unwrap();
         const user = result.data.user as User;
+        storeAuthTokens(result.data.accessToken, result.data.refreshToken);
         dispatch(setUser(user));
         toast.success(`Signed in as ${user.profile.firstName} (${user.userType})`);
         navigate(getPostLoginPath(user));
