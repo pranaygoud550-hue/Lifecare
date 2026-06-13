@@ -53,6 +53,8 @@ export const config = {
   backendUrl,
   mediscan: {
     apiUrl: process.env.MEDISCAN_API_URL || 'https://mediscan-api.onrender.com',
+    /** Try remote MediScan API first; fall back to integrated on-site screening when unavailable */
+    useLocalFallback: process.env.MEDISCAN_USE_LOCAL_FALLBACK !== 'false',
   },
   google: {
     placesApiKey: process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY || '',

@@ -12,6 +12,11 @@ import {
 } from '../controllers/walletController.js';
 import { logVital, getVitals, deleteVital } from '../controllers/vitalsController.js';
 import { getWellnessPlan } from '../controllers/wellnessController.js';
+import {
+  getMyHealthSharing,
+  updateMyHealthSharing,
+  getMyPublishedCarePlans,
+} from '../controllers/healthSharingController.js';
 import { postDietLog, getDietLogs, getTodayDietLog } from '../controllers/dietLogController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -59,6 +64,10 @@ router.get('/vitals', authorize('patient'), validate(vitalsQuerySchema), getVita
 router.delete('/vitals/:id', authorize('patient'), validate(vitalIdParamSchema), deleteVital);
 
 router.get('/wellness-plan', authorize('patient'), getWellnessPlan);
+
+router.get('/health-sharing', authorize('patient'), getMyHealthSharing);
+router.patch('/health-sharing', authorize('patient'), updateMyHealthSharing);
+router.get('/care-plans', authorize('patient'), getMyPublishedCarePlans);
 
 router.post('/diet-log', authorize('patient'), validate(dietLogSchema), postDietLog);
 router.get('/diet-log/today', authorize('patient'), getTodayDietLog);

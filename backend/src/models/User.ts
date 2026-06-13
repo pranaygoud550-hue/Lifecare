@@ -133,6 +133,11 @@ export interface IUser extends Document {
       refundStatus?: 'none' | 'requested' | 'approved' | 'rejected' | 'completed';
     }>;
   };
+  healthDataSharing?: {
+    shareVitalsWithDoctors: boolean;
+    shareWellnessWithDoctors: boolean;
+    updatedAt?: Date;
+  };
   createdAt: Date;
   updatedAt: Date;
   lastLogin?: Date;
@@ -305,6 +310,11 @@ const userSchema = new Schema<IUser>(
     lockedUntil: Date,
     unlockToken: String,
     unlockTokenExpires: Date,
+    healthDataSharing: {
+      shareVitalsWithDoctors: { type: Boolean, default: false },
+      shareWellnessWithDoctors: { type: Boolean, default: false },
+      updatedAt: Date,
+    },
   },
   { timestamps: true }
 );

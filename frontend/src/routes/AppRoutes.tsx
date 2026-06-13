@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { CareLayout } from '@/components/common/CareLayout';
+import { DoctorShell } from '@/components/doctor/DoctorShell';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
 
@@ -70,6 +71,13 @@ const ScanHistoryPage = lazy(() =>
   import('@/pages/patient/ScanHistoryPage').then((m) => ({ default: m.ScanHistoryPage }))
 );
 
+const DoctorPatientsPage = lazy(() =>
+  import('@/pages/doctor/DoctorPatientsPage').then((m) => ({ default: m.DoctorPatientsPage }))
+);
+const DoctorPatientDetailPage = lazy(() =>
+  import('@/pages/doctor/DoctorPatientDetailPage').then((m) => ({ default: m.DoctorPatientDetailPage }))
+);
+
 function PageLoad({ variant }: { variant?: 'default' | 'dashboard' | 'list' }) {
   return <PageSkeleton variant={variant} />;
 }
@@ -78,6 +86,28 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoad />}>
       <Routes>
+        <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
+          <Route element={<DoctorShell />}>
+            <Route path="doctor" element={<Navigate to="/doctor/patients" replace />} />
+            <Route
+              path="doctor/patients"
+              element={
+                <Suspense fallback={<PageLoad variant="list" />}>
+                  <DoctorPatientsPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="doctor/patients/:patientId"
+              element={
+                <Suspense fallback={<PageLoad variant="dashboard" />}>
+                  <DoctorPatientDetailPage />
+                </Suspense>
+              }
+            />
+          </Route>
+        </Route>
+
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />

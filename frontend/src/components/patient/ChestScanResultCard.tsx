@@ -31,7 +31,14 @@ export function ChestScanResultCard({
   return (
     <Card className="overflow-hidden border-primary/20 shadow-lg">
       <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-transparent">
-        <CardTitle className="text-xl">Analysis Results</CardTitle>
+        <CardTitle className="text-xl flex flex-wrap items-center gap-2">
+          Analysis Results
+          {scan.analysisSource === 'local_screening' && (
+            <Badge variant="secondary" className="text-xs font-normal">
+              LifeCare integrated screening
+            </Badge>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6 p-6">
         <div className="flex flex-col gap-6 md:flex-row">

@@ -26,6 +26,8 @@ export interface IScanReport extends Document {
   isSharedWithDoctor: boolean;
   appointmentId?: Types.ObjectId;
   skinCareAdvice?: SkinCareAdvice;
+  analysisSource?: 'external' | 'local_screening' | 'integrated';
+  mlEngine?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,6 +72,11 @@ const scanReportSchema = new Schema<IScanReport>(
     isSharedWithDoctor: { type: Boolean, default: false },
     appointmentId: { type: Schema.Types.ObjectId, ref: 'Appointment' },
     skinCareAdvice: { type: Schema.Types.Mixed },
+    analysisSource: {
+      type: String,
+      enum: ['external', 'local_screening', 'integrated'],
+    },
+    mlEngine: String,
   },
   { timestamps: true }
 );

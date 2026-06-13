@@ -20,3 +20,4 @@ export { Scan } from './Scan.js';
 export { DietLog } from './DietLog.js';
 export { MedicationReminder } from './MedicationReminder.js';
 export { EmergencyRecord } from './EmergencyRecord.js';
+export { DoctorCarePlan } from './DoctorCarePlan.js';

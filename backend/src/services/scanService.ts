@@ -20,10 +20,10 @@ import {
   isUrgentScanPrediction,
   scanTypeLabelForNotification,
 } from '../utils/scanNotifications.js';
-import { config } from '../config/index.js';
-import { enqueueScanAnalysis } from './scanAnalysisQueue.js';
 import { buildSkinCareAdvice } from '../utils/skinCareAdvice.js';
 import { resolveScanAssetUrl } from './localScanStorage.js';
+import { analyzeMedicalScan } from './mlScanAnalyzer.js';
+import { enqueueScanAnalysis } from './scanAnalysisQueue.js';
 
 const LOW_CONFIDENCE_THRESHOLD = 60;
 
@@ -77,25 +77,25 @@ async function callMediScanAnalyze(input: {
   }
 
   const buffer = Buffer.from(await imageRes.arrayBuffer());
-  const form = new FormData();
-  const mime = input.isDicom ? 'application/dicom' : imageRes.headers.get('content-type') ?? 'image/png';
-  const filename = input.originalFilename ?? (input.isDicom ? 'scan.dcm' : 'scan.png');
-  const blob = new Blob([new Uint8Array(buffer)], { type: mime });
-  form.append('file', blob, filename);
-  form.append('scan_type', input.scanType);
-  if (input.isDicom) {
-    form.append('is_dicom', 'true');
-  }
+  const mime = input.isDicom
+    ? 'application/dicom'
+    : imageRes.headers.get('content-type') ?? 'image/jpeg';
+  const filename =
+    input.originalFilename ?? (input.isDicom ? 'scan.dcm' : input.scanType === 'chest_xray' ? 'chest.jpg' : 'scan.jpg');
 
-  const url = `${config.mediscan.apiUrl.replace(/\/$/, '')}/api/analyze`;
-  const response = await fetch(url, { method: 'POST', body: form });
+  const unified = await analyzeMedicalScan({
+    buffer,
+    mimetype: mime,
+    originalname: filename,
+    scanType: input.scanType,
+  });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(`MediScan API error (${response.status}): ${text || response.statusText}`);
-  }
-
-  return (await response.json()) as MediScanAnalyzeResponse;
+  return {
+    prediction: unified.prediction,
+    confidence: unified.confidence,
+    probabilities: unified.probabilities,
+    gradcam_url: unified.gradcamUrl,
+  };
 }
 
 async function resolveDoctorId(
@@ -188,6 +188,8 @@ export async function runScanAnalysisJob(reportId: string): Promise<void> {
     report.confidence = confidence;
     report.probabilities = mapProbabilities(aiResult.probabilities ?? {});
     report.gradcamUrl = aiResult.gradcam_url ?? aiResult.gradcamUrl;
+    report.analysisSource = 'integrated';
+    report.mlEngine = 'lifecare-integrated';
     report.status = 'ai_analyzed';
     report.flags = flags;
     report.aiAnalyzedAt = new Date();

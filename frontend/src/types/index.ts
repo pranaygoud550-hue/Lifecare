@@ -89,6 +89,11 @@ export interface User {
     balance: number;
     transactions: WalletTransaction[];
   };
+  healthDataSharing?: {
+    shareVitalsWithDoctors: boolean;
+    shareWellnessWithDoctors: boolean;
+    updatedAt?: string;
+  };
 }
 
 export interface WalletTransaction {

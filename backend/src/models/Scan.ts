@@ -12,6 +12,8 @@ export interface IScan extends Document {
   disclaimer: string;
   sharedWithDoctor: boolean;
   doctorNote?: string;
+  analysisSource?: 'external' | 'local_screening' | 'integrated';
+  mlEngine?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +35,11 @@ const scanSchema = new Schema<IScan>(
     disclaimer: { type: String, required: true },
     sharedWithDoctor: { type: Boolean, default: false, index: true },
     doctorNote: String,
+    analysisSource: {
+      type: String,
+      enum: ['external', 'local_screening', 'integrated'],
+    },
+    mlEngine: String,
   },
   { timestamps: true }
 );

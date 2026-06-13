@@ -91,6 +91,8 @@ export interface ScanReport {
   createdAt: string;
   updatedAt: string;
   analysisStatus?: string;
+  analysisSource?: 'external' | 'local_screening' | 'integrated';
+  mlEngine?: string;
 }
 
 export interface DoctorScanAnalytics {

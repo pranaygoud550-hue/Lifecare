@@ -11,6 +11,7 @@ import type { DoctorScanAnalytics, ScanReport, ScanReviewPayload } from '@/types
 import type { ChestScan } from '@/types/chestScan';
 import type { GoogleHospitalPlace, HospitalRoutePreviewData, NavigationRouteData, NavigationEtaData, SmartHospitalRecommendation } from '@/types/googleMaps';
 import type { WellnessPlan, DietLogEntry, MealSlot, DietAdherenceStatus, OffPlanCategory } from '@/types/wellness';
+import type { DoctorCarePlan, DoctorPatientDetail, DoctorPatientListItem, HealthDataSharing } from '@/types/doctorCare';
 
 export const api = createApi({
   reducerPath: 'api',
@@ -18,7 +19,7 @@ export const api = createApi({
   keepUnusedDataFor: 120,
   refetchOnFocus: false,
   refetchOnReconnect: true,
-  tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans'],
+  tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans', 'DoctorCare', 'HealthSharing'],
   endpoints: (builder) => ({
     register: builder.mutation<ApiResponse<AuthSessionData>, Record<string, unknown>>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
@@ -675,6 +676,57 @@ export const api = createApi({
       }),
       invalidatesTags: ['Scans'],
     }),
+    getDoctorCarePatients: builder.query<
+      ApiResponse<{ patients: DoctorPatientListItem[]; count: number }>,
+      { search?: string } | void
+    >({
+      query: (params) => ({
+        url: '/doctors/care/patients',
+        params: params?.search ? { search: params.search } : {},
+      }),
+      providesTags: ['DoctorCare'],
+    }),
+    getDoctorCarePatientDetail: builder.query<ApiResponse<DoctorPatientDetail>, string>({
+      query: (patientId) => `/doctors/care/patients/${patientId}`,
+      providesTags: (_r, _e, patientId) => [{ type: 'DoctorCare', id: patientId }],
+    }),
+    publishDoctorCarePlan: builder.mutation<
+      ApiResponse<DoctorCarePlan>,
+      {
+        patientId: string;
+        title?: string;
+        summary?: string;
+        dos?: string[];
+        donts?: string[];
+        dietInstructions?: string;
+        lifestyleNotes?: string;
+        bpSugarNotes?: string;
+        publishToPatient?: boolean;
+        appointmentId?: string;
+      }
+    >({
+      query: ({ patientId, ...body }) => ({
+        url: `/doctors/care/patients/${patientId}/care-plans`,
+        method: 'POST',
+        body,
+      }),
+      invalidatesTags: ['DoctorCare'],
+    }),
+    getHealthSharing: builder.query<ApiResponse<HealthDataSharing>, void>({
+      query: () => '/users/health-sharing',
+      providesTags: ['HealthSharing'],
+    }),
+    updateHealthSharing: builder.mutation<
+      ApiResponse<HealthDataSharing>,
+      Partial<Pick<HealthDataSharing, 'shareVitalsWithDoctors' | 'shareWellnessWithDoctors'>>
+    >({
+      query: (body) => ({ url: '/users/health-sharing', method: 'PATCH', body }),
+      invalidatesTags: ['HealthSharing'],
+    }),
+    getMyDoctorCarePlans: builder.query<ApiResponse<DoctorCarePlan[]>, void>({
+      query: () => '/users/care-plans',
+      providesTags: ['DoctorCare'],
+    }),
   }),
 });
 
@@ -801,4 +853,10 @@ export const {
   useGetDoctorPendingScansQuery,
   useGetDoctorScanAnalyticsQuery,
   useReviewDoctorScanMutation,
+  useGetDoctorCarePatientsQuery,
+  useGetDoctorCarePatientDetailQuery,
+  usePublishDoctorCarePlanMutation,
+  useGetHealthSharingQuery,
+  useUpdateHealthSharingMutation,
+  useGetMyDoctorCarePlansQuery,
 } = api;

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PatientMedicalForm, type PatientMedicalFormValues } from '@/components/auth/PatientMedicalForm';
 import { ProfileEmergencySosCard } from '@/components/profile/ProfileEmergencySosCard';
+import { HealthDataSharingCard } from '@/components/patient/HealthDataSharingCard';
 import { ProfileRecordsWalletPanel } from '@/components/profile/ProfileCarePanels';
 import { ProfileLanguageSettings } from '@/components/profile/ProfileLanguageSettings';
 import {
@@ -170,6 +171,8 @@ export function DashboardProfileSection() {
           walletBalance={walletData?.data?.balance ?? 0}
         />
       </div>
+
+      <HealthDataSharingCard />
     </div>
   );
 }

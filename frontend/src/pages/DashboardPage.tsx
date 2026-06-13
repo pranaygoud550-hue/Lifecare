@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Calendar, User, Heart, FileText, Settings, Shield, Video, ShieldCheck, Brain,
@@ -187,6 +187,10 @@ function StaffDashboard() {
 
 export function DashboardPage() {
   const { user } = useAppSelector((state) => state.auth);
+
+  if (user?.userType === 'doctor') {
+    return <Navigate to="/doctor/patients" replace />;
+  }
 
   if (user?.userType === 'patient') {
     return <PatientDashboard />;

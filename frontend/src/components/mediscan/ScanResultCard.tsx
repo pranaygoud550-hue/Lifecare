@@ -104,7 +104,14 @@ export function ScanResultCard({ report, onShared }: ScanResultCardProps) {
     <Card className="border-primary/20">
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
         <div>
-          <CardTitle className="text-lg">Analysis results</CardTitle>
+          <CardTitle className="text-lg flex flex-wrap items-center gap-2">
+            Analysis results
+            {report.status === 'ai_analyzed' && (
+              <Badge variant="secondary" className="text-xs font-normal">
+                LifeCare AI screening
+              </Badge>
+            )}
+          </CardTitle>
           <p className="text-sm text-muted">{scanTypeLabel(report.scanType)}</p>
         </div>
         <Badge variant={predictionBadgeVariant(tier)} className="text-sm px-3 py-1">

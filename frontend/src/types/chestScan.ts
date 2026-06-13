@@ -23,6 +23,8 @@ export interface ChestScan {
   disclaimer: string;
   sharedWithDoctor: boolean;
   doctorNote?: string;
+  analysisSource?: 'external' | 'local_screening' | 'integrated';
+  mlEngine?: string;
   createdAt: string;
   updatedAt: string;
 }

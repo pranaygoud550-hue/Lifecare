@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import { VitalReading, Appointment } from '../models/index.js';
+import { Appointment, User, VitalReading } from '../models/index.js';
 import { asyncHandler } from '../middleware/validate.js';
 
 export const logVital = asyncHandler(async (req: Request, res: Response) => {
@@ -57,18 +57,39 @@ export const getVitals = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+async function doctorMayViewPatientVitals(doctorId: string, patientId: string): Promise<boolean> {
+  const active = await Appointment.findOne({
+    doctorId,
+    patientId,
+    status: 'in-progress',
+    consultationType: { $in: ['video', 'audio', 'chat'] },
+  });
+  if (active) return true;
+
+  const recent = await Appointment.findOne({
+    doctorId,
+    patientId,
+    status: { $nin: ['cancelled'] },
+  }).sort({ scheduledDate: -1 });
+
+  if (!recent) return false;
+
+  const patient = await User.findById(patientId).select('healthDataSharing');
+  return Boolean(patient?.healthDataSharing?.shareVitalsWithDoctors);
+}
+
 export const getPatientVitalsForDoctor = asyncHandler(async (req: Request, res: Response) => {
   const patientId = String(req.params.patientId);
   const doctorId = req.user!.userId;
 
-  const hasRelationship = await Appointment.exists({
-    doctorId,
-    patientId,
-    status: { $nin: ['cancelled'] },
-  });
-
-  if (!hasRelationship) {
-    res.status(403).json({ success: false, message: 'No consultation relationship with this patient' });
+  const allowed = await doctorMayViewPatientVitals(doctorId, patientId);
+  if (!allowed) {
+    res.status(403).json({
+      success: false,
+      message:
+        'Patient has not shared vitals with you. Ask them to enable sharing in Profile → Privacy, or join a live consultation.',
+      code: 'VITALS_NOT_SHARED',
+    });
     return;
   }
 

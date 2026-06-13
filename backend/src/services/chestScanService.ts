@@ -1,19 +1,11 @@
 import { Types } from 'mongoose';
 import { Scan, User } from '../models/index.js';
 import type { IScan } from '../models/Scan.js';
-import { config } from '../config/index.js';
 import { saveScanToLocalStorage } from './localScanStorage.js';
+import { analyzeChestXrayImage } from './mlScanAnalyzer.js';
 
 const DEFAULT_DISCLAIMER =
   'This is an AI screening tool, not a medical diagnosis. Always consult a qualified healthcare professional for clinical decisions.';
-
-export interface MediScanApiResponse {
-  class_name: string;
-  confidence: number;
-  all_predictions?: Array<{ class_name: string; confidence: number }> | Record<string, number>;
-  explanation?: string;
-  disclaimer?: string;
-}
 
 export interface AnalyzeScanInput {
   patientId: string;
@@ -26,50 +18,7 @@ export interface AnalyzeScanInput {
 
 function normalizeConfidence(value: number): number {
   if (value <= 1) return Math.round(value * 10000) / 100;
-  return Math.round(value * 100) / 100;
-}
-
-function mapAllPredictions(
-  raw: MediScanApiResponse['all_predictions']
-): Record<string, number> {
-  if (!raw) return {};
-
-  if (Array.isArray(raw)) {
-    return Object.fromEntries(
-      raw.map((item) => [item.class_name, normalizeConfidence(item.confidence)])
-    );
-  }
-
-  return Object.fromEntries(
-    Object.entries(raw).map(([key, value]) => [key, normalizeConfidence(value)])
-  );
-}
-
-export async function callChestXrayMlApi(input: {
-  buffer: Buffer;
-  mimetype: string;
-  originalname: string;
-}): Promise<MediScanApiResponse> {
-  const form = new FormData();
-  const blob = new Blob([new Uint8Array(input.buffer)], {
-    type: input.mimetype || 'image/jpeg',
-  });
-  form.append('file', blob, input.originalname || 'chest-xray.jpg');
-
-  const baseUrl = config.mediscan.apiUrl.replace(/\/$/, '');
-  const response = await fetch(`${baseUrl}/predict`, {
-    method: 'POST',
-    body: form,
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => '');
-    throw new Error(
-      `MediScan API error (${response.status}): ${text || response.statusText}`
-    );
-  }
-
-  return (await response.json()) as MediScanApiResponse;
+  return Math.round(Math.min(100, Math.max(0, value)) * 100) / 100;
 }
 
 async function persistImage(input: {
@@ -107,28 +56,30 @@ export function scanToJSON(scan: IScan) {
 }
 
 export async function analyzeAndStoreScan(input: AnalyzeScanInput) {
-  const mlResult = await callChestXrayMlApi({
+  const analyzed = await analyzeChestXrayImage({
     buffer: input.buffer,
     mimetype: input.mimetype,
     originalname: input.originalname,
   });
 
   const storage = await persistImage(input);
-  const allPredictions = mapAllPredictions(mlResult.all_predictions);
-  const confidence = normalizeConfidence(mlResult.confidence);
+  const allPredictions = analyzed.all_predictions;
+  const confidence = normalizeConfidence(analyzed.confidence);
 
   const scan = await Scan.create({
     patientId: input.patientId,
     imageUrl: storage.imageUrl,
     cloudinaryPublicId: storage.cloudinaryPublicId,
-    prediction: mlResult.class_name,
+    prediction: analyzed.class_name,
     confidence,
     allPredictions,
     explanation:
-      mlResult.explanation?.trim() ||
-      `Your scan shows patterns consistent with ${mlResult.class_name} with ${confidence.toFixed(1)}% confidence.`,
-    disclaimer: mlResult.disclaimer?.trim() || DEFAULT_DISCLAIMER,
+      analyzed.explanation?.trim() ||
+      `Your scan shows patterns consistent with ${analyzed.class_name} with ${confidence.toFixed(1)}% confidence.`,
+    disclaimer: analyzed.disclaimer?.trim() || DEFAULT_DISCLAIMER,
     sharedWithDoctor: false,
+    analysisSource: analyzed.source,
+    mlEngine: analyzed.engine,
   });
 
   return scanToJSON(scan);

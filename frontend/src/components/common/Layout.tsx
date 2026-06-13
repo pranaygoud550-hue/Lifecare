@@ -10,6 +10,8 @@ import { PatientTopBar } from '@/components/patient/PatientTopBar';
 import { PatientBottomNav } from '@/components/patient/PatientBottomNav';
 import { usePatientAppShell } from '@/hooks/usePatientAppShell';
 
+const DOCTOR_PORTAL_PREFIX = '/doctor';
+
 const AUTH_ROUTES = ['/login', '/register', '/unlock-account'];
 
 export function Layout() {
@@ -17,6 +19,11 @@ export function Layout() {
   const { pathname } = useLocation();
   const isAuthRoute = AUTH_ROUTES.some((p) => pathname.startsWith(p));
   const isPatientDashboardHome = pathname === '/dashboard';
+  const isDoctorPortal = pathname === DOCTOR_PORTAL_PREFIX || pathname.startsWith(`${DOCTOR_PORTAL_PREFIX}/`);
+
+  if (isDoctorPortal) {
+    return <Outlet />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
