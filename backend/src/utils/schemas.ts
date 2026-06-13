@@ -358,7 +358,16 @@ export const nearbyHospitalsQuerySchema = z.object({
   query: z.object({
     lat: z.coerce.number().min(-90).max(90),
     lng: z.coerce.number().min(-180).max(180),
-    radius: z.coerce.number().positive().max(100).optional().default(10),
+    radius: z.coerce.number().positive().max(100).optional().default(25),
+  }),
+});
+
+export const hospitalRoutePreviewQuerySchema = z.object({
+  query: z.object({
+    originLat: z.coerce.number().min(-90).max(90),
+    originLng: z.coerce.number().min(-180).max(180),
+    destLat: z.coerce.number().min(-90).max(90),
+    destLng: z.coerce.number().min(-180).max(180),
   }),
 });
 

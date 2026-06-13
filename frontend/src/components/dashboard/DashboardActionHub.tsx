@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LifeBuoy, ScanLine, Activity, Salad, User, Camera, Calendar, Pill } from 'lucide-react';
 import { useAppDispatch } from '@/hooks/redux';
-import { openEmergency } from '@/features/emergency/emergencySlice';
+import { openHospitalRideFlow } from '@/features/emergency/emergencySlice';
 import { cn } from '@/lib/utils';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
 
@@ -18,7 +18,7 @@ export function DashboardActionHub({ onTabChange }: { onTabChange?: (tab: Dashbo
     { id: 'skin', label: t('dashboard.actionSkin'), description: t('dashboard.actionSkinDesc'), icon: Camera, to: '/dashboard/mediscan?mode=skin', accent: 'violet' as const },
     { id: 'diet', label: t('dashboard.actionDiet'), description: t('dashboard.actionDietDesc'), icon: Salad, to: '/dashboard/wellness' },
     { id: 'profile', label: t('dashboard.actionMyProfile'), description: t('dashboard.actionMyProfileDesc'), icon: User, tab: 'profile' as DashboardTab },
-    { id: 'sos', label: t('dashboard.actionSos'), description: t('dashboard.actionSosDesc'), icon: LifeBuoy, sos: true, accent: 'danger' as const },
+    { id: 'sos', label: t('dashboard.actionSos'), description: t('dashboard.actionSosDesc'), icon: LifeBuoy, needHelp: true, accent: 'danger' as const },
   ];
 
   return (
@@ -54,9 +54,14 @@ export function DashboardActionHub({ onTabChange }: { onTabChange?: (tab: Dashbo
             </>
           );
 
-          if ('sos' in action && action.sos) {
+          if ('needHelp' in action && action.needHelp) {
             return (
-              <button key={action.id} type="button" onClick={() => dispatch(openEmergency())} className={className}>
+              <button
+                key={action.id}
+                type="button"
+                onClick={() => dispatch(openHospitalRideFlow())}
+                className={className}
+              >
                 {inner}
               </button>
             );

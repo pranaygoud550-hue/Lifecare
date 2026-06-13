@@ -7,6 +7,7 @@ import { MapPin } from 'lucide-react';
 import { useGetEmergencyNearbyHospitalsQuery } from '@/features/api/apiSlice';
 import { ClientOnly } from '@/components/emergency/MapWrapper';
 import { HospitalNearbySummary } from '@/components/hospital/HospitalNearbySummary';
+import { useDrivingRoute } from '@/hooks/useDrivingRoute';
 import { cn } from '@/lib/utils';
 
 const DEMO_LOCATION = { lat: 17.385, lng: 78.4867 };
@@ -55,10 +56,7 @@ function SimpleMap({
   className?: string;
 }) {
   const { t } = useTranslation();
-  const route: [number, number][] = [
-    [userLocation.lat, userLocation.lng],
-    [hospital.lat, hospital.lng],
-  ];
+  const route = useDrivingRoute(userLocation, hospital);
 
   return (
     <div className={cn('rounded-xl overflow-hidden border border-border', className ?? 'h-[320px] w-full')}>

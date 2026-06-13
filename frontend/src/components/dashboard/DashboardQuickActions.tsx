@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Activity, Stethoscope, ScanLine } from 'lucide-react';
+import { Activity, Ambulance, Stethoscope, ScanLine } from 'lucide-react';
+import { useAppDispatch } from '@/hooks/redux';
+import { openAmbulanceEmergencyFlow } from '@/features/emergency/emergencySlice';
 import { cn } from '@/lib/utils';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
 
 export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: DashboardTab) => void }) {
   const { t } = useTranslation();
+  const dispatch = useAppDispatch();
 
   const actions = [
     {
@@ -15,6 +18,14 @@ export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: Dash
       onClick: () => onTabChange('vitals'),
       className: 'hover:border-primary/40',
       iconClass: 'text-primary',
+    },
+    {
+      id: 'ambulance',
+      label: t('dashboard.ambulanceEmergency', 'Book Ambulance'),
+      icon: Ambulance,
+      onClick: () => dispatch(openAmbulanceEmergencyFlow()),
+      className: 'hover:border-red-400/50 bg-red-50/30',
+      iconClass: 'text-red-600',
     },
     {
       id: 'doctor',

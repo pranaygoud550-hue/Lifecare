@@ -17,16 +17,6 @@ import type { EmergencyHospitalInfo } from '@/types';
 const AUTO_VEHICLE = 'medical_cab';
 const AUTO_VEHICLE_LABEL = 'Medical Cab';
 
-const DEMO_HOSPITAL: EmergencyHospitalInfo = {
-  _id: 'fallback-apollo-hyd',
-  name: 'Apollo Hospitals Hyderabad',
-  address: 'Jubilee Hills, Road No 72, Hyderabad',
-  phone: null,
-  city: 'Hyderabad',
-  coordinates: { lat: 17.385, lng: 78.4867 },
-  distanceMeters: 0,
-};
-
 function formatApiError(err: unknown): string {
   const e = err as {
     data?: { message?: string; errors?: { field: string; message: string }[] };
@@ -121,12 +111,12 @@ export function HospitalRideStep() {
         const list = res.data?.hospitals ?? [];
         const nearest = list[0] ?? null;
         dispatch(setNearbyHospitals({ hospitals: list, nearest }));
-        setSelectedHospital((prev) => prev ?? nearest ?? DEMO_HOSPITAL);
+        setSelectedHospital((prev) => prev ?? nearest);
       })
       .catch(() => {
         if (cancelled) return;
         dispatch(setNearbyHospitals({ hospitals: [], nearest: null }));
-        setSelectedHospital((prev) => prev ?? DEMO_HOSPITAL);
+        toast.error('Could not find hospitals near you. Try refreshing your location.');
       })
       .finally(() => {
         if (!cancelled) setHospitalsLoading(false);
@@ -296,9 +286,13 @@ export function HospitalRideStep() {
               <Loader2 className="h-4 w-4 animate-spin" />
               Loading hospitals near you…
             </p>
+          ) : nearbyHospitals.length === 0 ? (
+            <p className="text-sm text-amber-100">
+              No hospitals found within 50 km. Refresh your location or search for a hospital below.
+            </p>
           ) : (
             <HospitalSearchPicker
-              nearbyHospitals={nearbyHospitals.length > 0 ? nearbyHospitals : [DEMO_HOSPITAL]}
+              nearbyHospitals={nearbyHospitals}
               selected={selectedHospital}
               onSelect={(h) => {
                 setSelectedHospital(h);

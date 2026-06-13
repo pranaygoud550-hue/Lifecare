@@ -8,6 +8,10 @@ import {
 } from '../services/googlePlacesService.js';
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { findNearbyHospitals, formatHospitalResponse } from '../services/emergencyService.js';
+import {
+  getDirectionsRoute,
+  isGoogleDirectionsConfigured,
+} from '../services/googleDirectionsService.js';
 
 const VALID_TYPES = new Set<PlaceSearchType>([
   'hospital',
@@ -66,7 +70,7 @@ export const getNearbyGooglePlaces = asyncHandler(async (req, res: Response) => 
   }
 
   if (!isGooglePlacesConfigured()) {
-    const hospitals = await fallbackMongoHospitals(lat, lng, radiusKm);
+    const hospitals = await fallbackMongoHospitals(lat, lng, radiusKm).catch(() => []);
     res.json({
       success: true,
       data: {
@@ -80,28 +84,43 @@ export const getNearbyGooglePlaces = asyncHandler(async (req, res: Response) => 
     return;
   }
 
-  let hospitals = await searchNearbyPlaces(lat, lng, radiusKm * 1000, type);
+  try {
+    let hospitals = await searchNearbyPlaces(lat, lng, radiusKm * 1000, type);
 
-  if (openNow) {
-    hospitals = hospitals.filter((h) => h.isOpen === true);
+    if (openNow) {
+      hospitals = hospitals.filter((h) => h.isOpen === true);
+    }
+
+    if (sort === 'rating') {
+      hospitals.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    } else if (sort === 'open') {
+      hospitals.sort((a, b) => Number(b.isOpen === true) - Number(a.isOpen === true));
+    }
+
+    res.json({
+      success: true,
+      data: {
+        count: hospitals.length,
+        radiusKm,
+        source: 'google_places',
+        patientLocation: { lat, lng },
+        hospitals,
+      },
+    });
+  } catch (err) {
+    console.error('Google Places nearby search failed:', err);
+    const hospitals = await fallbackMongoHospitals(lat, lng, radiusKm).catch(() => []);
+    res.json({
+      success: true,
+      data: {
+        count: hospitals.length,
+        radiusKm,
+        source: 'database',
+        message: 'Google Places unavailable — showing database hospitals only',
+        hospitals,
+      },
+    });
   }
-
-  if (sort === 'rating') {
-    hospitals.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-  } else if (sort === 'open') {
-    hospitals.sort((a, b) => Number(b.isOpen === true) - Number(a.isOpen === true));
-  }
-
-  res.json({
-    success: true,
-    data: {
-      count: hospitals.length,
-      radiusKm,
-      source: 'google_places',
-      patientLocation: { lat, lng },
-      hospitals,
-    },
-  });
 });
 
 export const getGooglePlaceDetails = asyncHandler(async (req, res: Response) => {
@@ -117,6 +136,64 @@ export const getGooglePlaceDetails = asyncHandler(async (req, res: Response) => 
 
   const details = await getPlaceDetails(placeId);
   res.json({ success: true, data: details });
+});
+
+export const getHospitalRoutePreview = asyncHandler(async (req, res: Response) => {
+  const originLat = Number(req.query.originLat);
+  const originLng = Number(req.query.originLng);
+  const destLat = Number(req.query.destLat);
+  const destLng = Number(req.query.destLng);
+
+  if (
+    !Number.isFinite(originLat) ||
+    !Number.isFinite(originLng) ||
+    !Number.isFinite(destLat) ||
+    !Number.isFinite(destLng)
+  ) {
+    res.status(400).json({ success: false, message: 'originLat, originLng, destLat, destLng are required' });
+    return;
+  }
+
+  if (!isGoogleDirectionsConfigured()) {
+    res.json({
+      success: true,
+      data: {
+        source: 'straight_line',
+        decodedPath: [
+          [originLat, originLng],
+          [destLat, destLng],
+        ],
+      },
+    });
+    return;
+  }
+
+  try {
+    const route = await getDirectionsRoute(originLat, originLng, destLat, destLng, 'driving');
+    res.json({
+      success: true,
+      data: {
+        source: 'google_directions',
+        distance: route.distance,
+        duration: route.duration,
+        durationInTraffic: route.durationInTraffic ?? route.duration,
+        decodedPath: route.decodedPath,
+        polyline: route.polyline,
+      },
+    });
+  } catch (err) {
+    console.error('Route preview failed:', err);
+    res.json({
+      success: true,
+      data: {
+        source: 'straight_line',
+        decodedPath: [
+          [originLat, originLng],
+          [destLat, destLng],
+        ],
+      },
+    });
+  }
 });
 
 export const recommendSmartHospital = asyncHandler(async (req, res: Response) => {

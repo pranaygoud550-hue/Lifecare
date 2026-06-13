@@ -15,6 +15,15 @@ export interface GoogleHospitalPlace {
   source?: 'google_places' | 'database';
 }
 
+export interface HospitalRoutePreviewData {
+  source: 'google_directions' | 'straight_line';
+  distance?: string;
+  duration?: string;
+  durationInTraffic?: string;
+  decodedPath: [number, number][];
+  polyline?: string;
+}
+
 export interface NavigationRouteStep {
   instruction: string;
   distance: string;

@@ -477,6 +477,7 @@ export interface EmergencyLiveEtaData {
 export interface NearbyHospitalsResponse {
   count: number;
   radiusKm: number;
+  source?: 'google_places' | 'database' | 'mixed';
   patientLocation: { lat: number; lng: number };
   hospitals: EmergencyHospitalInfo[];
 }

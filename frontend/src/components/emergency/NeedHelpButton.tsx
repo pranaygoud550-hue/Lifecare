@@ -1,6 +1,6 @@
 import { LifeBuoy } from 'lucide-react';
-import { useAppDispatch } from '@/hooks/redux';
-import { openEmergency } from '@/features/emergency/emergencySlice';
+import { useAppDispatch, useAppSelector } from '@/hooks/redux';
+import { openEmergency, openHospitalRideFlow } from '@/features/emergency/emergencySlice';
 import { cn } from '@/lib/utils';
 
 interface NeedHelpButtonProps {
@@ -10,13 +10,22 @@ interface NeedHelpButtonProps {
 
 export function NeedHelpButton({ variant = 'header', className }: NeedHelpButtonProps) {
   const dispatch = useAppDispatch();
+  const { user, isAuthenticated } = useAppSelector((s) => s.auth);
+
+  const handleClick = () => {
+    if (isAuthenticated && user?.userType === 'patient') {
+      dispatch(openHospitalRideFlow());
+    } else {
+      dispatch(openEmergency());
+    }
+  };
 
   if (variant === 'fab' || variant === 'fab-patient') {
     return (
       <button
         type="button"
-        onClick={() => dispatch(openEmergency())}
-        aria-label="I Need Help — choose emergency ambulance or hospital ride"
+        onClick={handleClick}
+        aria-label="I Need Help — hospital ride with location detected"
         className={cn(
           variant === 'fab-patient'
             ? 'fixed bottom-[5.75rem] left-4 z-40 flex items-center gap-2'
@@ -36,8 +45,8 @@ export function NeedHelpButton({ variant = 'header', className }: NeedHelpButton
   return (
     <button
       type="button"
-      onClick={() => dispatch(openEmergency())}
-      aria-label="I Need Help — emergency assistance"
+      onClick={handleClick}
+      aria-label="I Need Help — hospital transport"
       className={cn(
         'hidden lg:flex items-center gap-2 px-4 py-2 rounded-full',
         'bg-red-600 text-white font-semibold text-sm min-h-[48px]',

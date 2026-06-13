@@ -16,7 +16,7 @@ import type { EmergencyType } from '../models/EmergencyRequest.js';
 import {
   findNearestAvailableAmbulances,
   findNearestHospital,
-  findNearbyHospitals,
+  findNearbyHospitalsUnified,
   formatAmbulanceResponse,
   formatHospitalResponse,
   findActiveEmergencyForAmbulance,
@@ -295,17 +295,18 @@ export const cancelEmergencyRequest = asyncHandler(async (req: Request, res: Res
 export const getNearbyHospitals = asyncHandler(async (req: Request, res: Response) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
-  const radius = Number(req.query.radius ?? 10);
+  const radius = Number(req.query.radius ?? 25);
 
-  const hospitals = await findNearbyHospitals(lat, lng, radius);
+  const { hospitals, source } = await findNearbyHospitalsUnified(lat, lng, radius);
 
   res.json({
     success: true,
     data: {
       count: hospitals.length,
       radiusKm: radius,
+      source,
       patientLocation: { lat, lng },
-      hospitals: hospitals.map((row) => formatHospitalResponse(row.hospital, row.distanceMeters)),
+      hospitals,
     },
   });
 });

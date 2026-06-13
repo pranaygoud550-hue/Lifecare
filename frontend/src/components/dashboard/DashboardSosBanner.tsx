@@ -1,13 +1,11 @@
+import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
-import { useAppDispatch } from '@/hooks/redux';
-import { openEmergency } from '@/features/emergency/emergencySlice';
 import { Button } from '@/components/ui/button';
 
-/** Emergency access at bottom of scroll — visible but not alarming on every visit */
+/** Links to profile SOS — location + nearest hospital + countdown dispatch */
 export function DashboardSosBanner() {
   const { t } = useTranslation();
-  const dispatch = useAppDispatch();
 
   return (
     <section
@@ -24,9 +22,9 @@ export function DashboardSosBanner() {
       <Button
         variant="secondary"
         className="w-full mt-4 h-12 font-bold text-red-700 bg-white hover:bg-red-50"
-        onClick={() => dispatch(openEmergency())}
+        asChild
       >
-        {t('dashboard.sosBannerCta')}
+        <Link to="/dashboard/profile">{t('dashboard.sosBannerCta')}</Link>
       </Button>
     </section>
   );

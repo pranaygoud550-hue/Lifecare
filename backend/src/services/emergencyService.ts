@@ -5,6 +5,11 @@ import type { IEmergencyRequest } from '../models/EmergencyRequest.js';
 import type { IHospital } from '../models/Hospital.js';
 import { calculateDistance } from '../utils/helpers.js';
 import { calculateETA, selectAmbulanceByEta, type EtaCalculation } from '../utils/eta.js';
+import {
+  isGooglePlacesConfigured,
+  searchNearbyPlaces,
+  enrichPlacesWithPhones,
+} from './googlePlacesService.js';
 
 export interface AmbulanceWithDistance {
   unit: IAmbulanceUnit;
@@ -17,6 +22,21 @@ export interface HospitalWithDistance {
   hospital: IHospital;
   distanceKm: number;
   distanceMeters: number;
+}
+
+export interface UnifiedNearbyHospital {
+  _id: string;
+  name: string;
+  address: string;
+  phone: string | null;
+  city?: string;
+  state?: string;
+  specialties?: string[];
+  emergencyAvailable?: boolean;
+  coordinates: { lat: number; lng: number } | null;
+  distanceMeters: number;
+  source: 'google_places' | 'database';
+  googlePlaceId?: string;
 }
 
 function toGeoPoint(lat: number, lng: number) {
@@ -146,53 +166,148 @@ export async function findNearbyHospitals(
   lng: number,
   radiusKm = 10
 ): Promise<HospitalWithDistance[]> {
-  const point = toGeoPoint(lat, lng);
+  try {
+    const point = toGeoPoint(lat, lng);
 
-  const hospitals = await Hospital.aggregate<
-    IHospital & { distanceMeters: number }
-  >([
-    {
-      $geoNear: {
-        near: point,
-        distanceField: 'distanceMeters',
-        maxDistance: radiusKm * 1000,
-        spherical: true,
-        query: { isActive: true, emergencyAvailable: true, location: { $exists: true } },
+    const hospitals = await Hospital.aggregate<
+      IHospital & { distanceMeters: number }
+    >([
+      {
+        $geoNear: {
+          near: point,
+          distanceField: 'distanceMeters',
+          maxDistance: radiusKm * 1000,
+          spherical: true,
+          query: { isActive: true, emergencyAvailable: true, location: { $exists: true } },
+        },
       },
-    },
-    { $limit: 50 },
-  ]);
+      { $limit: 50 },
+    ]);
 
-  if (hospitals.length > 0) {
-    return hospitals.map((row) => ({
-      hospital: row as unknown as IHospital,
-      distanceKm: row.distanceMeters / 1000,
-      distanceMeters: Math.round(row.distanceMeters),
-    }));
+    if (hospitals.length > 0) {
+      return hospitals.map((row) => ({
+        hospital: row as unknown as IHospital,
+        distanceKm: row.distanceMeters / 1000,
+        distanceMeters: Math.round(row.distanceMeters),
+      }));
+    }
+
+    const fallback = await Hospital.find({
+      isActive: true,
+      emergencyAvailable: true,
+      'coordinates.lat': { $exists: true },
+      'coordinates.lng': { $exists: true },
+    }).limit(50);
+
+    const withDistance: HospitalWithDistance[] = [];
+
+    for (const h of fallback) {
+      const coords = hospitalCoords(h);
+      if (!coords) continue;
+      const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+      if (distanceKm > radiusKm) continue;
+      withDistance.push({
+        hospital: h,
+        distanceKm,
+        distanceMeters: Math.round(distanceKm * 1000),
+      });
+    }
+
+    return withDistance.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  } catch (err) {
+    console.error('findNearbyHospitals failed:', err);
+    return [];
+  }
+}
+
+/** MongoDB hospitals near a point (seed / partner facilities). */
+export async function findNearbyHospitalsFromDb(
+  lat: number,
+  lng: number,
+  radiusKm = 10
+): Promise<HospitalWithDistance[]> {
+  return findNearbyHospitals(lat, lng, radiusKm);
+}
+
+/**
+ * Nearest hospitals for emergency flows — Google Places worldwide when configured,
+ * merged with LifeCare database hospitals.
+ */
+export async function findNearbyHospitalsUnified(
+  lat: number,
+  lng: number,
+  radiusKm = 25
+): Promise<{ hospitals: UnifiedNearbyHospital[]; source: 'google_places' | 'database' | 'mixed' }> {
+  const merged = new Map<string, UnifiedNearbyHospital>();
+  let usedGoogle = false;
+  let usedDb = false;
+
+  if (isGooglePlacesConfigured()) {
+    try {
+      let places = await searchNearbyPlaces(lat, lng, radiusKm * 1000, 'hospital');
+      places = await enrichPlacesWithPhones(places, 8);
+      usedGoogle = true;
+      for (const place of places) {
+        merged.set(`g:${place.place_id}`, {
+          _id: place.place_id,
+          name: place.name,
+          address: place.address,
+          phone: place.phone,
+          specialties: place.specialtyTags,
+          emergencyAvailable: place.isEmergency,
+          coordinates: place.coordinates,
+          distanceMeters: place.distanceMeters,
+          source: 'google_places',
+          googlePlaceId: place.place_id,
+        });
+      }
+    } catch (err) {
+      console.error('Google Places nearby search failed:', err);
+    }
   }
 
-  const fallback = await Hospital.find({
-    isActive: true,
-    emergencyAvailable: true,
-    'coordinates.lat': { $exists: true },
-    'coordinates.lng': { $exists: true },
-  }).limit(50);
+  const dbRows = await findNearbyHospitalsFromDb(lat, lng, radiusKm).catch((err) => {
+    console.error('Database nearby hospital search failed:', err);
+    return [] as HospitalWithDistance[];
+  });
+  if (dbRows.length > 0) usedDb = true;
 
-  const withDistance: HospitalWithDistance[] = [];
-
-  for (const h of fallback) {
-    const coords = hospitalCoords(h);
-    if (!coords) continue;
-    const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
-    if (distanceKm > radiusKm) continue;
-    withDistance.push({
-      hospital: h,
-      distanceKm,
-      distanceMeters: Math.round(distanceKm * 1000),
+  for (const row of dbRows) {
+    const formatted = formatHospitalResponse(row.hospital, row.distanceMeters);
+    const id = String(row.hospital._id);
+    const nearDup = [...merged.values()].some(
+      (h) =>
+        h.source === 'google_places' &&
+        h.coordinates &&
+        formatted.coordinates &&
+        calculateDistance(
+          h.coordinates.lat,
+          h.coordinates.lng,
+          formatted.coordinates.lat,
+          formatted.coordinates.lng
+        ) < 0.15
+    );
+    if (nearDup) continue;
+    merged.set(`d:${id}`, {
+      _id: id,
+      name: formatted.name,
+      address: formatted.address ?? '',
+      phone: formatted.phone ?? null,
+      city: formatted.city,
+      state: formatted.state,
+      specialties: formatted.specialties,
+      emergencyAvailable: formatted.emergencyAvailable,
+      coordinates: formatted.coordinates,
+      distanceMeters: formatted.distanceMeters,
+      source: 'database',
     });
   }
 
-  return withDistance.sort((a, b) => a.distanceMeters - b.distanceMeters);
+  const hospitals = [...merged.values()].sort((a, b) => a.distanceMeters - b.distanceMeters);
+  const source: 'google_places' | 'database' | 'mixed' =
+    usedGoogle && usedDb ? 'mixed' : usedGoogle ? 'google_places' : 'database';
+
+  return { hospitals, source };
 }
 
 export function formatHospitalResponse(hospital: IHospital, distanceMeters: number) {

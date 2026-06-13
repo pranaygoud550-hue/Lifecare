@@ -4,6 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useDrivingRoute } from '@/hooks/useDrivingRoute';
 
 export interface MapPoint {
   lat: number;
@@ -150,6 +151,8 @@ export function RideLiveMap({
     rideStatus || ''
   );
 
+  const hospitalRoute = useDrivingRoute(pickup, hospital ?? null);
+
   const driverRoute = useMemo(() => {
     if (!driver) return [];
     const target = goingToHospital && hospital ? hospital : pickup;
@@ -158,14 +161,6 @@ export function RideLiveMap({
       [target.lat, target.lng],
     ] as [number, number][];
   }, [driver, pickup, hospital, goingToHospital]);
-
-  const hospitalRoute = useMemo(() => {
-    if (!hospital) return [];
-    return [
-      [pickup.lat, pickup.lng],
-      [hospital.lat, hospital.lng],
-    ] as [number, number][];
-  }, [pickup, hospital]);
 
   const fitPoints = useMemo(() => {
     const pts: MapPoint[] = [pickup];
@@ -198,7 +193,7 @@ export function RideLiveMap({
 
         <Marker position={[pickup.lat, pickup.lng]} icon={pickupIcon} zIndexOffset={900} />
 
-        {hospitalRoute.length === 2 && (
+        {hospitalRoute.length >= 2 && (
           <Polyline
             positions={hospitalRoute}
             pathOptions={{ color: '#16a34a', weight: 4, opacity: 0.55, dashArray: '8 8' }}

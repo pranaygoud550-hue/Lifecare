@@ -46,9 +46,8 @@ export function NotificationBell() {
     if (n.type.includes('appointment')) navigate('/appointments');
     else if (n.type === 'prescription') navigate('/prescriptions');
     else if (n.type === 'wallet') navigate('/wallet');
-    else if (n.type === 'ambulance') navigate('/emergency');
-    else if (n.type === 'RAPIDCARE_UPDATE' || n.type === 'emergency_sync') {
-      navigate('/notifications');
+    else if (n.type === 'ambulance' || n.type === 'RAPIDCARE_UPDATE' || n.type === 'emergency_sync') {
+      navigate('/dashboard/emergency-history');
     }
   };
 

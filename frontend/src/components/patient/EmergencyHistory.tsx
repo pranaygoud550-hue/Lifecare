@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Ambulance } from 'lucide-react';
+import { Ambulance, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useAppSelector } from '@/hooks/redux';
-import {
-  useGetRapidCareHistoryQuery,
-  useShareRapidCareReportMutation,
-} from '@/features/api/apiSlice';
-import { RapidCareWidget } from '@/components/dashboard/RapidCareWidget';
+import { useGetEmergencyHistoryQuery, useGetEmergencyRecordQuery } from '@/features/api/apiSlice';
+import { LifeCareAmbulanceCard } from '@/components/dashboard/LifeCareAmbulanceCard';
 
 type EmergencyRecord = {
   _id: string;
@@ -25,39 +21,17 @@ type EmergencyRecord = {
   paymentStatus: string;
   dispatchTime?: string;
   arrivalTime?: string;
-  completedTime?: string;
   condition: string;
-  sharedWithDoctor: boolean;
   createdAt: string;
-};
-
-const STATUS_LABEL: Record<string, string> = {
-  BOOKING_CREATED: 'Searching',
-  DRIVER_ASSIGNED: 'Assigned',
-  DRIVER_ARRIVING: 'En route',
-  COMPLETED: 'Completed',
-};
-
-const STATUS_CLASS: Record<string, string> = {
-  BOOKING_CREATED: 'bg-amber-100 text-amber-800',
-  DRIVER_ASSIGNED: 'bg-blue-100 text-blue-800',
-  DRIVER_ARRIVING: 'bg-orange-100 text-orange-800',
-  COMPLETED: 'bg-green-100 text-green-800',
 };
 
 export function EmergencyHistory() {
   const { t } = useTranslation();
-  const { user } = useAppSelector((s) => s.auth);
-  const patientId = user?._id || '';
-  const { data, isLoading } = useGetRapidCareHistoryQuery(patientId, { skip: !patientId });
-  const [shareReport, { isLoading: sharing }] = useShareRapidCareReportMutation();
+  const { data, isLoading } = useGetEmergencyHistoryQuery();
   const records = (data?.data || []) as EmergencyRecord[];
-  const [selected, setSelected] = useState<EmergencyRecord | null>(null);
-
-  async function handleShare(bookingId: string) {
-    await shareReport(bookingId).unwrap();
-    setSelected((s) => (s?.bookingId === bookingId ? { ...s, sharedWithDoctor: true } : s));
-  }
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const { data: detailData } = useGetEmergencyRecordQuery(selectedId || '', { skip: !selectedId });
+  const detail = detailData?.data as EmergencyRecord | undefined;
 
   return (
     <div className="space-y-6 pb-4">
@@ -66,11 +40,11 @@ export function EmergencyHistory() {
           🚑 {t('dashboard.emergencyHistory', 'Emergency History')}
         </h1>
         <p className="text-sm text-muted mt-0.5">
-          {t('dashboard.emergencyHistoryDesc', 'RapidCare ambulance trips linked to your account')}
+          {t('dashboard.emergencyHistoryDesc', 'Ambulance and hospital transport trips on your account')}
         </p>
       </div>
 
-      <RapidCareWidget />
+      <LifeCareAmbulanceCard />
 
       {isLoading && <p className="text-sm text-muted">{t('common.loading', 'Loading…')}</p>}
 
@@ -86,78 +60,57 @@ export function EmergencyHistory() {
       <div className="space-y-3">
         {records.map((r) => (
           <Card key={r._id} className="overflow-hidden">
-            <CardContent className="p-4 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs text-muted">
-                    {new Date(r.dispatchTime || r.createdAt).toLocaleString()}
-                  </p>
-                  <p className="font-semibold text-foreground mt-1">
-                    {r.pickupAddress} → {r.destinationHospital}
-                  </p>
-                  <p className="text-sm text-muted mt-1">
-                    {r.vehicleType}
-                    {r.driverName ? ` · ${r.driverName}` : ''}
-                    {r.responseTimeMinutes != null ? ` · ${r.responseTimeMinutes} min` : ''}
-                    {' · '}₹{r.fare}
-                  </p>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASS[r.eventType] || 'bg-muted text-muted-foreground'}`}
-                >
-                  {STATUS_LABEL[r.eventType] || r.eventType}
-                </span>
+            <button
+              type="button"
+              className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/30"
+              onClick={() => setSelectedId(r.bookingId)}
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <Ambulance className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="font-semibold text-foreground">
+                  {r.vehicleType} → {r.destinationHospital}
+                </p>
+                <p className="text-xs text-muted">
+                  {new Date(r.dispatchTime || r.createdAt).toLocaleString()}
+                  {r.responseTimeMinutes != null ? ` · ${r.responseTimeMinutes} min response` : ''}
+                </p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => setSelected(r)}>
-                  View Report
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={r.sharedWithDoctor || sharing}
-                  onClick={() => handleShare(r.bookingId)}
-                >
-                  {r.sharedWithDoctor ? 'Shared with doctor' : 'Share with Doctor'}
-                </Button>
-              </div>
-            </CardContent>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
+            </button>
           </Card>
         ))}
       </div>
 
-      {selected && (
+      {detail && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/50 p-4">
           <Card className="max-h-[85vh] w-full max-w-lg overflow-y-auto">
             <CardContent className="space-y-3 p-5">
               <div className="flex items-start justify-between">
-                <h3 className="font-bold text-lg">{selected.bookingId}</h3>
-                <Button type="button" variant="ghost" size="sm" onClick={() => setSelected(null)}>
+                <h3 className="font-bold text-lg">{detail.bookingId}</h3>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedId(null)}>
                   Close
                 </Button>
               </div>
-              <DetailRow label="Patient" value={selected.patientName} />
-              <DetailRow label="From" value={selected.pickupAddress} />
-              <DetailRow label="To" value={selected.destinationHospital} />
-              <DetailRow label="Condition" value={selected.condition} />
+              <DetailRow label="Patient" value={detail.patientName} />
+              <DetailRow label="Pickup" value={detail.pickupAddress} />
+              <DetailRow label="Hospital" value={detail.destinationHospital} />
+              <DetailRow label="Condition" value={detail.condition} />
               <DetailRow
                 label="Vehicle"
-                value={`${selected.vehicleType}${selected.vehicleNumber ? ` · ${selected.vehicleNumber}` : ''}`}
+                value={`${detail.vehicleType}${detail.vehicleNumber ? ` · ${detail.vehicleNumber}` : ''}`}
               />
-              {selected.driverName && <DetailRow label="Driver" value={selected.driverName} />}
-              {selected.responseTimeMinutes != null && (
-                <DetailRow label="Response time" value={`${selected.responseTimeMinutes} minutes`} />
+              {detail.driverName && <DetailRow label="Driver" value={detail.driverName} />}
+              {detail.responseTimeMinutes != null && (
+                <DetailRow label="Response time" value={`${detail.responseTimeMinutes} minutes`} />
               )}
-              <DetailRow label="Fare" value={`₹${selected.fare} (${selected.paymentStatus})`} />
-              {selected.dispatchTime && (
-                <DetailRow label="Dispatch" value={new Date(selected.dispatchTime).toLocaleString()} />
+              <DetailRow label="Fare" value={`₹${detail.fare} (${detail.paymentStatus})`} />
+              {detail.dispatchTime && (
+                <DetailRow label="Dispatch" value={new Date(detail.dispatchTime).toLocaleString()} />
               )}
-              {selected.arrivalTime && (
-                <DetailRow label="Arrival" value={new Date(selected.arrivalTime).toLocaleString()} />
-              )}
-              {selected.completedTime && (
-                <DetailRow label="Completed" value={new Date(selected.completedTime).toLocaleString()} />
+              {detail.arrivalTime && (
+                <DetailRow label="Arrival" value={new Date(detail.arrivalTime).toLocaleString()} />
               )}
             </CardContent>
           </Card>

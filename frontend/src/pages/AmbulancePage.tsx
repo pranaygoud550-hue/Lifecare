@@ -158,6 +158,7 @@ export function AmbulancePage() {
         <p className="text-muted">Request immediate medical transport with real-time tracking</p>
       </div>
 
+
       {!isAuthenticated && (
         <Card className="mb-6 border-accent/50 bg-accent/5">
           <CardContent className="p-4 flex items-center justify-between">

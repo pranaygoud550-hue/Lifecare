@@ -8,6 +8,7 @@ import { Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PatientMedicalForm, type PatientMedicalFormValues } from '@/components/auth/PatientMedicalForm';
+import { ProfileEmergencySosCard } from '@/components/profile/ProfileEmergencySosCard';
 import { ProfileRecordsWalletPanel } from '@/components/profile/ProfileCarePanels';
 import { ProfileLanguageSettings } from '@/components/profile/ProfileLanguageSettings';
 import {
@@ -118,6 +119,8 @@ export function DashboardProfileSection() {
       </div>
 
       <ProfileLanguageSettings />
+
+      <ProfileEmergencySosCard />
 
       <Card>
         <CardHeader>

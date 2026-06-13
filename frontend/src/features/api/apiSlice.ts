@@ -9,7 +9,7 @@ import type {
 } from '@/types';
 import type { DoctorScanAnalytics, ScanReport, ScanReviewPayload } from '@/types/mediscan';
 import type { ChestScan } from '@/types/chestScan';
-import type { GoogleHospitalPlace, NavigationRouteData, NavigationEtaData, SmartHospitalRecommendation } from '@/types/googleMaps';
+import type { GoogleHospitalPlace, HospitalRoutePreviewData, NavigationRouteData, NavigationEtaData, SmartHospitalRecommendation } from '@/types/googleMaps';
 import type { WellnessPlan, DietLogEntry, MealSlot, DietAdherenceStatus, OffPlanCategory } from '@/types/wellness';
 
 export const api = createApi({
@@ -204,7 +204,7 @@ export const api = createApi({
       ApiResponse<NearbyHospitalsResponse>,
       { lat: number; lng: number; radius?: number }
     >({
-      query: ({ lat, lng, radius = 10 }) => ({
+      query: ({ lat, lng, radius = 25 }) => ({
         url: '/emergency/nearby-hospitals',
         params: { lat, lng, radius },
       }),
@@ -305,6 +305,12 @@ export const api = createApi({
         },
       }),
       providesTags: ['Emergency'],
+    }),
+    getHospitalRoutePreview: builder.query<
+      ApiResponse<HospitalRoutePreviewData>,
+      { originLat: number; originLng: number; destLat: number; destLng: number }
+    >({
+      query: (params) => ({ url: '/hospitals/route-preview', params }),
     }),
     getGooglePlaceDetails: builder.query<ApiResponse<GoogleHospitalPlace>, string>({
       query: (placeId) => `/hospitals/${placeId}`,
@@ -736,6 +742,7 @@ export const {
   useGetHospitalsQuery,
   useGetHospitalByIdQuery,
   useGetNearbyGoogleHospitalsQuery,
+  useGetHospitalRoutePreviewQuery,
   useGetGooglePlaceDetailsQuery,
   useRecommendSmartHospitalQuery,
   useGetNavigationRouteMutation,

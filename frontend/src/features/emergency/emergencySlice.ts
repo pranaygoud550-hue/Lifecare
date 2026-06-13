@@ -164,6 +164,20 @@ const emergencySlice = createSlice({
       state.triageQuestionIndex = 0;
       state.route = null;
     },
+    openHospitalRideFlow: (state) => {
+      state.isOpen = true;
+      state.helpType = 'hospital_ride';
+      state.step = 'hospital-ride';
+      state.nearestHospital = null;
+      state.nearbyHospitals = [];
+    },
+    openAmbulanceEmergencyFlow: (state) => {
+      state.isOpen = true;
+      state.helpType = 'emergency';
+      state.step = 'emergency-dispatch';
+      state.nearestHospital = null;
+      state.nearbyHospitals = [];
+    },
     setHelpType: (state, action: PayloadAction<HelpType>) => {
       state.helpType = action.payload;
     },
@@ -363,6 +377,8 @@ const emergencySlice = createSlice({
 
 export const {
   openEmergency,
+  openHospitalRideFlow,
+  openAmbulanceEmergencyFlow,
   closeEmergency,
   setHelpType,
   setNearbyHospitals,

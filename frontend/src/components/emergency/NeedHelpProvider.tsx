@@ -1,7 +1,7 @@
 import { EmergencyFlowModal } from './EmergencyFlowModal';
 import { NeedHelpButton } from './NeedHelpButton';
 
-/** Global emergency UI — modal + floating help button */
+/** LifeCare emergency modal + floating help button */
 export function NeedHelpProvider({ patientShell = false }: { patientShell?: boolean }) {
   return (
     <>

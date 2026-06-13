@@ -4,10 +4,12 @@ import { validate } from '../middleware/validate.js';
 import {
   getNearbyGooglePlaces,
   getGooglePlaceDetails,
+  getHospitalRoutePreview,
   recommendSmartHospital,
 } from '../controllers/hospitalGoogleController.js';
 import {
   googlePlaceDetailsParamSchema,
+  hospitalRoutePreviewQuerySchema,
   nearbyGooglePlacesQuerySchema,
   smartHospitalQuerySchema,
 } from '../utils/schemas.js';
@@ -27,6 +29,7 @@ function authorizePatient(req: Parameters<typeof authenticate>[0], res: Response
 /** Mount Google Places routes — must be registered before /:id mongo route. */
 export function mountGoogleHospitalRoutes(router: Router): void {
   router.get('/nearby', validate(nearbyGooglePlacesQuerySchema), getNearbyGooglePlaces);
+  router.get('/route-preview', validate(hospitalRoutePreviewQuerySchema), getHospitalRoutePreview);
   router.get('/recommend', authenticate, authorizePatient, validate(smartHospitalQuerySchema), recommendSmartHospital);
   router.get('/places/:place_id', validate(googlePlaceDetailsParamSchema), getGooglePlaceDetails);
 }

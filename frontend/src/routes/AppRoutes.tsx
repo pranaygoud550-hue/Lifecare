@@ -63,6 +63,9 @@ const DoctorScansPage = lazy(() =>
 const ScanAnalysisPage = lazy(() =>
   import('@/pages/patient/ScanAnalysisPage').then((m) => ({ default: m.ScanAnalysisPage }))
 );
+const EmergencyHistoryPage = lazy(() =>
+  import('@/pages/EmergencyHistoryPage').then((m) => ({ default: m.EmergencyHistoryPage }))
+);
 const ScanHistoryPage = lazy(() =>
   import('@/pages/patient/ScanHistoryPage').then((m) => ({ default: m.ScanHistoryPage }))
 );
@@ -107,6 +110,14 @@ export function AppRoutes() {
             />
             <Route path="dashboard/mediscan" element={<Suspense fallback={<PageLoad variant="dashboard" />}><MediScanPage /></Suspense>} />
             <Route path="dashboard/wellness" element={<Suspense fallback={<PageLoad variant="dashboard" />}><WellnessPage /></Suspense>} />
+            <Route
+              path="dashboard/emergency-history"
+              element={
+                <Suspense fallback={<PageLoad variant="dashboard" />}>
+                  <EmergencyHistoryPage />
+                </Suspense>
+              }
+            />
             <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
               <Route
                 path="patient/hospitals"

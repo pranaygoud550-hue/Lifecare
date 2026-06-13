@@ -10,6 +10,7 @@ const PATIENT_SHELL_PREFIXES = [
   '/prescriptions',
   '/cart',
   '/notifications',
+  '/dashboard/emergency-history',
 ];
 
 export function usePatientAppShell(): boolean {

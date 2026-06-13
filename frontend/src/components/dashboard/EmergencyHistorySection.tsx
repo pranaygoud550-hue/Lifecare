@@ -7,23 +7,24 @@ import {
   useGetEmergencyHistoryQuery,
   useGetEmergencyRecordQuery,
 } from '@/features/api/apiSlice';
-import { RapidCareWidget } from '@/components/dashboard/RapidCareWidget';
+import { LifeCareAmbulanceCard } from '@/components/dashboard/LifeCareAmbulanceCard';
 
 type EmergencyRecord = {
   _id: string;
-  rapidcareBookingId: string;
+  bookingId: string;
   patientName: string;
-  hospital: string;
+  destinationHospital: string;
   vehicleType: string;
-  dispatchTime: string;
-  responseTimeMinutes: number;
-  pickupLocation: string;
+  dispatchTime?: string;
+  responseTimeMinutes?: number;
+  pickupAddress: string;
   condition: string;
-  driverName: string;
-  vehicleNumber: string;
+  driverName?: string;
+  vehicleNumber?: string;
   fare: number;
   paymentStatus: string;
-  arrivalTime: string;
+  arrivalTime?: string;
+  createdAt: string;
 };
 
 export function EmergencyHistorySection() {
@@ -41,11 +42,11 @@ export function EmergencyHistorySection() {
           {t('dashboard.emergencyHistory', 'Emergency History')}
         </h1>
         <p className="text-sm text-muted mt-0.5">
-          {t('dashboard.emergencyHistoryDesc', 'RapidCare ambulance trips linked to your account')}
+          {t('dashboard.emergencyHistoryDesc', 'Ambulance and hospital transport trips on your account')}
         </p>
       </div>
 
-      <RapidCareWidget />
+      <LifeCareAmbulanceCard />
 
       {isLoading && <p className="text-sm text-muted">{t('common.loading', 'Loading…')}</p>}
 
@@ -64,15 +65,16 @@ export function EmergencyHistorySection() {
             <button
               type="button"
               className="flex w-full items-center gap-3 p-4 text-left hover:bg-muted/30"
-              onClick={() => setSelectedId(r.rapidcareBookingId)}
+              onClick={() => setSelectedId(r.bookingId)}
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
                 <Ambulance className="h-5 w-5" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{r.vehicleType} → {r.hospital}</p>
+                <p className="font-semibold text-foreground">{r.vehicleType} → {r.destinationHospital}</p>
                 <p className="text-xs text-muted">
-                  {new Date(r.dispatchTime).toLocaleString()} · {r.responseTimeMinutes} min response
+                  {new Date(r.dispatchTime || r.createdAt).toLocaleString()}
+                  {r.responseTimeMinutes != null ? ` · ${r.responseTimeMinutes} min response` : ''}
                 </p>
               </div>
               <ChevronRight className="h-5 w-5 shrink-0 text-muted" />
@@ -86,21 +88,30 @@ export function EmergencyHistorySection() {
           <Card className="max-h-[85vh] w-full max-w-lg overflow-y-auto">
             <CardContent className="space-y-3 p-5">
               <div className="flex items-start justify-between">
-                <h3 className="font-bold text-lg">{detail.rapidcareBookingId}</h3>
+                <h3 className="font-bold text-lg">{detail.bookingId}</h3>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedId(null)}>
                   Close
                 </Button>
               </div>
               <DetailRow label="Patient" value={detail.patientName} />
-              <DetailRow label="Pickup" value={detail.pickupLocation} />
-              <DetailRow label="Hospital" value={detail.hospital} />
+              <DetailRow label="Pickup" value={detail.pickupAddress} />
+              <DetailRow label="Hospital" value={detail.destinationHospital} />
               <DetailRow label="Condition" value={detail.condition} />
-              <DetailRow label="Vehicle" value={`${detail.vehicleType} · ${detail.vehicleNumber}`} />
-              <DetailRow label="Driver" value={detail.driverName} />
-              <DetailRow label="Response time" value={`${detail.responseTimeMinutes} minutes`} />
+              <DetailRow
+                label="Vehicle"
+                value={`${detail.vehicleType}${detail.vehicleNumber ? ` · ${detail.vehicleNumber}` : ''}`}
+              />
+              {detail.driverName && <DetailRow label="Driver" value={detail.driverName} />}
+              {detail.responseTimeMinutes != null && (
+                <DetailRow label="Response time" value={`${detail.responseTimeMinutes} minutes`} />
+              )}
               <DetailRow label="Fare" value={`₹${detail.fare} (${detail.paymentStatus})`} />
-              <DetailRow label="Dispatch" value={new Date(detail.dispatchTime).toLocaleString()} />
-              <DetailRow label="Arrival" value={new Date(detail.arrivalTime).toLocaleString()} />
+              {detail.dispatchTime && (
+                <DetailRow label="Dispatch" value={new Date(detail.dispatchTime).toLocaleString()} />
+              )}
+              {detail.arrivalTime && (
+                <DetailRow label="Arrival" value={new Date(detail.arrivalTime).toLocaleString()} />
+              )}
             </CardContent>
           </Card>
         </div>
