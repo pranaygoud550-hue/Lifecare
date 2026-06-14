@@ -97,6 +97,7 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 |-------|-----|
 | Blank screen / slow load | Render waking up — wait 30–60s, refresh |
 | Demo login fails | Ensure `ALLOW_DEMO_LOGIN=true` on Render backend |
+| API shows `database.connected: false` | Set valid `MONGODB_URI` on Render **or** rely on in-memory demo fallback (`ALLOW_DEMO_LOGIN=true`) |
 | Onboarding shows again | Clear `lifecare-onboarding-complete` in browser localStorage |
 | SOS “no ambulance” | Backend uses fallback search (10→500 km); retry once |
 | MediScan chest upload | `/dashboard/mediscan` — local ML fallback | ✅ |

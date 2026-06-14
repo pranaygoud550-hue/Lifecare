@@ -6,11 +6,6 @@ API="${API_URL:-https://lifecare-l42k.onrender.com/api}"
 FRONTEND="${FRONTEND_URL:-https://lifecare-frontend-navy.vercel.app}"
 PASS=0
 FAIL=0
-TOKEN_PATIENT=""
-TOKEN_DOCTOR=""
-TOKEN_PHARMACY=""
-TOKEN_AMBULANCE=""
-TOKEN_ADMIN=""
 
 ok() { echo "  ✓ $1"; PASS=$((PASS + 1)); }
 bad() { echo "  ✗ $1"; FAIL=$((FAIL + 1)); }
@@ -23,21 +18,25 @@ check_http() {
 }
 
 demo_login() {
-  local phone="$1" var="$2"
+  local phone="$1" token_file="$2" id_file="${3:-}"
   local resp
   resp=$(curl -s -X POST "$API/auth/demo-login" \
     -H "Content-Type: application/json" \
     -d "{\"phone\":\"$phone\"}" --max-time 30)
-  local success token
+  local success
   success=$(echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('success', False))" 2>/dev/null || echo "False")
-  token=$(echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('data',{}).get('accessToken',''))" 2>/dev/null || echo "")
-  if [ "$success" = "True" ] && [ -n "$token" ]; then
+  if [ "$success" = "True" ]; then
+    echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['data']['accessToken'])" > "$token_file"
+    if [ -n "$id_file" ]; then
+      echo "$resp" | python3 -c "import sys,json; d=json.load(sys.stdin); u=d['data']['user']; print(u.get('_id') or u.get('id',''))" > "$id_file"
+    fi
     ok "Demo login $phone"
-    eval "$var=\"$token\""
   else
     bad "Demo login $phone — $(echo "$resp" | head -c 200)"
   fi
 }
+
+read_token() { cat "$1" 2>/dev/null || true; }
 
 auth_get() {
   local label="$1" path="$2" token="$3" expect="${4:-200}"
@@ -60,11 +59,18 @@ check_http "Backend health" "${API%/api}/health" "200"
 
 echo ""
 echo "2. Demo logins (all roles)"
-demo_login "9876543210" TOKEN_PATIENT
-demo_login "9876543211" TOKEN_DOCTOR
-demo_login "9876543215" TOKEN_PHARMACY
-demo_login "9876543216" TOKEN_AMBULANCE
-demo_login "9999999999" TOKEN_ADMIN
+demo_login "9876543210" /tmp/lc_token_patient /tmp/lc_patient_id
+demo_login "9876543211" /tmp/lc_token_doctor
+demo_login "9876543215" /tmp/lc_token_pharmacy
+demo_login "9876543216" /tmp/lc_token_ambulance
+demo_login "9999999999" /tmp/lc_token_admin
+
+TOKEN_PATIENT=$(read_token /tmp/lc_token_patient)
+TOKEN_DOCTOR=$(read_token /tmp/lc_token_doctor)
+TOKEN_PHARMACY=$(read_token /tmp/lc_token_pharmacy)
+TOKEN_AMBULANCE=$(read_token /tmp/lc_token_ambulance)
+TOKEN_ADMIN=$(read_token /tmp/lc_token_admin)
+PATIENT_ID=$(read_token /tmp/lc_patient_id)
 
 echo ""
 echo "3. Patient flows"
@@ -92,11 +98,11 @@ fi
 
 echo ""
 echo "6. Ambulance / emergency"
-if [ -n "$TOKEN_PATIENT" ]; then
+if [ -n "$TOKEN_PATIENT" ] && [ -n "$PATIENT_ID" ]; then
   SOS=$(curl -s -X POST "$API/emergency/sos" \
     -H "Authorization: Bearer $TOKEN_PATIENT" \
     -H "Content-Type: application/json" \
-    -d '{"patientLat":19.076,"patientLng":72.8777,"emergencyType":"other"}' \
+    -d "{\"patientLat\":19.076,\"patientLng\":72.8777,\"emergencyType\":\"other\",\"patientId\":\"$PATIENT_ID\"}" \
     --max-time 45)
   SOS_OK=$(echo "$SOS" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('success', False))" 2>/dev/null || echo "False")
   if [ "$SOS_OK" = "True" ]; then ok "POST /emergency/sos"; else bad "POST /emergency/sos: $(echo "$SOS" | head -c 200)"; fi

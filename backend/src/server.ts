@@ -24,6 +24,9 @@ const autoSeedIfEmpty = async () => {
       console.log('📋 Empty database — loading demo data...');
       const { runSeed } = await import('./utils/seed.js');
       await runSeed();
+    } else {
+      const { ensureInterviewDemoAppointment } = await import('./services/interviewDemoService.js');
+      await ensureInterviewDemoAppointment();
     }
   } catch (err) {
     console.warn('Auto-seed skipped:', err instanceof Error ? err.message : err);

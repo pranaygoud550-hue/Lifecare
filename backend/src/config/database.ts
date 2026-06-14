@@ -153,6 +153,17 @@ export const connectDB = async (): Promise<void> => {
     }
   }
 
+  /** Demo/production deploy without Atlas — keep interview flows working (data resets on cold start). */
+  if (process.env.ALLOW_DEMO_LOGIN === 'true' && process.env.USE_MEMORY_DB !== 'false') {
+    console.warn('\n⚠️  MongoDB unreachable — using in-memory DB for demo deploy (ALLOW_DEMO_LOGIN)...\n');
+    try {
+      await connectInMemoryDatabase();
+      return;
+    } catch (memErr) {
+      console.error('In-memory MongoDB failed:', memErr);
+    }
+  }
+
   const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
   console.error('\n❌ Could not connect to MongoDB');
   console.error(`   URI: ${safeUri}\n`);
