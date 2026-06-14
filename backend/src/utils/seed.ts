@@ -56,7 +56,7 @@ export const runSeed = async () => {
   const doctors = [
     {
       email: 'dr.kavitha@lifecare.com',
-      phone: '9876543216',
+      phone: '9876543221',
       firstName: 'Kavitha',
       lastName: 'Reddy',
       city: 'Mumbai',

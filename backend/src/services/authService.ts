@@ -391,10 +391,7 @@ export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
   }
 
   if (isDbReady()) {
-    let user = await User.findOne({ phone: normalizedPhone });
-    if (!user) {
-      user = await ensureDevDemoUserInDb(normalizedPhone);
-    }
+    const user = await ensureDevDemoUserInDb(normalizedPhone);
     if (user && !user.isBlocked) {
       user.isPhoneVerified = true;
       await user.save();

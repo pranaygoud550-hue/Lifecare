@@ -10,11 +10,13 @@
 </p>
 
 <p align="center">
-  <a href="https://lifecare-frontend.up.railway.app"><strong>Live Demo →</strong></a>
+  <a href="https://lifecare-frontend-navy.vercel.app"><strong>Live Demo →</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://lifecare-backend.up.railway.app/api/docs">API Docs</a>
+  <a href="https://lifecare-l42k.onrender.com/api/docs">API Docs</a>
   &nbsp;·&nbsp;
-  <a href="https://lifecare-backend.up.railway.app/health">Health Check</a>
+  <a href="https://lifecare-l42k.onrender.com/health">Health Check</a>
+  &nbsp;·&nbsp;
+  <a href="INTERVIEW_DEMO.md">Interview Guide</a>
 </p>
 
 <p align="center">
@@ -33,19 +35,24 @@
 
 | | URL |
 |---|---|
-| **App** | [lifecare-frontend.up.railway.app](https://lifecare-frontend.up.railway.app) |
-| **API** | [lifecare-backend.up.railway.app/api](https://lifecare-backend.up.railway.app/api) |
-| **Swagger** | [lifecare-backend.up.railway.app/api/docs](https://lifecare-backend.up.railway.app/api/docs) |
+| **App** | [lifecare-frontend-navy.vercel.app](https://lifecare-frontend-navy.vercel.app) |
+| **API** | [lifecare-l42k.onrender.com/api](https://lifecare-l42k.onrender.com/api) |
+| **Swagger** | [lifecare-l42k.onrender.com/api/docs](https://lifecare-l42k.onrender.com/api/docs) |
+| **Interview demo script** | [INTERVIEW_DEMO.md](./INTERVIEW_DEMO.md) |
 
-All seeded accounts use password **`Password@123`**.
+All seeded accounts use password **`Password@123`**, or use **one-click demo** on the login page (no password).
 
-| Role | Email | Use case |
-|------|-------|----------|
-| **Patient** | `patient@demo.com` | Book consults, SOS, pharmacy checkout, wallet |
-| **Doctor** | `dr.kavitha@lifecare.com` | Accept appointments, video consult, prescriptions |
-| **Admin** | `admin@lifecare.com` | Platform analytics, user moderation, verification |
+| Role | Demo button / Phone | Use case |
+|------|---------------------|----------|
+| **Patient** | `9876543210` | Book consults, SOS, pharmacy, MediScan |
+| **Doctor** | `9876543211` | Patients, video consult, care plans |
+| **Pharmacy** | `9876543215` | Order queue, packing & delivery |
+| **Ambulance** | `9876543216` | SOS pickups, driver dashboard |
+| **Admin** | `9999999999` | Platform analytics, user moderation |
 
-> One-click **Demo Login** is available on the auth screen. OTP login (`9876543210`) is also supported.
+Email login (optional): `patient@demo.com`, `dr.sharma@lifecare.com`, `admin@lifecare.com` — same password.
+
+> Full interview walkthrough: **[INTERVIEW_DEMO.md](./INTERVIEW_DEMO.md)**
 
 ---
 

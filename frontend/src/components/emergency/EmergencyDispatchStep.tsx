@@ -141,7 +141,7 @@ export function EmergencyDispatchStep() {
           <ul className="text-sm text-white/90 space-y-2 list-disc list-inside">
             <li>Nearest available ambulance is dispatched to you</li>
             <li>You are routed to the closest hospital with emergency care</li>
-            <li>Dispatch ambulance now</li>
+            <li>Share live location with the driver until pickup</li>
           </ul>
         </div>
 

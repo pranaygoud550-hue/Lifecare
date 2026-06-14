@@ -57,7 +57,7 @@ function StaffDashboard() {
   ];
 
   const attendantLinks = [
-    { to: '/attendant', icon: Heart, label: t('dashboard.attendantDashboard'), desc: t('dashboard.attendantDesc') },
+    { to: '/driver', icon: Heart, label: t('dashboard.attendantDashboard'), desc: t('dashboard.attendantDesc') },
   ];
 
   const quickLinks =
