@@ -599,10 +599,17 @@ export const api = createApi({
     }),
     analyzeChestScan: builder.mutation<ApiResponse<ChestScan>, FormData>({
       query: (body) => ({ url: '/scans/analyze', method: 'POST', body }),
-      invalidatesTags: ['Scans'],
+      invalidatesTags: ['Scans', 'HealthRecords'],
     }),
     getMyChestScans: builder.query<ApiResponse<ChestScan[]>, void>({
       query: () => '/scans/my-scans',
+      providesTags: ['Scans'],
+    }),
+    getUnifiedScanHistory: builder.query<
+      ApiResponse<import('@/types/scanHistory').UnifiedScanHistoryItem[]>,
+      void
+    >({
+      query: () => '/scans/history',
       providesTags: ['Scans'],
     }),
     getDoctorPatientScans: builder.query<ApiResponse<ChestScan[]>, void>({
@@ -629,7 +636,7 @@ export const api = createApi({
       FormData
     >({
       query: (body) => ({ url: '/scans/upload', method: 'POST', body }),
-      invalidatesTags: ['Scans', 'Wellness'],
+      invalidatesTags: ['Scans', 'Wellness', 'HealthRecords'],
     }),
     getMyScanReports: builder.query<ApiResponse<ScanReport[]>, void>({
       query: () => '/scans/my-reports',
@@ -861,6 +868,7 @@ export const {
   useSubmitDoctorVerificationMutation,
   useAnalyzeChestScanMutation,
   useGetMyChestScansQuery,
+  useGetUnifiedScanHistoryQuery,
   useGetDoctorPatientScansQuery,
   useGetPatientChestScansForDoctorQuery,
   useAddChestScanNoteMutation,

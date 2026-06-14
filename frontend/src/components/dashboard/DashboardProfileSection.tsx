@@ -10,13 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { PatientMedicalForm, type PatientMedicalFormValues } from '@/components/auth/PatientMedicalForm';
 import { ProfileEmergencySosCard } from '@/components/profile/ProfileEmergencySosCard';
 import { HealthDataSharingCard } from '@/components/patient/HealthDataSharingCard';
-import { ProfileRecordsWalletPanel } from '@/components/profile/ProfileCarePanels';
+import { ProfileRecordsWalletPanel, ProfileScanHistoryPreview } from '@/components/profile/ProfileCarePanels';
 import { ProfileLanguageSettings } from '@/components/profile/ProfileLanguageSettings';
 import {
   useGetMedicalHistoryQuery,
   useUpdateMedicalHistoryMutation,
   useGetHealthRecordsQuery,
   useGetWalletQuery,
+  useGetUnifiedScanHistoryQuery,
 } from '@/features/api/apiSlice';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { updateUser } from '@/features/auth/authSlice';
@@ -58,6 +59,9 @@ export function DashboardProfileSection() {
   const [updateMedical, { isLoading: saving }] = useUpdateMedicalHistoryMutation();
   const { data: recordsData } = useGetHealthRecordsQuery({}, { skip: !user });
   const { data: walletData } = useGetWalletQuery(undefined, { skip: !user });
+  const { data: scanHistoryData } = useGetUnifiedScanHistoryQuery(undefined, {
+    skip: !user || user.userType !== 'patient',
+  });
 
   const {
     register,
@@ -169,8 +173,11 @@ export function DashboardProfileSection() {
         <ProfileRecordsWalletPanel
           recordsCount={recordsData?.data?.length ?? 0}
           walletBalance={walletData?.data?.balance ?? 0}
+          scanCount={scanHistoryData?.data?.length ?? 0}
         />
       </div>
+
+      <ProfileScanHistoryPreview />
 
       <HealthDataSharingCard />
     </div>

@@ -10,7 +10,10 @@ import {
   Wallet,
   Stethoscope,
   ChevronRight,
+  ScanLine,
 } from 'lucide-react';
+import { useGetUnifiedScanHistoryQuery } from '@/features/api/apiSlice';
+import { scanTypeLabel } from '@/lib/mediscan';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -262,9 +265,11 @@ export function ProfilePharmacyPanel({ orders, loading }: { orders: PharmacyOrde
 export function ProfileRecordsWalletPanel({
   recordsCount,
   walletBalance,
+  scanCount,
 }: {
   recordsCount: number;
   walletBalance: number;
+  scanCount?: number;
 }) {
   const { t } = useTranslation();
   return (
@@ -279,6 +284,22 @@ export function ProfileRecordsWalletPanel({
           <Link to="/health-records">
             <Button variant="outline" className="w-full">
               {t('dashboard.openVault')}
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="p-5 flex flex-col gap-3">
+          <ScanLine className="h-8 w-8 text-violet-600" />
+          <div>
+            <p className="font-bold">AI scan history</p>
+            <p className="text-sm text-muted">
+              {scanCount ?? 0} saved scan{(scanCount ?? 0) !== 1 ? 's' : ''} (X-ray, skin, eye)
+            </p>
+          </div>
+          <Link to="/patient/scan-history">
+            <Button variant="outline" className="w-full">
+              View scan history
             </Button>
           </Link>
         </CardContent>
@@ -306,6 +327,52 @@ export function ProfileRecordsWalletPanel({
           </Link>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+export function ProfileScanHistoryPreview() {
+  const { data } = useGetUnifiedScanHistoryQuery();
+  const recent = (data?.data ?? []).slice(0, 3);
+
+  if (recent.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold">Recent AI scans</h3>
+        <Link to="/patient/scan-history" className="text-sm text-primary font-medium hover:underline">
+          View all
+        </Link>
+      </div>
+      <div className="space-y-2">
+        {recent.map((scan) => (
+          <Card key={`${scan.source}-${scan.id}`}>
+            <CardContent className="p-3 flex items-center gap-3">
+              <ScanLine className="h-5 w-5 text-violet-600 shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">
+                  {scanTypeLabel(scan.scanType)}
+                  {scan.prediction ? ` — ${scan.prediction}` : ''}
+                </p>
+                <p className="text-xs text-muted">
+                  {new Date(scan.createdAt).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                  {scan.confidence != null ? ` · ${scan.confidence.toFixed(0)}%` : ''}
+                </p>
+              </div>
+              <Link to={scan.source === 'mediscan_report' ? `/dashboard/mediscan?scan=${scan.id}` : '/patient/scan-history'}>
+                <Button size="sm" variant="ghost">
+                  Open
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

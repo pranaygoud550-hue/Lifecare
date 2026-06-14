@@ -101,6 +101,8 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 | Onboarding shows again | Clear `lifecare-onboarding-complete` in browser localStorage |
 | SOS “no ambulance” | Backend uses fallback search (10→500 km); retry once |
 | MediScan chest upload | `/dashboard/mediscan` — local ML fallback | ✅ |
+| Unified scan history | `/patient/scan-history` — X-ray, skin, eye on profile | ✅ |
+| Health vault sync | Scans auto-saved to `/health-records` | ✅ |
 | Camera/mic blocked | Browser permission — use chat-only or allow permissions |
 | No live consult showing | Re-login as Patient or Doctor (seeds demo call on login) |
 | Stripe card disabled | Use **Wallet** or **Pay at clinic** — expected without live Stripe keys |

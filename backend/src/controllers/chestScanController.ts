@@ -8,6 +8,7 @@ import {
   getSharedScansForPatient,
   shareScanWithDoctor,
 } from '../services/chestScanService.js';
+import { syncScanToHealthVault } from '../services/scanHistoryService.js';
 
 export const analyzeChestScan = asyncHandler(async (req: Request, res: Response) => {
   const file = req.file;
@@ -26,6 +27,20 @@ export const analyzeChestScan = asyncHandler(async (req: Request, res: Response)
       imageUrl: file.cloudinaryUrl,
       cloudinaryPublicId: file.cloudinaryPublicId,
     });
+
+    const scanId = String((result as { _id?: string })._id ?? '');
+    if (scanId && result.prediction) {
+      await syncScanToHealthVault({
+        patientId: req.user!.userId,
+        scanId,
+        scanType: 'chest_xray',
+        prediction: result.prediction,
+        confidence: result.confidence,
+        imageUrl: result.imageUrl,
+        explanation: result.explanation,
+        createdAt: new Date((result as { createdAt?: string }).createdAt ?? Date.now()),
+      }).catch(() => undefined);
+    }
 
     res.status(201).json({
       success: true,

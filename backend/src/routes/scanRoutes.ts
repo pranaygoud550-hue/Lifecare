@@ -8,6 +8,7 @@ import {
   getDoctorPendingScanReports,
   getDoctorScanList,
   getDoctorScanAnalyticsHandler,
+  getUnifiedScanHistory,
 } from '../controllers/scanController.js';
 import {
   analyzeChestScan,
@@ -39,6 +40,8 @@ router.post(
   ...analyzeUploadMiddleware,
   analyzeChestScan
 );
+
+router.get('/history', authorize('patient'), getUnifiedScanHistory);
 
 router.get('/my-scans', authorize('patient'), getMyChestScans);
 

@@ -24,6 +24,7 @@ import { buildSkinCareAdvice } from '../utils/skinCareAdvice.js';
 import { resolveScanAssetUrl } from './localScanStorage.js';
 import { analyzeMedicalScan } from './mlScanAnalyzer.js';
 import { enqueueScanAnalysis } from './scanAnalysisQueue.js';
+import { syncScanToHealthVault } from './scanHistoryService.js';
 
 const LOW_CONFIDENCE_THRESHOLD = 60;
 
@@ -202,6 +203,18 @@ export async function runScanAnalysisJob(reportId: string): Promise<void> {
         ) ?? undefined;
     }
     await report.save();
+
+    if (report.prediction && report.confidence != null) {
+      await syncScanToHealthVault({
+        patientId: report.patientId.toString(),
+        scanId: report._id.toString(),
+        scanType: report.scanType,
+        prediction: report.prediction,
+        confidence: report.confidence,
+        imageUrl: report.imageUrl,
+        createdAt: report.aiAnalyzedAt ?? new Date(),
+      }).catch(() => undefined);
+    }
 
     const payload: ScanCompleteSocketPayload = {
       scanId: report._id.toString(),

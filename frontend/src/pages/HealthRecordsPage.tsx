@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
-import { Upload, FolderOpen, Trash2, FileText, Image, Syringe } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Upload, FolderOpen, Trash2, FileText, Image, Syringe, ScanLine } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
   useGetHealthRecordsQuery,
@@ -94,6 +95,24 @@ export function HealthRecordsPage() {
           <Upload className="h-4 w-4" /> Upload Record
         </Button>
       </div>
+
+      <Card className="mb-6 border-violet-200 bg-violet-50/50">
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <ScanLine className="h-6 w-6 text-violet-600 shrink-0" />
+          <p className="text-sm text-muted flex-1">
+            MediScan results (chest X-ray, skin, eye) are auto-saved here and in{' '}
+            <Link to="/patient/scan-history" className="text-primary font-medium hover:underline">
+              AI scan history
+            </Link>
+            .
+          </p>
+          <Link to="/patient/scan-history">
+            <Button size="sm" variant="outline">
+              View scans
+            </Button>
+          </Link>
+        </CardContent>
+      </Card>
 
       {showUpload && (
         <Card className="mb-8">

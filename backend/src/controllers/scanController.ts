@@ -149,3 +149,13 @@ export const getDoctorScanAnalyticsHandler = asyncHandler(async (req: Request, r
   const analytics = await getDoctorScanAnalytics(req.user!.userId);
   res.json({ success: true, data: analytics });
 });
+
+export const getUnifiedScanHistory = asyncHandler(async (req: Request, res: Response) => {
+  const { getUnifiedPatientScanHistory, backfillScanHealthVault } = await import(
+    '../services/scanHistoryService.js'
+  );
+  const patientId = req.user!.userId;
+  await backfillScanHealthVault(patientId).catch(() => undefined);
+  const history = await getUnifiedPatientScanHistory(patientId);
+  res.json({ success: true, data: history });
+});
