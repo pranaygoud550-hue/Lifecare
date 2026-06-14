@@ -11,9 +11,11 @@ const AUTH_RATE_LIMIT_JSON = {
   message: 'Too many authentication attempts, please try again later',
 } as const;
 
-function shouldSkipRateLimit(req?: { originalUrl?: string }): boolean {
+function shouldSkipRateLimit(req?: { originalUrl?: string; path?: string }): boolean {
   if (config.nodeEnv === 'test') return true;
   if (req?.originalUrl?.startsWith(config.stripe.webhookPath)) return true;
+  // Demo login is phone-gated; skip strict auth limiter so recruiters can try all roles.
+  if (process.env.ALLOW_DEMO_LOGIN === 'true' && req?.path === '/demo-login') return true;
   return false;
 }
 
