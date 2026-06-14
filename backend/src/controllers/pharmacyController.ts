@@ -190,3 +190,47 @@ export const cancelOrder = asyncHandler(async (req: Request, res: Response) => {
 
   res.json({ success: true, data: order });
 });
+
+export const getStaffOrders = asyncHandler(async (req: Request, res: Response) => {
+  const orders = await Order.find({ pharmacyId: req.user!.userId })
+    .sort({ createdAt: -1 })
+    .populate('patientId', 'profile phone email')
+    .limit(100);
+  res.json({ success: true, data: orders });
+});
+
+export const updateStaffOrderStatus = asyncHandler(async (req: Request, res: Response) => {
+  const { status } = req.body as { status?: string };
+  const allowed = ['confirmed', 'packed', 'shipped', 'delivered'] as const;
+  if (!status || !allowed.includes(status as (typeof allowed)[number])) {
+    res.status(400).json({ success: false, message: 'Invalid status' });
+    return;
+  }
+
+  const order = await Order.findById(req.params.id);
+  if (!order || order.pharmacyId.toString() !== req.user!.userId) {
+    res.status(404).json({ success: false, message: 'Order not found' });
+    return;
+  }
+
+  order.delivery.currentStatus = status;
+  order.delivery.statusHistory?.push({ status, timestamp: new Date() });
+  await order.save();
+
+  await createNotification({
+    userId: order.patientId.toString(),
+    type: 'order',
+    title: 'Order update',
+    message: `Your order ${order.orderId} is now ${status}.`,
+    data: { orderId: order._id.toString(), status },
+  });
+
+  res.json({ success: true, data: order });
+});
+
+export const getStaffInventory = asyncHandler(async (req: Request, res: Response) => {
+  const medicines = await Medicine.find({ pharmacyId: req.user!.userId, isActive: true })
+    .sort({ stock: 1, name: 1 })
+    .limit(200);
+  res.json({ success: true, data: medicines });
+});

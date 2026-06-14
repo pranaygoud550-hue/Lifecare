@@ -51,7 +51,6 @@ export function Header() {
     () => [
       { to: '/doctors', label: t('nav.findDoctors') },
       { to: '/pharmacy', label: t('nav.pharmacy') },
-      { to: '/ambulance', label: t('nav.ambulance') },
     ],
     [t]
   );

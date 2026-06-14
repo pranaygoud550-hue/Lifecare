@@ -14,7 +14,7 @@ import {
 import { startEmergencyDemoFlow, stopLocationSimulation } from '../services/emergencyDemoService.js';
 import type { EmergencyType } from '../models/EmergencyRequest.js';
 import {
-  findNearestAvailableAmbulances,
+  findNearestAvailableAmbulancesWithFallback,
   findNearestHospital,
   findNearbyHospitalsUnified,
   formatAmbulanceResponse,
@@ -61,11 +61,11 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  const nearbyAmbulances = await findNearestAvailableAmbulances(patientLat, patientLng, 10, 10);
+  const nearbyAmbulances = await findNearestAvailableAmbulancesWithFallback(patientLat, patientLng, 10);
   if (nearbyAmbulances.length === 0) {
-    res.status(404).json({
+    res.status(503).json({
       success: false,
-      message: 'No available ambulances found within 10 km',
+      message: 'No ambulances are available right now. Call 108 or try again shortly.',
     });
     return;
   }

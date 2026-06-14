@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Search, Shield, Clock, Video, Pill, Ambulance, ArrowRight } from 'lucide-react';
+import { Search, Shield, Clock, Video, Pill, ArrowRight } from 'lucide-react';
 import { DemoLoginButtons } from '@/components/landing/DemoLoginButtons';
 import { Button } from '@/components/ui/button';
 
@@ -58,11 +58,6 @@ export function LandingHero() {
               <Link to="/pharmacy">
                 <Button variant="outline" className="gap-2 bg-white">
                   <Pill className="h-4 w-4 text-secondary" /> {t('nav.orderMedicines')}
-                </Button>
-              </Link>
-              <Link to="/ambulance">
-                <Button variant="danger" className="gap-2">
-                  <Ambulance className="h-4 w-4" /> {t('nav.sosAmbulance')}
                 </Button>
               </Link>
             </div>

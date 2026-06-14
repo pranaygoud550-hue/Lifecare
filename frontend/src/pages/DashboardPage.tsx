@@ -192,6 +192,18 @@ export function DashboardPage() {
     return <Navigate to="/doctor/patients" replace />;
   }
 
+  if (user?.userType === 'ambulance') {
+    return <Navigate to="/driver" replace />;
+  }
+
+  if (user?.userType === 'pharmacy') {
+    return <Navigate to="/pharmacy/portal" replace />;
+  }
+
+  if (user?.userType === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+
   if (user?.userType === 'patient') {
     return <PatientDashboard />;
   }

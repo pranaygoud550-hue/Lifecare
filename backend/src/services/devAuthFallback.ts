@@ -11,10 +11,18 @@ const DEV_ID_TO_PHONE: Record<string, string> = {
   '000000000000000000000001': '9876543210',
   '000000000000000000000002': '9876543211',
   '000000000000000000000003': '9999999999',
+  '000000000000000000000004': '9876543215',
+  '000000000000000000000005': '9876543216',
 };
 
 /** Demo accounts when MongoDB is unavailable (development only). */
-export const DEV_DEMO_PHONES = ['9876543210', '9876543211', '9999999999'] as const;
+export const DEV_DEMO_PHONES = [
+  '9876543210',
+  '9876543211',
+  '9876543215',
+  '9876543216',
+  '9999999999',
+] as const;
 
 const devUsers: Record<string, Record<string, unknown>> = {
   '9876543210': {
@@ -62,6 +70,37 @@ const devUsers: Record<string, Record<string, unknown>> = {
     isPhoneVerified: true,
     profile: { firstName: 'Admin', lastName: 'User' },
   },
+  '9876543215': {
+    _id: '000000000000000000000004',
+    userType: 'pharmacy',
+    email: '9876543215@phone.lifecare.local',
+    phone: '9876543215',
+    isPhoneVerified: true,
+    profile: { firstName: 'LifeCare', lastName: 'Pharmacy' },
+    pharmacyDetails: {
+      pharmacyName: 'LifeCare Pharmacy',
+      licenseNumber: 'PH-12345',
+      verified: true,
+      rating: 4.5,
+      deliveryRadius: 20,
+    },
+  },
+  '9876543216': {
+    _id: '000000000000000000000005',
+    userType: 'ambulance',
+    email: '9876543216@phone.lifecare.local',
+    phone: '9876543216',
+    isPhoneVerified: true,
+    profile: { firstName: 'Ravi', lastName: 'Driver' },
+    ambulanceDetails: {
+      driverName: 'Ravi Driver',
+      licenseNumber: 'DL-98765',
+      vehicleNumber: 'MH-01-AB-1234',
+      vehicleType: 'BLS',
+      availability: true,
+      rating: 4.7,
+    },
+  },
 };
 
 export const isDevDemoPhone = (phone: string) =>
@@ -94,6 +133,8 @@ export async function ensureDevDemoUserInDb(phone: string) {
   };
   if (template.medicalHistory) setFields.medicalHistory = template.medicalHistory;
   if (template.doctorDetails) setFields.doctorDetails = template.doctorDetails;
+  if (template.pharmacyDetails) setFields.pharmacyDetails = template.pharmacyDetails;
+  if (template.ambulanceDetails) setFields.ambulanceDetails = template.ambulanceDetails;
 
   return User.findOneAndUpdate(
     { phone: normalizedPhone },

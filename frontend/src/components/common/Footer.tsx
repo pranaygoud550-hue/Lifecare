@@ -12,7 +12,6 @@ export function Footer() {
     { to: '/doctors', label: t('nav.findDoctors') },
     { to: '/doctors', label: t('footer.videoConsultation') },
     { to: '/pharmacy', label: t('footer.orderMedicines') },
-    { to: '/ambulance', label: t('footer.bookAmbulance') },
     { to: '/register', label: t('footer.createAccount') },
     { to: '/login', label: t('footer.signIn') },
   ];

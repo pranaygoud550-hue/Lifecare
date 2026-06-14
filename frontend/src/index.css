@@ -104,6 +104,36 @@
     animation: splashExit 0.4s ease-in forwards;
   }
 
+  /* Cinematic onboarding carousel */
+  .lc-onboard-segment-active {
+    width: 0;
+    animation: onboardSegmentFill linear forwards;
+  }
+
+  .lc-onboard-enter-next {
+    animation: onboardEnterNext 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .lc-onboard-enter-prev {
+    animation: onboardEnterPrev 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .lc-onboard-icon {
+    animation: onboardIconFloat 4s ease-in-out infinite;
+  }
+
+  .lc-onboard-desc {
+    animation: onboardDescIn 0.7s ease-out 0.15s both;
+  }
+
+  .lc-onboard-footer-in {
+    animation: fadeUp 0.6s ease-out both;
+  }
+
+  .lc-onboard-glow {
+    animation: onboardGlowPulse 6s ease-in-out infinite;
+  }
+
   .lc-hero-fade-up {
     opacity: 0;
     animation: fadeUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
@@ -322,6 +352,70 @@
   to {
     opacity: 0;
     transform: translateY(-16px);
+  }
+}
+
+@keyframes onboardSegmentFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes onboardEnterNext {
+  from {
+    opacity: 0;
+    transform: translateX(48px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes onboardEnterPrev {
+  from {
+    opacity: 0;
+    transform: translateX(-48px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes onboardIconFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-10px) scale(1.03);
+  }
+}
+
+@keyframes onboardDescIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes onboardGlowPulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1.08);
   }
 }
 

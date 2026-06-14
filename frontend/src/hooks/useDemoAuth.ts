@@ -7,6 +7,7 @@ import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { storeAuthTokens } from '@/lib/authTokens';
 import { DEMO_ACCOUNTS, getPostLoginPath } from '@/lib/demoAuth';
+import { markOnboardingComplete } from '@/components/onboarding/LifeCareOnboarding';
 import type { User } from '@/types';
 
 export function useDemoAuth() {
@@ -23,6 +24,7 @@ export function useDemoAuth() {
         const user = result.data.user as User;
         storeAuthTokens(result.data.accessToken, result.data.refreshToken);
         dispatch(setUser(user));
+        markOnboardingComplete();
         toast.success(`Signed in as ${user.profile.firstName} (${user.userType})`);
         navigate(getPostLoginPath(user));
       } catch (err: unknown) {

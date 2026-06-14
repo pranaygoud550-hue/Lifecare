@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { OtpInput } from '@/components/auth/OtpInput';
+import { DemoLoginButtons } from '@/components/landing/DemoLoginButtons';
 import { useLoginOtpMutation, useSendOtpMutation } from '@/features/api/apiSlice';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { setUser } from '@/features/auth/authSlice';
@@ -184,6 +185,10 @@ export function LoginPage() {
               {t('auth.registerNow')}
             </Link>
           </p>
+
+          <div className="pt-4 border-t border-border">
+            <DemoLoginButtons compact />
+          </div>
         </CardContent>
       </Card>
     </div>

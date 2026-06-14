@@ -84,6 +84,16 @@ export interface User {
   pharmacyDetails?: {
     pharmacyName?: string;
     verified?: boolean;
+    licenseNumber?: string;
+    deliveryRadius?: number;
+    rating?: number;
+  };
+  ambulanceDetails?: {
+    driverName?: string;
+    vehicleNumber?: string;
+    vehicleType?: string;
+    availability?: boolean;
+    rating?: number;
   };
   wallet?: {
     balance: number;
@@ -310,9 +320,16 @@ export interface VitalsSummary {
 export interface PharmacyOrder {
   _id: string;
   orderId: string;
-  items: Array<{ medicineName: string; quantity: number; price: number }>;
-  pricing: { total: number };
+  patientId?: User | string;
+  items: Array<{ medicineId?: string; medicineName: string; quantity: number; price: number }>;
+  pricing: { total: number; subtotal?: number };
   delivery: { currentStatus: string; type?: string };
+  deliveryAddress?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
   payment?: { status: string };
   createdAt: string;
 }

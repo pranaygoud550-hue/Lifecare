@@ -6,6 +6,9 @@ import {
   getOrders,
   getOrderById,
   cancelOrder,
+  getStaffOrders,
+  updateStaffOrderStatus,
+  getStaffInventory,
 } from '../controllers/pharmacyController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -27,5 +30,9 @@ router.post('/orders', authorize('patient'), validate(createOrderSchema), create
 router.get('/orders', authorize('patient'), getOrders);
 router.get('/orders/:id', authorize('patient'), validate(appointmentIdParamSchema), getOrderById);
 router.put('/orders/:id/cancel', authorize('patient'), validate(appointmentIdParamSchema), cancelOrder);
+
+router.get('/staff/orders', authorize('pharmacy'), getStaffOrders);
+router.patch('/staff/orders/:id/status', authorize('pharmacy'), validate(appointmentIdParamSchema), updateStaffOrderStatus);
+router.get('/staff/inventory', authorize('pharmacy'), getStaffInventory);
 
 export default router;

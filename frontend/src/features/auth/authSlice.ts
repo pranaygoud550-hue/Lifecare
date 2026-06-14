@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { User } from '@/types';
 import { clearAuthTokens } from '@/lib/authTokens';
+import { clearStoredUser, readStoredUser, writeStoredUser } from '@/lib/authStorage';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'anonymous';
 
@@ -11,15 +12,6 @@ interface AuthState {
 }
 
 const USER_KEY = 'user';
-
-function readStoredUser(): User | null {
-  try {
-    const raw = localStorage.getItem(USER_KEY);
-    return raw ? (JSON.parse(raw) as User) : null;
-  } catch {
-    return null;
-  }
-}
 
 const storedUser = readStoredUser();
 
@@ -38,17 +30,20 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.authStatus = 'authenticated';
       localStorage.setItem(USER_KEY, JSON.stringify(action.payload));
+      writeStoredUser(action.payload);
     },
     logout: (state) => {
       state.user = null;
       state.isAuthenticated = false;
       state.authStatus = 'anonymous';
       localStorage.removeItem(USER_KEY);
+      clearStoredUser();
       clearAuthTokens();
     },
     updateUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
       localStorage.setItem(USER_KEY, JSON.stringify(action.payload));
+      writeStoredUser(action.payload);
     },
     setAuthStatus: (state, action: PayloadAction<AuthStatus>) => {
       state.authStatus = action.payload;
@@ -56,6 +51,7 @@ const authSlice = createSlice({
         state.user = null;
         state.isAuthenticated = false;
         localStorage.removeItem(USER_KEY);
+        clearStoredUser();
         clearAuthTokens();
       }
     },

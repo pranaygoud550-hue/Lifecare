@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from '@/components/common/Layout';
 import { CareLayout } from '@/components/common/CareLayout';
 import { DoctorShell } from '@/components/doctor/DoctorShell';
+import { AmbulanceShell } from '@/components/ambulance/AmbulanceShell';
+import { PharmacyShell } from '@/components/pharmacy/PharmacyShell';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
 
@@ -77,6 +79,12 @@ const DoctorPatientsPage = lazy(() =>
 const DoctorPatientDetailPage = lazy(() =>
   import('@/pages/doctor/DoctorPatientDetailPage').then((m) => ({ default: m.DoctorPatientDetailPage }))
 );
+const PharmacyStaffOrdersPage = lazy(() =>
+  import('@/pages/pharmacy/PharmacyStaffOrdersPage').then((m) => ({ default: m.PharmacyStaffOrdersPage }))
+);
+const PharmacyStaffInventoryPage = lazy(() =>
+  import('@/pages/pharmacy/PharmacyStaffInventoryPage').then((m) => ({ default: m.PharmacyStaffInventoryPage }))
+);
 
 function PageLoad({ variant }: { variant?: 'default' | 'dashboard' | 'list' }) {
   return <PageSkeleton variant={variant} />;
@@ -105,6 +113,20 @@ export function AppRoutes() {
                 </Suspense>
               }
             />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['ambulance']} />}>
+          <Route element={<AmbulanceShell />}>
+            <Route path="driver" element={<AttendantDashboardPage />} />
+            <Route path="attendant" element={<Navigate to="/driver" replace />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute allowedRoles={['pharmacy']} />}>
+          <Route element={<PharmacyShell />}>
+            <Route path="pharmacy/portal" element={<PharmacyStaffOrdersPage />} />
+            <Route path="pharmacy/portal/inventory" element={<PharmacyStaffInventoryPage />} />
           </Route>
         </Route>
 
@@ -195,10 +217,6 @@ export function AppRoutes() {
               <Route path="live-checkup" element={<LiveCheckupPage />} />
               <Route path="live-checkup/:appointmentId" element={<ConsultationRoomPage />} />
             </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute allowedRoles={['ambulance']} />}>
-            <Route path="attendant" element={<AttendantDashboardPage />} />
           </Route>
 
           <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>

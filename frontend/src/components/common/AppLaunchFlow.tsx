@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAppSelector } from '@/hooks/redux';
 import { SplashScreen } from './SplashScreen';
-import { WelcomeAuthScreen, isWelcomeSkipped } from './WelcomeAuthScreen';
+import { WelcomeAuthScreen, isOnboardingComplete } from './WelcomeAuthScreen';
 
 const AUTH_ROUTES = ['/login', '/register', '/unlock-account'];
 
@@ -19,7 +19,7 @@ export function AppLaunchFlow({ children }: { children: ReactNode }) {
   }
 
   const skipWelcome =
-    welcomeDone || authStatus === 'authenticated' || isAuthRoute || isWelcomeSkipped();
+    welcomeDone || authStatus === 'authenticated' || isAuthRoute || isOnboardingComplete();
 
   if (!skipWelcome && authStatus !== 'loading') {
     return <WelcomeAuthScreen onDone={() => setWelcomeDone(true)} />;

@@ -1,14 +1,20 @@
-import { Link } from 'react-router-dom';
-import { Ambulance } from 'lucide-react';
+import { LifeBuoy } from 'lucide-react';
+import { useAppDispatch } from '@/hooks/redux';
+import { dispatchNeedHelp } from '@/lib/needHelp';
+import { Button } from '@/components/ui/button';
 
 export function EmergencyButton() {
+  const dispatch = useAppDispatch();
+
   return (
-    <Link
-      to="/ambulance"
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-accent text-white px-5 py-3 rounded-full shadow-lg hover:scale-105 transition-transform animate-pulse hover:animate-none"
+    <Button
+      type="button"
+      variant="danger"
+      className="gap-2"
+      onClick={() => dispatchNeedHelp(dispatch)}
     >
-      <Ambulance className="h-5 w-5" />
-      <span className="font-semibold text-sm hidden sm:inline">Emergency SOS</span>
-    </Link>
+      <LifeBuoy className="h-5 w-5" />
+      Need Help
+    </Button>
   );
 }

@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Stethoscope, Video, Pill, Ambulance, Home, FileText } from 'lucide-react';
+import { Stethoscope, Video, Pill, Home, FileText, ScanLine } from 'lucide-react';
 
 export function ServicesOverview() {
   const { t } = useTranslation();
@@ -31,12 +31,12 @@ export function ServicesOverview() {
       iconBg: 'bg-purple-100 text-purple-600',
     },
     {
-      icon: Ambulance,
-      title: t('services.emergency'),
-      description: t('services.emergencyDesc'),
-      link: '/ambulance',
-      accent: 'border-l-red-500',
-      iconBg: 'bg-red-100 text-red-600',
+      icon: ScanLine,
+      title: t('services.mediscan', 'MediScan AI'),
+      description: t('services.mediscanDesc', 'AI-assisted chest and skin screening with doctor sharing.'),
+      link: '/login',
+      accent: 'border-l-emerald-500',
+      iconBg: 'bg-emerald-100 text-emerald-600',
     },
     {
       icon: Home,

@@ -98,6 +98,34 @@ export async function findNearestAvailableAmbulances(
   });
 }
 
+/** Finds ambulances near the patient, expanding search radius when none are close. */
+export async function findNearestAvailableAmbulancesWithFallback(
+  lat: number,
+  lng: number,
+  limit = 10
+): Promise<AmbulanceWithDistance[]> {
+  for (const radiusKm of [10, 50, 200, 500]) {
+    const found = await findNearestAvailableAmbulances(lat, lng, radiusKm, limit);
+    if (found.length > 0) return found;
+  }
+
+  const units = await AmbulanceUnit.find({ isAvailable: true, status: 'idle' })
+    .limit(limit)
+    .populate('driverId', 'profile phone email userType');
+
+  return units.map((unit) => {
+    const coords = unitCoords(unit);
+    const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+    const eta = calculateETA(coords.lat, coords.lng, lat, lng);
+    return {
+      unit,
+      distanceKm,
+      distanceMeters: Math.round(distanceKm * 1000),
+      eta,
+    };
+  });
+}
+
 export function selectBestAmbulanceForPatient(
   ambulances: AmbulanceWithDistance[],
   patientLat: number,

@@ -727,6 +727,25 @@ export const api = createApi({
       query: () => '/users/care-plans',
       providesTags: ['DoctorCare'],
     }),
+    getPharmacyStaffOrders: builder.query<ApiResponse<import('@/types').PharmacyOrder[]>, void>({
+      query: () => '/pharmacy/staff/orders',
+      providesTags: ['Orders'],
+    }),
+    updatePharmacyStaffOrderStatus: builder.mutation<
+      ApiResponse<import('@/types').PharmacyOrder>,
+      { id: string; status: string }
+    >({
+      query: ({ id, status }) => ({
+        url: `/pharmacy/staff/orders/${id}/status`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['Orders'],
+    }),
+    getPharmacyStaffInventory: builder.query<ApiResponse<Medicine[]>, void>({
+      query: () => '/pharmacy/staff/inventory',
+      providesTags: ['Medicines'],
+    }),
   }),
 });
 
@@ -859,4 +878,7 @@ export const {
   useGetHealthSharingQuery,
   useUpdateHealthSharingMutation,
   useGetMyDoctorCarePlansQuery,
+  useGetPharmacyStaffOrdersQuery,
+  useUpdatePharmacyStaffOrderStatusMutation,
+  useGetPharmacyStaffInventoryQuery,
 } = api;

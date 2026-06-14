@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Activity, Ambulance, Calendar, LayoutGrid, User } from 'lucide-react';
+import { Activity, LifeBuoy, Calendar, LayoutGrid, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export type DashboardTab = 'overview' | 'vitals' | 'care' | 'emergency' | 'profile';
@@ -21,9 +21,9 @@ export function DashboardSectionNav({
     { id: 'care', label: t('dashboard.tabCare'), hint: t('dashboard.tabCareHint'), icon: Calendar },
     {
       id: 'emergency',
-      label: t('dashboard.tabEmergency', 'Emergency'),
-      hint: t('dashboard.tabEmergencyHint', 'Ambulance & hospital rides'),
-      icon: Ambulance,
+      label: t('dashboard.tabEmergency', 'Need Help'),
+      hint: t('dashboard.tabEmergencyHint', 'Ambulance SOS & hospital rides'),
+      icon: LifeBuoy,
     },
     { id: 'profile', label: t('dashboard.tabProfile'), hint: t('dashboard.tabProfileHint'), icon: User },
   ];
