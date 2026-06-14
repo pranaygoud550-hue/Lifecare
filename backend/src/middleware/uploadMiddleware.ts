@@ -230,19 +230,8 @@ export async function uploadScanToCloudinary(
         next();
         return;
       } catch (cloudErr) {
-        if (config.nodeEnv === 'production') {
-          throw new CloudinaryUploadError(
-            'Image upload is temporarily unavailable. Please try again in a few moments.'
-          );
-        }
         console.warn('[MediScan] Cloudinary upload failed — using local storage:', cloudErr);
       }
-    } else if (config.nodeEnv === 'development') {
-      console.info('[MediScan] Cloudinary not configured — saving scans to uploads/mediscan/');
-    } else {
-      throw new CloudinaryUploadError(
-        'Image upload is not configured. Set Cloudinary credentials on the server.'
-      );
     }
 
     const local = await saveScanToLocalStorage({

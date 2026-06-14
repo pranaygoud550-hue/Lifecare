@@ -91,11 +91,6 @@ async function uploadAnalyzeImage(req: Request, res: Response, next: NextFunctio
         next();
         return;
       } catch (cloudErr) {
-        if (config.nodeEnv === 'production') {
-          throw new CloudinaryUploadError(
-            'Image upload is temporarily unavailable. Please try again shortly.'
-          );
-        }
         console.warn('[ChestScan] Cloudinary failed — using local storage:', cloudErr);
       }
     }

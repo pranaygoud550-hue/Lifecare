@@ -8,6 +8,7 @@ import { sendAccountUnlockEmail } from './emailService.js';
 import type { UserType } from '../types/index.js';
 import { isDbReady } from '../config/dbStatus.js';
 import { devLoginTokens, ensureDevDemoUserInDb, isDevDemoPhone } from './devAuthFallback.js';
+import { ensureInterviewDemoAppointment } from './interviewDemoService.js';
 import { normalizePhone } from '../utils/phone.js';
 
 const MAX_FAILED_ATTEMPTS = 10;
@@ -393,6 +394,9 @@ export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
   if (isDbReady()) {
     const user = await ensureDevDemoUserInDb(normalizedPhone);
     if (user && !user.isBlocked) {
+      if (normalizedPhone === '9876543210' || normalizedPhone === '9876543211') {
+        await ensureInterviewDemoAppointment();
+      }
       user.isPhoneVerified = true;
       await user.save();
       return buildAuthResult(user);

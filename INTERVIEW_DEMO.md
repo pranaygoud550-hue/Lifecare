@@ -37,23 +37,30 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 - Skip to **Login** → **Try as Patient**
 
 ### 2. Patient journey (2 min)
-1. **Dashboard** — quick actions: Book doctor, Pharmacy, MediScan, **Need Help**
-2. **Doctors** → pick Dr. Rajesh Sharma → **Book** → video slot → pay with **Wallet**
-3. **Pharmacy** → add medicine → **Cart** → **Checkout**
-4. **Need Help** (dashboard or floating button) → dispatch ambulance → live tracking
-5. **Wellness** → vitals + doctor care plan (after doctor publishes one)
+1. **Dashboard** → **Doctors** → book Dr. Sharma → pay with **Wallet**
+2. **Live Checkup** → **Join now** on the pre-seeded demo call (instant — no wait)
+3. **MediScan** → upload chest X-ray sample (`backend/tests/fixtures/sample-chest.png`) → AI results
+4. **Pharmacy** → cart → checkout
+5. **Need Help** → dispatch ambulance
 
-### 3. Doctor portal (1 min)
-- Log out → **Try as Doctor**
-- Open a patient → publish **Care plan** (diet + dos/don’ts)
-- Switch back to Patient → **Wellness** to show sync
+### 3. Video consult deep-dive (1 min)
+- **Patient:** `/live-checkup` → join **DEMO-LIVE-VIDEO** room (camera/mic prompt is normal)
+- **Doctor:** log in as doctor → same page → join same room → WebRTC + chat
+- Mention: Socket.io signaling, room gated on payment status
 
-### 4. Operations roles (1 min)
+### 4. MediScan deep-dive (45 sec)
+- **Dashboard → MediScan** → Chest X-ray → upload PNG/JPG
+- Works without Cloudinary (local ML fallback on server)
+- Results: classification, confidence, care advice
+- **Doctor → AI Scans** to review shared scans
+
+### 5. Operations roles (1 min)
 - **Pharmacy** — advance an order: Confirm → Packed → Shipped
 - **Ambulance** — show incoming SOS / transport on driver dashboard
 - **Admin** — platform overview
+- **Doctor portal** — publish a care plan → patient **Wellness** tab
 
-### 5. Technical talking points (30 sec)
+### 6. Technical talking points (30 sec)
 - MERN + TypeScript monorepo, RTK Query, Socket.io real-time
 - JWT auth with refresh, role-based routes
 - Geo-matched ambulance dispatch + hospital routing
@@ -71,7 +78,7 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 | Session | Reload stays logged in | ✅ |
 | Book doctor | `/doctors` → book → wallet/card/clinic | ✅ |
 | Appointments | `/appointments` | ✅ |
-| Video consult | `/live-checkup` | ✅ |
+| Video consult | `/live-checkup` — demo call ready on login | ✅ |
 | Pharmacy shop | `/pharmacy` → cart → checkout | ✅ |
 | Pharmacy staff | `/pharmacy/portal` | ✅ |
 | Need Help / SOS | Dashboard → Need Help modal | ✅ |
@@ -92,6 +99,9 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 | Demo login fails | Ensure `ALLOW_DEMO_LOGIN=true` on Render backend |
 | Onboarding shows again | Clear `lifecare-onboarding-complete` in browser localStorage |
 | SOS “no ambulance” | Backend uses fallback search (10→500 km); retry once |
+| MediScan chest upload | `/dashboard/mediscan` — local ML fallback | ✅ |
+| Camera/mic blocked | Browser permission — use chat-only or allow permissions |
+| No live consult showing | Re-login as Patient or Doctor (seeds demo call on login) |
 | Stripe card disabled | Use **Wallet** or **Pay at clinic** — expected without live Stripe keys |
 
 ---

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import connectDB from '../config/database.js';
 import { User, Medicine, Coupon, Review, HealthRecord, Notification, Hospital, AmbulanceUnit } from '../models/index.js';
+import { ensureInterviewDemoAppointment } from '../services/interviewDemoService.js';
 import { slugify } from '../utils/cities.js';
 
 export const runSeed = async () => {
@@ -547,6 +548,8 @@ export const runSeed = async () => {
       },
     ]);
   }
+
+  await ensureInterviewDemoAppointment();
 
   console.log('Database seeded successfully!');
   console.log('\nDemo credentials (password: Password@123):');
