@@ -10,9 +10,11 @@ import {
 
 export interface OnboardingSlide {
   id: string;
+  index: string;
   eyebrow: string;
   title: string;
   highlight: string;
+  tagline: string;
   description: string;
   icon: LucideIcon;
   gradient: string;
@@ -23,76 +25,89 @@ export interface OnboardingSlide {
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'welcome',
-    eyebrow: 'Slide 1 · Welcome',
-    title: 'Your health,',
-    highlight: 'reimagined.',
+    index: '01',
+    eyebrow: 'Chapter I — Why LifeCare+',
+    title: 'When health matters,',
+    highlight: 'everything matters.',
+    tagline: 'One app for your whole family’s care journey.',
     description:
-      'LifeCare+ brings doctors, emergency care, AI scans, pharmacy, and wellness into one trusted app — built for India, ready anywhere.',
+      'LifeCare+ unites verified doctors, emergency response, AI health screening, pharmacy, and your personal health record — designed for real life in India.',
     icon: Heart,
-    gradient: 'from-[#0a1628] via-[#0f2847] to-[#0a1628]',
-    glow: 'rgba(29,158,117,0.35)',
+    gradient: 'from-[#050a12] via-[#0c1f3d] to-[#050a12]',
+    glow: 'rgba(29,158,117,0.45)',
     accent: '#1D9E75',
   },
   {
     id: 'sos',
-    eyebrow: 'Slide 2 · Emergency',
-    title: 'Help in',
-    highlight: 'seconds.',
+    index: '02',
+    eyebrow: 'Chapter II — Emergency',
+    title: 'Every second',
+    highlight: 'counts.',
+    tagline: 'Ambulance + nearest hospital — one tap.',
     description:
-      'One-tap SOS dispatches ambulance, finds the nearest hospital on the map, and shares your live location with responders.',
+      'Press SOS and we connect you to the closest emergency hospital, dispatch an ambulance to your GPS, and show a live route map until help arrives.',
     icon: Siren,
-    gradient: 'from-[#1a0a0a] via-[#2d1212] to-[#0a1628]',
-    glow: 'rgba(255,107,107,0.4)',
+    gradient: 'from-[#120606] via-[#3a1010] to-[#050a12]',
+    glow: 'rgba(255,107,107,0.5)',
     accent: '#ff6b6b',
   },
   {
     id: 'mediscan',
-    eyebrow: 'Slide 3 · MediScan AI',
-    title: 'See what',
-    highlight: 'matters early.',
+    index: '03',
+    eyebrow: 'Chapter III — MediScan AI',
+    title: 'Catch risks',
+    highlight: 'earlier.',
+    tagline: 'AI screening — your doctor makes the call.',
     description:
-      'Upload chest X-rays or skin photos for AI-assisted screening. Share results with your doctor in one tap.',
+      'Upload chest X-rays, skin photos, or retina scans for instant AI-assisted screening. Results sync to your profile and health vault for clinician review.',
     icon: Brain,
-    gradient: 'from-[#0a1628] via-[#121a3a] to-[#0a1628]',
-    glow: 'rgba(0,102,255,0.35)',
-    accent: '#0066ff',
+    gradient: 'from-[#050a12] via-[#0a1535] to-[#050a12]',
+    glow: 'rgba(0,102,255,0.45)',
+    accent: '#3b82f6',
   },
   {
     id: 'consult',
-    eyebrow: 'Slide 4 · Telehealth',
-    title: 'Real doctors,',
-    highlight: 'real video.',
+    index: '04',
+    eyebrow: 'Chapter IV — Telehealth',
+    title: 'Real doctors.',
+    highlight: 'Real video.',
+    tagline: 'Consult from home — HD and secure.',
     description:
-      'Book verified specialists, join HD video consults, and receive personalized diet plans and dos & don’ts on your Wellness tab.',
+      'Book verified specialists, join live WebRTC video consults with your doctor, and follow personalized wellness plans — prescriptions included.',
     icon: Video,
-    gradient: 'from-[#0a1628] via-[#0f2a3d] to-[#0a1628]',
-    glow: 'rgba(93,202,165,0.35)',
+    gradient: 'from-[#050a12] via-[#0a2838] to-[#050a12]',
+    glow: 'rgba(93,202,165,0.4)',
     accent: '#5DCAA5',
   },
   {
     id: 'pharmacy',
-    eyebrow: 'Slide 5 · Pharmacy',
-    title: 'Meds & wellness,',
+    index: '05',
+    eyebrow: 'Chapter V — Complete care',
+    title: 'Meds, skin care,',
     highlight: 'delivered.',
+    tagline: 'Pharmacy + wallet + health history in sync.',
     description:
-      'Order medicines, track deliveries, log vitals, and follow doctor-approved diet guidance — all synced to your health profile.',
+      'Order medicines and skin-care products, pay with wallet, track deliveries, and keep every scan and consult in one trusted health profile.',
     icon: Pill,
-    gradient: 'from-[#0a1628] via-[#1a2838] to-[#0a1628]',
-    glow: 'rgba(0,196,140,0.3)',
+    gradient: 'from-[#050a12] via-[#102820] to-[#050a12]',
+    glow: 'rgba(0,196,140,0.35)',
     accent: '#00c48c',
   },
   {
     id: 'start',
-    eyebrow: 'Slide 6 · Begin',
-    title: 'Ready when',
-    highlight: 'you are.',
+    index: '06',
+    eyebrow: 'Chapter VI — Your turn',
+    title: 'Your health story',
+    highlight: 'starts now.',
+    tagline: 'Try the live demo in one tap.',
     description:
-      'Join thousands who trust LifeCare+ for everyday care and emergencies. Sign in, try a demo, or explore freely.',
+      'Explore as a patient or doctor — full app access, no signup. Or create your account and experience the future of digital healthcare.',
     icon: Sparkles,
-    gradient: 'from-[#0a1628] via-[#152238] to-[#0a1628]',
-    glow: 'rgba(29,158,117,0.45)',
+    gradient: 'from-[#050a12] via-[#152238] to-[#050a12]',
+    glow: 'rgba(29,158,117,0.5)',
     accent: '#1D9E75',
   },
 ];
 
-export const ONBOARDING_SLIDE_MS = 5500;
+/** Time each slide stays visible (cinematic pacing). */
+export const ONBOARDING_SLIDE_MS = 7500;

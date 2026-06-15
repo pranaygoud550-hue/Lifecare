@@ -47,17 +47,16 @@
 
 > **Honest scope:** This is an **interview-ready prototype**, not a regulated medical device. MediScan provides **AI screening assistance** with doctor review — not clinical diagnosis. See [PRIVACY_AND_SAFETY.md](./PRIVACY_AND_SAFETY.md).
 
-All seeded accounts use password **`Password@123`**, or use **one-click demo** on the login page (no password).
+All seeded accounts use password **`Password@123`**, or use **one-click demo** on the login page (Patient or Doctor only).
 
 | Role | Demo button / Phone | Use case |
 |------|---------------------|----------|
 | **Patient** | `9876543210` | Book consults, SOS, pharmacy, MediScan |
 | **Doctor** | `9876543211` | Patients, video consult, care plans |
-| **Pharmacy** | `9876543215` | Order queue, packing & delivery |
-| **Ambulance** | `9876543216` | SOS pickups, driver dashboard |
-| **Admin** | `9999999999` | Platform analytics, user moderation |
 
-Email login (optional): `patient@demo.com`, `dr.sharma@lifecare.com`, `admin@lifecare.com` — same password.
+**First visit:** Full-screen **6-chapter cinematic intro** (splash → slides) explains why LifeCare+ matters.
+
+Email login (optional): `patient@demo.com`, `dr.sharma@lifecare.com`, `pharmacy@lifecare.com`, `ambulance@lifecare.com`, `admin@lifecare.com` — same password.
 
 > Full interview walkthrough: **[INTERVIEW_DEMO.md](./INTERVIEW_DEMO.md)**
 

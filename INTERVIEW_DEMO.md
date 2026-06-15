@@ -16,17 +16,16 @@ Use this one-page guide when presenting the project in interviews, hackathons, o
 
 ## One-click demo accounts
 
-Open **Login** → scroll to **Try instantly — no signup** → pick a role:
+Open **Login** → scroll to **Try instantly** → pick a role:
 
 | Role | Button | Where you land | What to show |
 |------|--------|----------------|--------------|
-| **Patient** | Try as Patient | `/dashboard` | Appointments, MediScan, pharmacy cart, **Need Help** SOS |
-| **Doctor** | Try as Doctor | `/doctor/patients` | Patient list, care plans, video consults |
-| **Pharmacy** | Try as Pharmacy | `/pharmacy/portal` | Order queue, pack → ship → deliver |
-| **Ambulance** | Try as Ambulance | `/driver` | SOS pickups, transport, navigation |
-| **Admin** | Try as Admin | `/admin` | Platform stats, user management |
+| **Patient** | Demo as Patient | `/dashboard` | Appointments, MediScan, pharmacy cart, **Need Help** SOS |
+| **Doctor** | Demo as Doctor | `/doctor/patients` | Patient list, care plans, video consults |
 
-Password login (optional): `patient@demo.com` / `Password@123` — same seeded data.
+> **First visit:** A full-screen **6-slide cinematic intro** plays automatically (splash → chapters I–VI). Clear `lifecare-onboarding-complete` in localStorage to replay.
+
+Password login (optional): `patient@demo.com` / `Password@123` — same seeded data. Staff portals (pharmacy, ambulance, admin) remain available via password accounts in seed data.
 
 ---
 
