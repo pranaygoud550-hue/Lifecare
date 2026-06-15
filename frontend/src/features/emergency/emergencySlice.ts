@@ -199,6 +199,11 @@ const emergencySlice = createSlice({
     closeEmergency: () => {
       return { ...initialState };
     },
+    /** Close the help modal but keep live SOS tracking (map, ETA, hospital). */
+    dismissEmergencyModal: (state) => {
+      state.isOpen = false;
+      state.step = 'closed';
+    },
     setGuest: (state, action: PayloadAction<GuestContact | null>) => {
       state.guest = action.payload;
     },
@@ -380,6 +385,7 @@ export const {
   openHospitalRideFlow,
   openAmbulanceEmergencyFlow,
   closeEmergency,
+  dismissEmergencyModal,
   setHelpType,
   setNearbyHospitals,
   proceedAfterHelpChoice,

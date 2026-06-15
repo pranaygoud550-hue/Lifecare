@@ -174,7 +174,7 @@ export function EmergencyActiveView() {
   if (!patientLocation) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-red-950 text-white">
+    <div className="fixed inset-0 z-[110] overflow-y-auto bg-red-950 text-white">
       <div className="min-h-full flex flex-col">
         <header className="bg-red-700 px-4 py-4 shadow-lg">
           <div className="container-custom flex items-center justify-between gap-3">

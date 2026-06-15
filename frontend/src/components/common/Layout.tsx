@@ -38,7 +38,7 @@ export function Layout() {
       {!patientShell && <Footer />}
       {patientShell && <PatientBottomNav />}
       {!isAuthRoute && !isPatientDashboardHome && <NeedHelpProvider patientShell={patientShell} />}
-      {!isAuthRoute && !isPatientDashboardHome && <OneTapEmergencyProvider />}
+      {!isAuthRoute && <OneTapEmergencyProvider />}
       <InstallPrompt />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Ambulance,
@@ -13,14 +13,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
-import { useTriggerSOSMutation } from '@/features/api/apiSlice';
+import { useLazyGetEmergencyNearbyHospitalsQuery, useTriggerSOSMutation } from '@/features/api/apiSlice';
 import {
   activateOneTapEmergency,
-  closeEmergency,
+  dismissEmergencyModal,
   setEmergencyLocation,
+  setNearbyHospitals,
 } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import type { EmergencyType } from '@/types';
+import { resolvePickupLocation } from '@/lib/pickupLocation';
+import type { EmergencyHospitalInfo, EmergencyType } from '@/types';
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m`;
@@ -33,11 +35,35 @@ export function EmergencyDispatchStep() {
   const { user } = useAppSelector((s) => s.auth);
   const { nearestHospital, guest } = useAppSelector((s) => s.emergency);
 
-  const [phase, setPhase] = useState<'ready' | 'locating' | 'dispatching'>('ready');
+  const [phase, setPhase] = useState<'ready' | 'locating' | 'dispatching'>(
+    () => (user?._id ? 'locating' : 'ready')
+  );
   const [manualAddress, setManualAddress] = useState('');
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [dispatchError, setDispatchError] = useState<string | null>(null);
+  const startedRef = useRef(false);
 
   const [triggerSOS, { isLoading }] = useTriggerSOSMutation();
+  const [fetchHospitals] = useLazyGetEmergencyNearbyHospitalsQuery();
+
+  const loadNearestHospital = useCallback(
+    async (lat: number, lng: number) => {
+      try {
+        const res = await fetchHospitals({ lat, lng, radius: 50 }).unwrap();
+        const list = (res.data?.hospitals ?? []) as EmergencyHospitalInfo[];
+        dispatch(
+          setNearbyHospitals({
+            hospitals: list,
+            nearest: list[0] ?? null,
+          })
+        );
+        return list[0] ?? null;
+      } catch {
+        return null;
+      }
+    },
+    [dispatch, fetchHospitals]
+  );
 
   const dispatchEmergency = useCallback(
     async (lat: number, lng: number, address: string) => {
@@ -47,6 +73,7 @@ export function EmergencyDispatchStep() {
         return;
       }
 
+      setDispatchError(null);
       setPhase('dispatching');
       dispatch(
         setEmergencyLocation({
@@ -56,6 +83,8 @@ export function EmergencyDispatchStep() {
         })
       );
 
+      void loadNearestHospital(lat, lng);
+
       try {
         const result = await triggerSOS({
           patientLat: lat,
@@ -63,6 +92,16 @@ export function EmergencyDispatchStep() {
           emergencyType: 'other' as EmergencyType,
           patientId: user._id,
         }).unwrap();
+
+        const hospitalFromApi = result.data.nearestHospital;
+        if (hospitalFromApi?.name) {
+          dispatch(
+            setNearbyHospitals({
+              hospitals: [hospitalFromApi as EmergencyHospitalInfo],
+              nearest: hospitalFromApi as EmergencyHospitalInfo,
+            })
+          );
+        }
 
         dispatch(
           activateOneTapEmergency({
@@ -73,11 +112,11 @@ export function EmergencyDispatchStep() {
           })
         );
 
-        dispatch(closeEmergency());
+        dispatch(dismissEmergencyModal());
 
-        if (result.data.nearestHospital) {
+        if (hospitalFromApi?.name) {
           toast.success(
-            `Ambulance dispatched — routing to ${result.data.nearestHospital.name as string}`
+            `Connected to ${hospitalFromApi.name} — ambulance ETA ${result.data.calculatedETA} min`
           );
         } else if (result.data.isDelayed) {
           toast.warn(`Ambulance assigned — ETA ${result.data.calculatedETA} min (traffic delay).`);
@@ -85,45 +124,38 @@ export function EmergencyDispatchStep() {
           toast.success(`Ambulance on the way — ETA ${result.data.calculatedETA} min.`);
         }
       } catch (err: unknown) {
-        toast.error(getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.'));
+        const message = getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.');
+        setDispatchError(message);
+        toast.error(message);
         setPhase('ready');
       }
     },
-    [dispatch, navigate, triggerSOS, user?._id]
+    [dispatch, loadNearestHospital, navigate, triggerSOS, user?._id]
   );
 
-  const captureAndDispatch = useCallback(() => {
-    if (!navigator.geolocation) {
-      setPhase('ready');
-      toast.info('Enter your address below.');
-      return;
-    }
+  const captureAndDispatch = useCallback(async () => {
     setPhase('locating');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        const address = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        setCoords({ lat, lng });
-        void dispatchEmergency(lat, lng, address);
-      },
-      () => {
-        setPhase('ready');
-        toast.error('Location blocked — enter your address manually.');
-      },
-      { enableHighAccuracy: true, timeout: 12000 }
-    );
-  }, [dispatchEmergency]);
+    setDispatchError(null);
+
+    const resolved = await resolvePickupLocation({ fallbackAfterMs: 5_000, timeoutMs: 12_000 });
+    const { lat, lng, address, fromGps } = resolved;
+    setCoords({ lat, lng });
+
+    if (!fromGps) {
+      toast.info('Using approximate location — enable GPS for the nearest hospital match.');
+    }
+
+    await loadNearestHospital(lat, lng);
+    await dispatchEmergency(lat, lng, address);
+  }, [dispatchEmergency, loadNearestHospital]);
 
   useEffect(() => {
-    if (user?._id) {
-      captureAndDispatch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- dispatch once when step mounts for logged-in patients
-  }, [user?._id]);
+    if (!user?._id || startedRef.current) return;
+    startedRef.current = true;
+    void captureAndDispatch();
+  }, [user?._id, captureAndDispatch]);
 
-  const hospital =
-    nearestHospital ?? null;
+  const hospital = nearestHospital ?? null;
 
   return (
     <div className="flex flex-col flex-1 p-6 sm:p-8 max-w-lg mx-auto w-full overflow-y-auto">
@@ -143,9 +175,9 @@ export function EmergencyDispatchStep() {
             <Ambulance className="h-4 w-4" /> What happens
           </p>
           <ul className="text-sm text-white/90 space-y-2 list-disc list-inside">
+            <li>We find the nearest hospital (2 km, then 4 km, then wider)</li>
             <li>Nearest available ambulance is dispatched to you</li>
-            <li>You are routed to the closest hospital with emergency care</li>
-            <li>Share live location with the driver until pickup</li>
+            <li>Live map with route appears automatically</li>
           </ul>
         </div>
 
@@ -165,7 +197,9 @@ export function EmergencyDispatchStep() {
           </div>
         ) : (
           <p className="text-sm text-red-100">
-            Hospital will be assigned automatically based on your GPS location.
+            {phase === 'locating'
+              ? 'Detecting your location and nearest emergency hospital…'
+              : 'Connecting to the nearest hospital from your GPS…'}
           </p>
         )}
 
@@ -174,15 +208,21 @@ export function EmergencyDispatchStep() {
             Contact: {guest.name} · {guest.phone}
           </p>
         )}
+
+        {dispatchError && (
+          <p className="text-sm text-amber-100 bg-amber-950/40 border border-amber-400/30 rounded-lg p-3">
+            {dispatchError}
+          </p>
+        )}
       </div>
 
       {(phase === 'locating' || phase === 'dispatching' || isLoading) && (
         <div className="flex flex-col items-center py-10 text-center">
           <Loader2 className="h-14 w-14 text-white animate-spin mb-4" />
           <p className="text-xl font-bold text-white">
-            {phase === 'locating' ? 'Getting your location…' : 'Dispatching ambulance…'}
+            {phase === 'locating' ? 'Getting your location…' : 'Connecting ambulance & hospital…'}
           </p>
-          <p className="text-red-100 mt-2">Connecting to nearest ambulance & hospital</p>
+          <p className="text-red-100 mt-2">Live map will open when dispatch confirms</p>
         </div>
       )}
 
@@ -199,8 +239,8 @@ export function EmergencyDispatchStep() {
             className="mt-4 h-14 text-lg bg-white text-red-700 w-full"
             disabled={!manualAddress.trim()}
             onClick={() => {
-              const lat = coords?.lat ?? 19.076;
-              const lng = coords?.lng ?? 72.8777;
+              const lat = coords?.lat ?? 17.385;
+              const lng = coords?.lng ?? 78.4867;
               void dispatchEmergency(lat, lng, manualAddress);
             }}
           >
@@ -212,7 +252,7 @@ export function EmergencyDispatchStep() {
       {phase === 'ready' && user?._id && (
         <Button
           className="h-14 text-lg bg-white text-red-700 w-full"
-          onClick={captureAndDispatch}
+          onClick={() => void captureAndDispatch()}
         >
           Retry dispatch
         </Button>

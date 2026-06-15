@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   closeEmergency,
+  dismissEmergencyModal,
   setGuest,
   skipGuest,
 } from '@/features/emergency/emergencySlice';
@@ -41,7 +42,7 @@ function headerSubtitle(step: string, helpType: string | null): string | null {
 
 export function EmergencyFlowModal() {
   const dispatch = useAppDispatch();
-  const { isOpen, step, helpType } = useAppSelector((s) => s.emergency);
+  const { isOpen, step, helpType, isActive } = useAppSelector((s) => s.emergency);
   const { isAuthenticated, user } = useAppSelector((s) => s.auth);
 
   useEffect(() => {
@@ -88,7 +89,9 @@ export function EmergencyFlowModal() {
           </div>
           <button
             type="button"
-            onClick={() => dispatch(closeEmergency())}
+            onClick={() =>
+              dispatch(isActive ? dismissEmergencyModal() : closeEmergency())
+            }
             className="p-2 rounded-full text-white hover:bg-white/10 min-h-[48px] min-w-[48px] flex items-center justify-center shrink-0"
             aria-label="Close help"
           >
