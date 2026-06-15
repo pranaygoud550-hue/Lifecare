@@ -5,8 +5,8 @@
 <h1 align="center">LifeCare+</h1>
 
 <p align="center">
-  <strong>End-to-end digital health platform</strong> — teleconsultation, emergency dispatch, pharmacy, and payments in one product surface.<br/>
-  Built as a production-grade MERN monorepo with real-time tracking, WebRTC video, and Stripe-native billing.
+  <strong>End-to-end digital health prototype</strong> — teleconsultation, emergency dispatch, pharmacy, AI screening, and payments in one demo surface.<br/>
+  Built as a TypeScript MERN monorepo with real-time tracking, WebRTC video, and Stripe-ready billing.
 </p>
 
 <p align="center">
@@ -17,10 +17,14 @@
   <a href="https://lifecare-l42k.onrender.com/health">Health Check</a>
   &nbsp;·&nbsp;
   <a href="INTERVIEW_DEMO.md">Interview Guide</a>
+  &nbsp;·&nbsp;
+  <a href="POSITIONING.md">Positioning</a>
+  &nbsp;·&nbsp;
+  <a href="PRIVACY_AND_SAFETY.md">Privacy & AI Safety</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white" alt="React" />
   <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Node.js-20-339933?logo=node.js&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white" alt="MongoDB" />
@@ -39,6 +43,9 @@
 | **API** | [lifecare-l42k.onrender.com/api](https://lifecare-l42k.onrender.com/api) |
 | **Swagger** | [lifecare-l42k.onrender.com/api/docs](https://lifecare-l42k.onrender.com/api/docs) |
 | **Interview demo script** | [INTERVIEW_DEMO.md](./INTERVIEW_DEMO.md) |
+| **Persistent DB setup** | [docs/DEPLOY_ATLAS.md](./docs/DEPLOY_ATLAS.md) |
+
+> **Honest scope:** This is an **interview-ready prototype**, not a regulated medical device. MediScan provides **AI screening assistance** with doctor review — not clinical diagnosis. See [PRIVACY_AND_SAFETY.md](./PRIVACY_AND_SAFETY.md).
 
 All seeded accounts use password **`Password@123`**, or use **one-click demo** on the login page (no password).
 
@@ -58,18 +65,17 @@ Email login (optional): `patient@demo.com`, `dr.sharma@lifecare.com`, `admin@lif
 
 ## Why it's technically interesting
 
-Not a CRUD demo — each core flow maps to patterns you'd ship in a health-tech product.
+A portfolio project that goes beyond CRUD — each flow maps to patterns used in health-tech products (with demo-grade ML and auth where noted).
 
 | Capability | What we built |
 |------------|---------------|
-| **WebRTC teleconsult** | Peer signaling over Socket.io (`offer` / `answer` / `ice-candidate`); room join gated on auth + payment status |
-| **Emergency SOS** | Sub-second dispatch pipeline — geo-matched driver assignment, live GPS streaming, pickup OTP verification |
-| **Real-time layer** | Socket.io rooms for consult, SOS, ambulance, and per-user notification channels |
-| **Payments** | Stripe PaymentIntents + webhooks; unified patient wallet with top-up, debit, refunds, and coupon engine |
-| **Auth & sessions** | JWT access tokens + refresh rotation with token-family revocation; httpOnly cookies + Bearer header support |
-| **Data & geo** | MongoDB geospatial indexes for hospital proximity and ambulance ETA calculations |
-| **API surface** | OpenAPI 3 spec with Swagger UI, bearer-auth Try-it-out, production-safe spec bundling |
-| **Ops-ready** | Docker Compose stack, Railway deploy configs, rate limiting, Helmet, Zod validation, Mongo sanitize |
+| **WebRTC teleconsult** | Peer signaling over Socket.io; room join gated on auth + payment status |
+| **Emergency SOS** | Geo-matched driver assignment, live GPS streaming, pickup OTP verification |
+| **Real-time layer** | Socket.io rooms for consult, SOS, ambulance, and notifications |
+| **Payments** | Stripe PaymentIntents + webhooks; patient wallet with top-up and debit |
+| **MediScan** | Chest / skin / retina upload → AI or integrated fallback → profile history + health vault |
+| **Auth & sessions** | JWT + refresh rotation; demo login for interviews (`ALLOW_DEMO_LOGIN`) |
+| **API surface** | OpenAPI 3 + Swagger UI |
 
 **Role-based product surface:** patient · doctor · ambulance driver · pharmacy · admin — each with dedicated dashboards and guarded API routes.
 

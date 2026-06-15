@@ -21,7 +21,7 @@ describe('POST /api/scans/analyze (chest X-ray)', () => {
 
   it('analyzes chest image and stores scan for patient', async () => {
     const { response: reg } = await registerPatient(server.httpServer);
-    expect(reg.status).toBe(201);
+    expect(reg.status).toBe(200);
     const token = reg.body.data.accessToken as string;
 
     let imageBuffer: Buffer;

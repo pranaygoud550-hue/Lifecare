@@ -106,6 +106,8 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 | Camera/mic blocked | Browser permission — use chat-only or allow permissions |
 | No live consult showing | Re-login as Patient or Doctor (seeds demo call on login) |
 | Stripe card disabled | Use **Wallet** or **Pay at clinic** — expected without live Stripe keys |
+| MediScan shows disease names | Explain: **screening assistant only** — see [PRIVACY_AND_SAFETY.md](./PRIVACY_AND_SAFETY.md) |
+| Data lost after redeploy | Set `MONGODB_URI` on Render — [docs/DEPLOY_ATLAS.md](./docs/DEPLOY_ATLAS.md) |
 
 ---
 

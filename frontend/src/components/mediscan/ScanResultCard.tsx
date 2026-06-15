@@ -105,10 +105,10 @@ export function ScanResultCard({ report, onShared }: ScanResultCardProps) {
       <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-4">
         <div>
           <CardTitle className="text-lg flex flex-wrap items-center gap-2">
-            Analysis results
+            Screening results
             {report.status === 'ai_analyzed' && (
               <Badge variant="secondary" className="text-xs font-normal">
-                LifeCare AI screening
+                AI screening — not a diagnosis
               </Badge>
             )}
           </CardTitle>
@@ -195,8 +195,9 @@ export function ScanResultCard({ report, onShared }: ScanResultCardProps) {
           </Button>
         </div>
 
-        <p className="text-xs text-muted text-center">
-          AI results are for reference only. Always consult your doctor.
+        <p className="text-xs text-muted text-center border-t border-border pt-4">
+          This is an AI screening tool only — not a medical diagnosis. Share results with a licensed
+          healthcare professional before making health decisions.
         </p>
       </CardContent>
 

@@ -78,8 +78,11 @@ export function createApp(): Express {
     const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'][
       mongoose.connection.readyState
     ] || 'unknown';
+    const demoMode = process.env.ALLOW_DEMO_LOGIN === 'true';
     res.json({
       status: isDatabaseConnected ? 'ok' : 'degraded',
+      environment: config.nodeEnv,
+      demoMode,
       database: {
         connected: isDatabaseConnected,
         inMemory: usingInMemoryDatabase,

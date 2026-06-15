@@ -47,15 +47,15 @@ export function MediScanHero({ compact, onStartSkin, activeStep = 'discover' }: 
               MediScan AI Studio
             </h1>
             <p className={cn('text-white/70 mt-3', compact ? 'text-sm' : 'text-base sm:text-lg')}>
-              Your personal AI imaging lab — skin camera check, chest X-ray insights, and retina
-              screening in seconds. Not just another upload form.
+              AI-assisted screening for skin, chest X-ray, and retina images — patterns to discuss with
+              your clinician. Not a diagnosis.
             </p>
 
             {!compact && (
               <div className="flex flex-wrap gap-4 mt-6">
                 {[
                   { icon: Zap, label: 'Results in ~30 sec' },
-                  { icon: Brain, label: 'Doctor-ready reports' },
+                  { icon: Brain, label: 'Screening assistant' },
                   { icon: ScanLine, label: '3 scan modalities' },
                 ].map((item) => (
                   <div

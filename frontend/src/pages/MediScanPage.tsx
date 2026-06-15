@@ -8,6 +8,7 @@ import { ScanUploadCard } from '@/components/mediscan/ScanUploadCard';
 import { ScanProcessingCard } from '@/components/mediscan/ScanProcessingCard';
 import { ScanResultCard } from '@/components/mediscan/ScanResultCard';
 import { ScanHistoryList } from '@/components/mediscan/ScanHistoryList';
+import { MediScanSafetyNotice } from '@/components/mediscan/MediScanSafetyNotice';
 import { cn } from '@/lib/utils';
 import type { ScanReport } from '@/types/mediscan';
 
@@ -82,6 +83,8 @@ export function MediScanPage() {
           activeStep={activeStep}
           onStartSkin={scrollToScanner}
         />
+
+        <MediScanSafetyNotice dark className="max-w-3xl mx-auto" />
 
         <div id="mediscan-scanner" ref={scannerRef} className="scroll-mt-24">
           <section aria-label="AI scanner" className="max-w-3xl mx-auto">
