@@ -75,7 +75,11 @@ export function EmergencyDispatchStep() {
 
         dispatch(closeEmergency());
 
-        if (result.data.isDelayed) {
+        if (result.data.nearestHospital) {
+          toast.success(
+            `Ambulance dispatched — routing to ${result.data.nearestHospital.name as string}`
+          );
+        } else if (result.data.isDelayed) {
           toast.warn(`Ambulance assigned — ETA ${result.data.calculatedETA} min (traffic delay).`);
         } else {
           toast.success(`Ambulance on the way — ETA ${result.data.calculatedETA} min.`);

@@ -9,6 +9,8 @@ import type { UserType } from '../types/index.js';
 import { isDbReady } from '../config/dbStatus.js';
 import { devLoginTokens, ensureDevDemoUserInDb, isDevDemoPhone } from './devAuthFallback.js';
 import { ensureInterviewDemoAppointment } from './interviewDemoService.js';
+import { ensureEmergencyAmbulanceNearPatient } from './emergencyService.js';
+import { ensureSkinCareMedicines } from '../utils/seed.js';
 import { normalizePhone } from '../utils/phone.js';
 
 const MAX_FAILED_ATTEMPTS = 10;
@@ -396,6 +398,10 @@ export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
     if (user && !user.isBlocked) {
       if (normalizedPhone === '9876543210' || normalizedPhone === '9876543211') {
         await ensureInterviewDemoAppointment();
+      }
+      if (normalizedPhone === '9876543210') {
+        await ensureSkinCareMedicines();
+        await ensureEmergencyAmbulanceNearPatient(19.076, 72.8777);
       }
       user.isPhoneVerified = true;
       await user.save();

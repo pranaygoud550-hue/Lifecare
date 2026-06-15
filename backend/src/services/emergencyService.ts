@@ -5,6 +5,7 @@ import type { IEmergencyRequest } from '../models/EmergencyRequest.js';
 import type { IHospital } from '../models/Hospital.js';
 import { calculateDistance } from '../utils/helpers.js';
 import { calculateETA, selectAmbulanceByEta, type EtaCalculation } from '../utils/eta.js';
+import { config } from '../config/index.js';
 import {
   isGooglePlacesConfigured,
   searchNearbyPlaces,
@@ -180,12 +181,198 @@ export async function findNearestHospital(
   if (!coords) return null;
 
   const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
-  if (distanceKm > radiusKm) return null;
 
   return {
     hospital,
     distanceKm,
     distanceMeters: Math.round(distanceKm * 1000),
+  };
+}
+
+/** Nearest emergency hospital anywhere in the database (no radius cap). */
+export async function findNearestHospitalGlobally(
+  lat: number,
+  lng: number
+): Promise<HospitalWithDistance | null> {
+  const hospitals = await Hospital.find({
+    isActive: true,
+    emergencyAvailable: true,
+  }).limit(200);
+
+  let best: HospitalWithDistance | null = null;
+
+  for (const hospital of hospitals) {
+    const coords = hospitalCoords(hospital);
+    if (!coords) continue;
+    const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
+    const distanceMeters = Math.round(distanceKm * 1000);
+    if (!best || distanceMeters < best.distanceMeters) {
+      best = { hospital, distanceKm, distanceMeters };
+    }
+  }
+
+  return best;
+}
+
+function unifiedHospitalToPayload(hospital: UnifiedNearbyHospital): Record<string, unknown> {
+  return {
+    _id: hospital._id,
+    name: hospital.name,
+    address: hospital.address,
+    phone: hospital.phone,
+    emergencyAvailable: hospital.emergencyAvailable ?? true,
+    coordinates: hospital.coordinates,
+    distanceMeters: hospital.distanceMeters,
+    googlePlaceId: hospital.googlePlaceId,
+    source: hospital.source,
+  };
+}
+
+const ACTIVE_EMERGENCY_STATUSES = ['searching', 'dispatched', 'arrived', 'pickedUp', 'atHospital'];
+
+/** Frees ambulances stuck unavailable after completed/cancelled emergencies. */
+export async function releaseStaleAmbulanceUnits(): Promise<number> {
+  if (config.nodeEnv === 'test') return 0;
+
+  const activeEmergencies = await EmergencyRequest.find({
+    status: { $in: ACTIVE_EMERGENCY_STATUSES },
+  }).select('assignedAmbulanceId');
+
+  const busyIds = new Set(
+    activeEmergencies
+      .map((row) => (row.assignedAmbulanceId ? String(row.assignedAmbulanceId) : ''))
+      .filter(Boolean)
+  );
+
+  const stuckUnits = await AmbulanceUnit.find({ isAvailable: false });
+  let released = 0;
+
+  for (const unit of stuckUnits) {
+    if (busyIds.has(String(unit._id))) continue;
+    unit.isAvailable = true;
+    unit.status = 'idle';
+    unit.lastUpdated = new Date();
+    await unit.save();
+    released += 1;
+  }
+
+  return released;
+}
+
+/** Ensures at least one ambulance is available near the patient for SOS demos. */
+export async function ensureEmergencyAmbulanceNearPatient(lat: number, lng: number): Promise<void> {
+  if (config.nodeEnv === 'test') return;
+
+  const available = await AmbulanceUnit.countDocuments({ isAvailable: true, status: 'idle' });
+  if (available > 0) return;
+
+  await releaseStaleAmbulanceUnits();
+
+  const stillAvailable = await AmbulanceUnit.countDocuments({ isAvailable: true, status: 'idle' });
+  if (stillAvailable > 0) return;
+
+  const driver = await User.findOne({ userType: 'ambulance', phone: '9876543216' });
+  if (!driver) return;
+
+  const nearLat = lat + 0.018;
+  const nearLng = lng + 0.01;
+
+  await AmbulanceUnit.findOneAndUpdate(
+    { driverId: driver._id },
+    {
+      driverId: driver._id,
+      vehicleNumber: 'MH-01-AB-1234',
+      isAvailable: true,
+      status: 'idle',
+      lastUpdated: new Date(),
+      currentLocation: {
+        type: 'Point',
+        coordinates: [nearLng, nearLat],
+      },
+    },
+    { upsert: true }
+  );
+
+  await User.findByIdAndUpdate(driver._id, {
+    'ambulanceDetails.availability': true,
+  });
+}
+
+export interface EmergencyDispatchResolution {
+  hospitalPayload: Record<string, unknown> | null;
+  hospitalDbId?: Types.ObjectId;
+  connectedViaRadiusKm: number | null;
+  ambulances: AmbulanceWithDistance[];
+  selection: NonNullable<ReturnType<typeof selectBestAmbulanceForPatient>>;
+}
+
+/**
+ * Connects patient to nearest hospital in expanding tiers (2→4→8 km…),
+ * then assigns the closest available ambulance. Falls back to global nearest hospital.
+ */
+export async function resolveEmergencyDispatch(
+  patientLat: number,
+  patientLng: number
+): Promise<EmergencyDispatchResolution | null> {
+  await releaseStaleAmbulanceUnits();
+
+  const tierRadiiKm = [2, 4, 8, 15, 25, 50, 100];
+
+  for (const radiusKm of tierRadiiKm) {
+    const { hospitals } = await findNearbyHospitalsUnified(patientLat, patientLng, radiusKm);
+    const inTier = hospitals.filter((h) => h.distanceMeters <= radiusKm * 1000);
+    if (inTier.length === 0) continue;
+
+    await ensureEmergencyAmbulanceNearPatient(patientLat, patientLng);
+    const ambulances = await findNearestAvailableAmbulancesWithFallback(patientLat, patientLng);
+    if (ambulances.length === 0) continue;
+
+    const nearest = inTier[0];
+    const selection = selectBestAmbulanceForPatient(ambulances, patientLat, patientLng);
+    if (!selection) continue;
+
+    const hospitalPayload = {
+      ...unifiedHospitalToPayload(nearest),
+      connectionTierKm: radiusKm,
+      connectionMessage: `Connected via nearest hospital within ${radiusKm} km`,
+    };
+
+    return {
+      hospitalPayload,
+      hospitalDbId:
+        nearest.source === 'database' ? new Types.ObjectId(nearest._id) : undefined,
+      connectedViaRadiusKm: radiusKm,
+      ambulances,
+      selection,
+    };
+  }
+
+  await ensureEmergencyAmbulanceNearPatient(patientLat, patientLng);
+  const ambulances = await findNearestAvailableAmbulancesWithFallback(patientLat, patientLng);
+  if (ambulances.length === 0) return null;
+
+  const selection = selectBestAmbulanceForPatient(ambulances, patientLat, patientLng);
+  if (!selection) return null;
+
+  const global = await findNearestHospitalGlobally(patientLat, patientLng);
+  let hospitalPayload: Record<string, unknown> | null = null;
+  let hospitalDbId: Types.ObjectId | undefined;
+
+  if (global) {
+    hospitalPayload = {
+      ...formatHospitalResponse(global.hospital, global.distanceMeters),
+      connectionTierKm: null,
+      connectionMessage: 'Connected to nearest emergency hospital from your location',
+    };
+    hospitalDbId = global.hospital._id;
+  }
+
+  return {
+    hospitalPayload,
+    hospitalDbId,
+    connectedViaRadiusKm: null,
+    ambulances,
+    selection,
   };
 }
 

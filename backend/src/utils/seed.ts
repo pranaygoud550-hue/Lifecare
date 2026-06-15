@@ -402,6 +402,17 @@ export const runSeed = async () => {
     { name: 'Volini Pain Relief Spray', genericName: 'Diclofenac', brand: 'Volini', manufacturer: 'Sanofi', category: 'OTC Medicines', form: 'Liquid', mrp: 180, price: 149, rx: false, stock: 35 },
     { name: 'Telma 40mg', genericName: 'Telmisartan', brand: 'Telma', manufacturer: 'Glenmark', category: 'Prescription Medicines', form: 'Tablet', mrp: 180, price: 145, rx: true, stock: 70 },
     { name: 'ORS Rehydration Powder', genericName: 'Oral Rehydration Salts', brand: 'Electral', manufacturer: 'FDC Ltd', category: 'OTC Medicines', form: 'Sachet', mrp: 22, price: 18, rx: false, stock: 500 },
+    { name: 'Cetaphil Gentle Skin Cleanser', genericName: 'Cetyl Alcohol + Propylene Glycol', brand: 'Cetaphil', manufacturer: 'Galderma', category: 'Skin Care', form: 'Liquid', mrp: 549, price: 459, rx: false, stock: 85 },
+    { name: 'Lakme Sun Expert SPF 50', genericName: 'Avobenzone + Octinoxate', brand: 'Lakme', manufacturer: 'Hindustan Unilever', category: 'Skin Care', form: 'Liquid', mrp: 299, price: 249, rx: false, stock: 120 },
+    { name: 'Neutrogena Hydro Boost Gel', genericName: 'Hyaluronic Acid', brand: 'Neutrogena', manufacturer: 'Johnson & Johnson', category: 'Skin Care', form: 'Liquid', mrp: 899, price: 749, rx: false, stock: 65 },
+    { name: 'Boroline Antiseptic Cream', genericName: 'Boric Acid + Zinc Oxide', brand: 'Boroline', manufacturer: 'GD Pharmaceuticals', category: 'Skin Care', form: 'Liquid', mrp: 45, price: 38, rx: false, stock: 200 },
+    { name: 'Himalaya Purifying Neem Face Wash', genericName: 'Neem + Turmeric', brand: 'Himalaya', manufacturer: 'Himalaya Wellness', category: 'Skin Care', form: 'Liquid', mrp: 180, price: 149, rx: false, stock: 95 },
+    { name: 'Nivea Soft Light Moisturiser', genericName: 'Vitamin E + Jojoba Oil', brand: 'Nivea', manufacturer: 'Beiersdorf', category: 'Skin Care', form: 'Liquid', mrp: 320, price: 269, rx: false, stock: 110 },
+    { name: 'Sebamed Clear Face Gel', genericName: 'Hyaluronic Acid + Aloe', brand: 'Sebamed', manufacturer: 'Sebapharma', category: 'Skin Care', form: 'Liquid', mrp: 650, price: 549, rx: false, stock: 48 },
+    { name: 'Vaseline Healthy Bright Lotion', genericName: 'Niacinamide + SPF', brand: 'Vaseline', manufacturer: 'Hindustan Unilever', category: 'Skin Care', form: 'Liquid', mrp: 425, price: 359, rx: false, stock: 75 },
+    { name: 'Acne-Aid Cleansing Soap', genericName: 'Sulphur + Resorcinol', brand: 'Acne-Aid', manufacturer: 'Stiefel', category: 'Skin Care', form: 'Liquid', mrp: 165, price: 139, rx: false, stock: 90 },
+    { name: 'Aloe Vera Soothing Gel 100g', genericName: 'Aloe Barbadensis', brand: 'LifeCare', manufacturer: 'LifeCare Wellness', category: 'Skin Care', form: 'Liquid', mrp: 199, price: 159, rx: false, stock: 140 },
+    { name: 'Mamaearth Vitamin C Face Serum', genericName: 'Vitamin C + Turmeric', brand: 'Mamaearth', manufacturer: 'Honasa Consumer', category: 'Skin Care', form: 'Liquid', mrp: 599, price: 499, rx: false, stock: 55 },
   ];
 
   for (const med of medicines) {
@@ -559,6 +570,83 @@ export const runSeed = async () => {
   console.log('  Pharmacy: pharmacy@lifecare.com');
   console.log('  Ambulance: ambulance@lifecare.com');
 };
+
+type SeedMedicine = {
+  name: string;
+  genericName: string;
+  brand: string;
+  manufacturer: string;
+  category: string;
+  form: string;
+  mrp: number;
+  price: number;
+  rx: boolean;
+  stock: number;
+};
+
+const SKIN_CARE_MEDICINES: SeedMedicine[] = [
+  { name: 'Cetaphil Gentle Skin Cleanser', genericName: 'Cetyl Alcohol + Propylene Glycol', brand: 'Cetaphil', manufacturer: 'Galderma', category: 'Skin Care', form: 'Liquid', mrp: 549, price: 459, rx: false, stock: 85 },
+  { name: 'Lakme Sun Expert SPF 50', genericName: 'Avobenzone + Octinoxate', brand: 'Lakme', manufacturer: 'Hindustan Unilever', category: 'Skin Care', form: 'Liquid', mrp: 299, price: 249, rx: false, stock: 120 },
+  { name: 'Neutrogena Hydro Boost Gel', genericName: 'Hyaluronic Acid', brand: 'Neutrogena', manufacturer: 'Johnson & Johnson', category: 'Skin Care', form: 'Liquid', mrp: 899, price: 749, rx: false, stock: 65 },
+  { name: 'Boroline Antiseptic Cream', genericName: 'Boric Acid + Zinc Oxide', brand: 'Boroline', manufacturer: 'GD Pharmaceuticals', category: 'Skin Care', form: 'Liquid', mrp: 45, price: 38, rx: false, stock: 200 },
+  { name: 'Himalaya Purifying Neem Face Wash', genericName: 'Neem + Turmeric', brand: 'Himalaya', manufacturer: 'Himalaya Wellness', category: 'Skin Care', form: 'Liquid', mrp: 180, price: 149, rx: false, stock: 95 },
+  { name: 'Nivea Soft Light Moisturiser', genericName: 'Vitamin E + Jojoba Oil', brand: 'Nivea', manufacturer: 'Beiersdorf', category: 'Skin Care', form: 'Liquid', mrp: 320, price: 269, rx: false, stock: 110 },
+  { name: 'Sebamed Clear Face Gel', genericName: 'Hyaluronic Acid + Aloe', brand: 'Sebamed', manufacturer: 'Sebapharma', category: 'Skin Care', form: 'Liquid', mrp: 650, price: 549, rx: false, stock: 48 },
+  { name: 'Vaseline Healthy Bright Lotion', genericName: 'Niacinamide + SPF', brand: 'Vaseline', manufacturer: 'Hindustan Unilever', category: 'Skin Care', form: 'Liquid', mrp: 425, price: 359, rx: false, stock: 75 },
+  { name: 'Acne-Aid Cleansing Soap', genericName: 'Sulphur + Resorcinol', brand: 'Acne-Aid', manufacturer: 'Stiefel', category: 'Skin Care', form: 'Liquid', mrp: 165, price: 139, rx: false, stock: 90 },
+  { name: 'Aloe Vera Soothing Gel 100g', genericName: 'Aloe Barbadensis', brand: 'LifeCare', manufacturer: 'LifeCare Wellness', category: 'Skin Care', form: 'Liquid', mrp: 199, price: 159, rx: false, stock: 140 },
+  { name: 'Mamaearth Vitamin C Face Serum', genericName: 'Vitamin C + Turmeric', brand: 'Mamaearth', manufacturer: 'Honasa Consumer', category: 'Skin Care', form: 'Liquid', mrp: 599, price: 499, rx: false, stock: 55 },
+];
+
+async function upsertMedicineCatalog(pharmacyId: { _id: unknown }, med: SeedMedicine) {
+  const packSize =
+    med.form === 'Tablet' || med.form === 'Capsule'
+      ? '10 count'
+      : med.form === 'Syrup'
+        ? '100 ml'
+        : med.form === 'Injection'
+          ? '1 vial'
+          : med.form === 'Sachet'
+            ? '1 sachet'
+            : '100 ml';
+
+  await Medicine.findOneAndUpdate(
+    { name: med.name, pharmacyId: pharmacyId._id },
+    {
+      name: med.name,
+      genericName: med.genericName,
+      brand: med.brand,
+      manufacturer: med.manufacturer,
+      category: med.category,
+      form: med.form,
+      strength: med.name.match(/\d+\s*\w+/)?.[0] || '',
+      packSize,
+      composition: med.genericName,
+      uses: med.category === 'Skin Care' ? 'For external use on skin as directed' : 'As directed by physician',
+      prescriptionRequired: med.rx,
+      pricing: {
+        mrp: med.mrp,
+        sellingPrice: med.price,
+        discount: Math.round(((med.mrp - med.price) / med.mrp) * 100),
+      },
+      stock: med.stock,
+      pharmacyId: pharmacyId._id,
+      rating: 4.2,
+      reviewCount: 24,
+      isActive: true,
+    },
+    { upsert: true, new: true }
+  );
+}
+
+/** Upserts skin-care catalog without a full re-seed (live demo deploys). */
+export async function ensureSkinCareMedicines() {
+  const pharmacy = await User.findOne({ email: 'pharmacy@lifecare.com' });
+  if (!pharmacy) return;
+  for (const med of SKIN_CARE_MEDICINES) {
+    await upsertMedicineCatalog(pharmacy, med);
+  }
+}
 
 const isMain = process.argv[1] === fileURLToPath(import.meta.url);
 

@@ -121,6 +121,11 @@ async function createUser(params: {
 export async function seedEmergencyTestData(options?: {
   onlyFarAmbulanceAvailable?: boolean;
 }): Promise<EmergencyTestSeed> {
+  await EmergencyRequest.deleteMany({});
+  await AmbulanceUnit.deleteMany({});
+  await Hospital.deleteMany({ slug: { $in: [TEST_COORDS.hospitals.near.slug, TEST_COORDS.hospitals.far.slug] } });
+  await User.deleteMany({ email: { $regex: /@test\.com$/ } });
+
   const patient = await createUser({
     userType: 'patient',
     email: 'patient-emergency@test.com',

@@ -25,6 +25,7 @@ import {
   recalculateLiveEta,
   getDriverName,
   unitCoords,
+  resolveEmergencyDispatch,
 } from '../services/emergencyService.js';
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
@@ -61,8 +62,8 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  const nearbyAmbulances = await findNearestAvailableAmbulancesWithFallback(patientLat, patientLng, 10);
-  if (nearbyAmbulances.length === 0) {
+  const dispatchPlan = await resolveEmergencyDispatch(patientLat, patientLng);
+  if (!dispatchPlan) {
     res.status(503).json({
       success: false,
       message: 'No ambulances are available right now. Call 108 or try again shortly.',
@@ -70,17 +71,15 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  const selection = selectBestAmbulanceForPatient(nearbyAmbulances, patientLat, patientLng);
-  if (!selection) {
-    res.status(404).json({ success: false, message: 'Unable to assign an ambulance' });
-    return;
-  }
+  const { hospitalPayload: tierHospitalPayload, hospitalDbId, connectedViaRadiusKm, ambulances: nearbyAmbulances, selection } =
+    dispatchPlan;
 
   const assigned = selection.selected;
   const { eta, isDelayed, triedCount } = selection;
 
-  let nearestHospitalPayload: Record<string, unknown> | null = null;
+  let nearestHospitalPayload: Record<string, unknown> | null = tierHospitalPayload;
   let smartRecommendation: Awaited<ReturnType<typeof recommendHospitalForPatient>> | null = null;
+  let nearestHospitalResult: Awaited<ReturnType<typeof findNearestHospital>> | null = null;
 
   if (isGooglePlacesConfigured()) {
     smartRecommendation = await recommendHospitalForPatient(patientId, patientLat, patientLng, 15);
@@ -100,18 +99,23 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
         googlePlaceId: h.place_id,
         recommendationReason: smartRecommendation.reason,
         scanContext: smartRecommendation.scanContext,
+        connectionTierKm: connectedViaRadiusKm,
       };
     }
   }
 
-  const nearestHospitalResult = nearestHospitalPayload
-    ? null
-    : await findNearestHospital(patientLat, patientLng, 15);
-  if (!nearestHospitalPayload && nearestHospitalResult) {
-    nearestHospitalPayload = formatHospitalResponse(
-      nearestHospitalResult.hospital,
-      nearestHospitalResult.distanceMeters
-    );
+  if (!nearestHospitalPayload && tierHospitalPayload) {
+    nearestHospitalPayload = tierHospitalPayload;
+  }
+
+  if (!nearestHospitalPayload) {
+    nearestHospitalResult = await findNearestHospital(patientLat, patientLng, 15);
+    if (nearestHospitalResult) {
+      nearestHospitalPayload = formatHospitalResponse(
+        nearestHospitalResult.hospital,
+        nearestHospitalResult.distanceMeters
+      );
+    }
   }
   const requestId = generateEmergencyRequestId();
   const now = new Date();
@@ -128,7 +132,7 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     status: 'searching',
     requestedAt: now,
     assignedAmbulanceId: assigned.unit._id,
-    hospitalId: nearestHospitalResult?.hospital._id,
+    hospitalId: hospitalDbId ?? nearestHospitalResult?.hospital._id,
     candidateAmbulanceIds: nearbyAmbulances.map((a) => a.unit._id),
     calculatedETA: eta.etaMinutes,
     isDelayed,
@@ -166,10 +170,13 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
   emitToUser(patientId, 'emergency:searching', {
     requestId: emergencyRequest.requestId,
     status: 'searching',
-    message: 'Connecting you to the nearest ambulance…',
+    message: nearestHospitalPayload
+      ? `Connecting you to ${nearestHospitalPayload.name as string} and nearest ambulance…`
+      : 'Connecting you to the nearest ambulance…',
     calculatedETA: eta.etaMinutes,
     estimatedArrival,
     isDelayed,
+    nearestHospital: nearestHospitalPayload,
     assignedAmbulance: formatAmbulanceResponse(assigned.unit, assigned.distanceMeters, eta.etaMinutes),
     trackLink,
   });
@@ -191,6 +198,7 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
       calculatedETA: eta.etaMinutes,
       isDelayed,
       ambulancesEvaluated: triedCount,
+      hospitalConnectionTierKm: connectedViaRadiusKm,
       nearestHospital: nearestHospitalPayload,
       smartRecommendation: smartRecommendation
         ? {

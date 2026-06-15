@@ -1,7 +1,7 @@
 import { Search, ShoppingCart, SlidersHorizontal, Package } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
 import { toast } from 'react-toastify';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useGetMedicinesQuery } from '@/features/api/apiSlice';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { addToCart, updateQuantity, selectCartCount } from '@/features/cart/cartSlice';
@@ -21,6 +21,7 @@ const FORM_FILTERS = [
   { id: 'Injection', label: 'Injections' },
   { id: 'Sachet', label: 'Vitamins & Sachets' },
   { id: 'Liquid', label: 'Liquids & Care' },
+  { id: 'Skin Care', label: 'Skin Care' },
 ] as const;
 
 const SORT_OPTIONS = [
@@ -40,6 +41,7 @@ function parseSort(value: SortValue): { sort: string; order?: string } {
 }
 
 export function PharmacyPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
 
@@ -55,9 +57,12 @@ export function PharmacyPage() {
 
   const sortParams = parseSort(sortBy);
 
+  const isSkinCareFilter = formFilter === 'Skin Care';
+
   const { data, isLoading, isFetching } = useGetMedicinesQuery({
     search: search.trim() || undefined,
-    form: formFilter || undefined,
+    form: formFilter && !isSkinCareFilter ? formFilter : undefined,
+    category: isSkinCareFilter ? 'Skin Care' : undefined,
     sort: sortParams.sort,
     order: sortParams.order,
     limit: '48',
@@ -77,7 +82,8 @@ export function PharmacyPage() {
       return;
     }
     dispatch(addToCart({ medicine }));
-    toast.success(`${medicine.name} added to cart`);
+    toast.success(`${medicine.name} added — opening cart`);
+    navigate('/cart');
   };
 
   const getCartQuantity = (id: string) => cartItems.find((i) => i._id === id)?.quantity || 0;
