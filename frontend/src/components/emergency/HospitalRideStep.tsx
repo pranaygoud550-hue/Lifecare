@@ -75,7 +75,7 @@ export function HospitalRideStep() {
     let cancelled = false;
     setLocating(true);
 
-    void resolvePickupLocation({ fallbackAfterMs: 5_000, timeoutMs: 10_000 }).then((resolved) => {
+    void resolvePickupLocation({ allowFallback: true, timeoutMs: 15_000 }).then((resolved) => {
       if (cancelled) return;
       setPickup({ lat: resolved.lat, lng: resolved.lng });
       setPickupAddress(resolved.address);

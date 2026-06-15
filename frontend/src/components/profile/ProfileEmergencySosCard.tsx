@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { useTriggerSOSMutation, useLazyGetEmergencyNearbyHospitalsQuery } from '@/features/api/apiSlice';
 import { activateOneTapEmergency } from '@/features/emergency/emergencySlice';
-import { resolvePickupLocation } from '@/lib/pickupLocation';
+import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
 import { getApiErrorMessage } from '@/lib/apiError';
 import type { EmergencyHospitalInfo } from '@/types';
 
@@ -100,7 +100,19 @@ export function ProfileEmergencySosCard() {
     setNearestHospital(null);
     const startedAt = Date.now();
 
-    const resolved = await resolvePickupLocation({ fallbackAfterMs: 8_000, timeoutMs: 14_000 });
+    let resolved;
+    try {
+      resolved = await resolveSosLocation();
+    } catch (err) {
+      const message =
+        err instanceof GpsLocationError
+          ? err.message
+          : 'Could not detect your location. Enable GPS and try again.';
+      toast.error(message);
+      setPhase('idle');
+      return;
+    }
+
     coordsRef.current = { lat: resolved.lat, lng: resolved.lng };
     setPickupAddress(resolved.address);
 
@@ -112,7 +124,7 @@ export function ProfileEmergencySosCard() {
     setPhase('hospital');
     let nearest: EmergencyHospitalInfo | null = null;
     try {
-      const res = await fetchHospitals({ lat: resolved.lat, lng: resolved.lng, radius: 50 }).unwrap();
+      const res = await fetchHospitals({ lat: resolved.lat, lng: resolved.lng, radius: 15 }).unwrap();
       nearest = res.data?.hospitals?.[0] ?? null;
       setNearestHospital(nearest);
     } catch {

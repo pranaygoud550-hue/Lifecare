@@ -401,7 +401,7 @@ export const devQuickLogin = async (phone: string): Promise<AuthResult> => {
       }
       if (normalizedPhone === '9876543210') {
         await ensureSkinCareMedicines();
-        await ensureEmergencyAmbulanceNearPatient(19.076, 72.8777);
+        await ensureEmergencyAmbulanceNearPatient(17.385, 78.4867);
       }
       user.isPhoneVerified = true;
       await user.save();

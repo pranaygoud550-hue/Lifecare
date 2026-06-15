@@ -21,7 +21,8 @@ import {
   setNearbyHospitals,
 } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { resolvePickupLocation } from '@/lib/pickupLocation';
+import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
+import { useLazyGeocodeEmergencyAddressQuery } from '@/features/api/apiSlice';
 import type { EmergencyHospitalInfo, EmergencyType } from '@/types';
 
 function formatDistance(meters: number): string {
@@ -39,17 +40,17 @@ export function EmergencyDispatchStep() {
     () => (user?._id ? 'locating' : 'ready')
   );
   const [manualAddress, setManualAddress] = useState('');
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   const [triggerSOS, { isLoading }] = useTriggerSOSMutation();
   const [fetchHospitals] = useLazyGetEmergencyNearbyHospitalsQuery();
+  const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
 
   const loadNearestHospital = useCallback(
     async (lat: number, lng: number) => {
       try {
-        const res = await fetchHospitals({ lat, lng, radius: 50 }).unwrap();
+        const res = await fetchHospitals({ lat, lng, radius: 15 }).unwrap();
         const list = (res.data?.hospitals ?? []) as EmergencyHospitalInfo[];
         dispatch(
           setNearbyHospitals({
@@ -137,16 +138,19 @@ export function EmergencyDispatchStep() {
     setPhase('locating');
     setDispatchError(null);
 
-    const resolved = await resolvePickupLocation({ fallbackAfterMs: 5_000, timeoutMs: 12_000 });
-    const { lat, lng, address, fromGps } = resolved;
-    setCoords({ lat, lng });
-
-    if (!fromGps) {
-      toast.info('Using approximate location — enable GPS for the nearest hospital match.');
+    try {
+      const resolved = await resolveSosLocation();
+      await loadNearestHospital(resolved.lat, resolved.lng);
+      await dispatchEmergency(resolved.lat, resolved.lng, resolved.address);
+    } catch (err) {
+      const message =
+        err instanceof GpsLocationError
+          ? err.message
+          : 'Could not detect your location. Enable GPS and try again.';
+      setDispatchError(message);
+      toast.error(message);
+      setPhase('ready');
     }
-
-    await loadNearestHospital(lat, lng);
-    await dispatchEmergency(lat, lng, address);
   }, [dispatchEmergency, loadNearestHospital]);
 
   useEffect(() => {
@@ -238,10 +242,15 @@ export function EmergencyDispatchStep() {
           <Button
             className="mt-4 h-14 text-lg bg-white text-red-700 w-full"
             disabled={!manualAddress.trim()}
-            onClick={() => {
-              const lat = coords?.lat ?? 17.385;
-              const lng = coords?.lng ?? 78.4867;
-              void dispatchEmergency(lat, lng, manualAddress);
+            onClick={async () => {
+              try {
+                const geo = await geocodeAddress(manualAddress.trim()).unwrap();
+                const { lat, lng, displayName } = geo.data!;
+                await loadNearestHospital(lat, lng);
+                await dispatchEmergency(lat, lng, displayName);
+              } catch {
+                toast.error('Could not find that address. Try "Area, City" e.g. Warangal, Telangana');
+              }
             }}
           >
             Dispatch ambulance now

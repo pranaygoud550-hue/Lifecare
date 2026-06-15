@@ -266,6 +266,7 @@ export const runSeed = async () => {
     Chennai: { lat: 13.0827, lng: 80.2707 },
     Kolkata: { lat: 22.5726, lng: 88.3639 },
     Ahmedabad: { lat: 23.0225, lng: 72.5714 },
+    Warangal: { lat: 17.9689, lng: 79.5941 },
   };
 
   const hospitals = [
@@ -285,10 +286,16 @@ export const runSeed = async () => {
     { name: 'Peerless Hospital', city: 'Kolkata', state: 'West Bengal', address: '360, Panchasayar', type: 'multi-specialty', specialties: ['Psychiatry', 'General Physician', 'Pediatrics'], rating: 4.2, emergency: true, beds: 400 },
     { name: 'Civil Hospital Ahmedabad', city: 'Ahmedabad', state: 'Gujarat', address: 'Asarwa, Ahmedabad', type: 'government', specialties: ['General Physician', 'Pediatrics', 'Orthopedics'], rating: 4.0, emergency: true, beds: 1200 },
     { name: 'Zydus Hospital', city: 'Ahmedabad', state: 'Gujarat', address: 'Zydus Hospitals Road, Thaltej', type: 'super-specialty', specialties: ['Cardiology', 'Neurology', 'Oncology'], rating: 4.6, emergency: true, beds: 350 },
+    { name: 'Mahatma Gandhi Memorial Hospital', city: 'Warangal', state: 'Telangana', address: 'Kakatiya Medical College Campus, Warangal', type: 'government', specialties: ['General Physician', 'Emergency', 'Pediatrics'], rating: 4.2, emergency: true, beds: 800 },
+    { name: 'City Hospital Warangal', city: 'Warangal', state: 'Telangana', address: 'Hanamkonda, Warangal', type: 'multi-specialty', specialties: ['General Physician', 'Orthopedics', 'Cardiology'], rating: 4.1, emergency: true, beds: 200 },
   ];
 
   for (const h of hospitals) {
-    const base = cityCoordinates[h.city] ?? { lat: 19.076, lng: 72.8777 };
+    const base = cityCoordinates[h.city];
+    if (!base) {
+      console.warn(`Skipping hospital seed — unknown city: ${h.city}`);
+      continue;
+    }
     const lat = base.lat + (Math.random() - 0.5) * 0.04;
     const lng = base.lng + (Math.random() - 0.5) * 0.04;
 

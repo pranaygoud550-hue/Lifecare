@@ -15,6 +15,7 @@ import {
   useLazyGetTransportTrackQuery,
   useLazyGetTransportByTokenQuery,
   useRegenerateTrackingLinkMutation,
+  useLazyGeocodeEmergencyAddressQuery,
 } from '@/features/api/apiSlice';
 import { LiveTransportMap } from './LiveTransportMap';
 import { joinTransportTracking, getSocket } from '@/lib/socket';
@@ -44,6 +45,7 @@ export function EmergencySOSView() {
   const [fetchTrack] = useLazyGetTransportTrackQuery();
   const [fetchTrackByToken] = useLazyGetTransportByTokenQuery();
   const [regenerateLink] = useRegenerateTrackingLinkMutation();
+  const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
 
   const patientName =
     guest?.name ||
@@ -169,11 +171,17 @@ export function EmergencySOSView() {
     return () => clearInterval(interval);
   }, [bookingId, phase]);
 
-  const handleManualSubmit = () => {
+  const handleManualSubmit = async () => {
     if (!manualAddress.trim()) return;
-    const loc = { lat: 19.076, lng: 72.8777, address: manualAddress };
-    dispatch(setEmergencyLocation(loc));
-    void dispatchSos(loc);
+    try {
+      const geo = await geocodeAddress(manualAddress.trim()).unwrap();
+      const { lat, lng, displayName } = geo.data!;
+      const loc = { lat, lng, address: displayName };
+      dispatch(setEmergencyLocation(loc));
+      void dispatchSos(loc);
+    } catch {
+      toast.error('Could not find that address. Try "Area, City" e.g. Hyderabad, Telangana');
+    }
   };
 
   const handleShare = async () => {

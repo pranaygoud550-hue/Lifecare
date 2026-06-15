@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   createEmergencySos,
   getNearbyHospitals,
+  geocodeEmergencyAddress,
   updateAmbulanceLocation,
   getEmergencyEta,
   cancelEmergencyRequest,
@@ -22,6 +23,7 @@ import {
 
 const router = Router();
 
+router.get('/geocode', geocodeEmergencyAddress);
 router.get('/nearby-hospitals', validate(nearbyHospitalsQuerySchema), getNearbyHospitals);
 
 router.get(

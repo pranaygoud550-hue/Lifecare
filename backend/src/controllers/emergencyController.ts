@@ -15,12 +15,11 @@ import { startEmergencyDemoFlow, stopLocationSimulation } from '../services/emer
 import type { EmergencyType } from '../models/EmergencyRequest.js';
 import {
   findNearestAvailableAmbulancesWithFallback,
-  findNearestHospital,
+  findNearestHospitalGlobally,
   findNearbyHospitalsUnified,
   formatAmbulanceResponse,
   formatHospitalResponse,
   findActiveEmergencyForAmbulance,
-  selectBestAmbulanceForPatient,
   findEmergencyRequestByIdentifier,
   recalculateLiveEta,
   getDriverName,
@@ -29,6 +28,7 @@ import {
 } from '../services/emergencyService.js';
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
+import { geocodeAddress } from '../services/geocodeService.js';
 
 function resolvePatientId(body: { patientId?: string; userId?: string }): string | null {
   return body.patientId ?? body.userId ?? null;
@@ -79,24 +79,29 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
 
   let nearestHospitalPayload: Record<string, unknown> | null = tierHospitalPayload;
   let smartRecommendation: Awaited<ReturnType<typeof recommendHospitalForPatient>> | null = null;
-  let nearestHospitalResult: Awaited<ReturnType<typeof findNearestHospital>> | null = null;
+  let nearestHospitalResult: Awaited<ReturnType<typeof findNearestHospitalGlobally>> | null = null;
 
   if (isGooglePlacesConfigured()) {
     smartRecommendation = await recommendHospitalForPatient(patientId, patientLat, patientLng, 15);
-    if (smartRecommendation.recommendation) {
-      const h = smartRecommendation.recommendation;
+    const rec = smartRecommendation.recommendation;
+    const tierDist =
+      typeof tierHospitalPayload?.distanceMeters === 'number'
+        ? tierHospitalPayload.distanceMeters
+        : null;
+
+    if (rec && (!tierDist || rec.distanceMeters <= tierDist * 1.25)) {
       nearestHospitalPayload = {
-        place_id: h.place_id,
-        name: h.name,
-        address: h.address,
-        phone: h.phone,
-        rating: h.rating,
-        emergencyAvailable: h.isEmergency,
-        coordinates: h.coordinates,
-        distanceMeters: h.distanceMeters,
-        photo_url: h.photo_url,
-        specialties: h.specialtyTags,
-        googlePlaceId: h.place_id,
+        place_id: rec.place_id,
+        name: rec.name,
+        address: rec.address,
+        phone: rec.phone,
+        rating: rec.rating,
+        emergencyAvailable: rec.isEmergency,
+        coordinates: rec.coordinates,
+        distanceMeters: rec.distanceMeters,
+        photo_url: rec.photo_url,
+        specialties: rec.specialtyTags,
+        googlePlaceId: rec.place_id,
         recommendationReason: smartRecommendation.reason,
         scanContext: smartRecommendation.scanContext,
         connectionTierKm: connectedViaRadiusKm,
@@ -109,7 +114,7 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
   }
 
   if (!nearestHospitalPayload) {
-    nearestHospitalResult = await findNearestHospital(patientLat, patientLng, 15);
+    nearestHospitalResult = await findNearestHospitalGlobally(patientLat, patientLng);
     if (nearestHospitalResult) {
       nearestHospitalPayload = formatHospitalResponse(
         nearestHospitalResult.hospital,
@@ -303,9 +308,21 @@ export const cancelEmergencyRequest = asyncHandler(async (req: Request, res: Res
 export const getNearbyHospitals = asyncHandler(async (req: Request, res: Response) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
-  const radius = Number(req.query.radius ?? 25);
+  let radius = Number(req.query.radius ?? 25);
 
-  const { hospitals, source } = await findNearbyHospitalsUnified(lat, lng, radius);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    res.status(400).json({ success: false, message: 'Valid lat and lng are required' });
+    return;
+  }
+
+  let { hospitals, source } = await findNearbyHospitalsUnified(lat, lng, radius);
+
+  if (hospitals.length === 0 && radius < 50) {
+    const expanded = await findNearbyHospitalsUnified(lat, lng, 50);
+    hospitals = expanded.hospitals;
+    source = expanded.source;
+    radius = 50;
+  }
 
   res.json({
     success: true,
@@ -317,6 +334,22 @@ export const getNearbyHospitals = asyncHandler(async (req: Request, res: Respons
       hospitals,
     },
   });
+});
+
+export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Response) => {
+  const address = String(req.query.address ?? '').trim();
+  if (!address) {
+    res.status(400).json({ success: false, message: 'address query parameter is required' });
+    return;
+  }
+
+  const result = await geocodeAddress(address);
+  if (!result) {
+    res.status(404).json({ success: false, message: 'Could not find that address. Try city + area, e.g. Warangal, Telangana' });
+    return;
+  }
+
+  res.json({ success: true, data: result });
 });
 
 export const updateAmbulanceLocation = asyncHandler(async (req: Request, res: Response) => {

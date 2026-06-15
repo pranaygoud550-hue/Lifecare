@@ -17,6 +17,7 @@ import { LazyRideLiveMap, openRideInMaps } from '@/components/emergency/LazyRide
 import { getInitials } from '@/lib/utils';
 import { joinTransportTracking } from '@/lib/socket';
 import { cn } from '@/lib/utils';
+import { FALLBACK_PICKUP } from '@/lib/pickupLocation';
 
 const STATUS_STEPS = [
   { key: 'requested', label: 'Finding ride' },
@@ -103,7 +104,7 @@ export function HelpComingView() {
 
   const pickup =
     track?.patientLocation ||
-    (location ? { lat: location.lat, lng: location.lng } : { lat: 19.076, lng: 72.8777 });
+    (location ? { lat: location.lat, lng: location.lng } : { lat: FALLBACK_PICKUP.lat, lng: FALLBACK_PICKUP.lng });
 
   const hospital = track?.hospitalLocation ?? null;
   const currentStep = statusIndex(rideStatus);

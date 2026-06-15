@@ -11,6 +11,7 @@ import {
   searchNearbyPlaces,
   enrichPlacesWithPhones,
 } from './googlePlacesService.js';
+import { searchOsmHospitals } from './osmHospitalService.js';
 
 export interface AmbulanceWithDistance {
   unit: IAmbulanceUnit;
@@ -36,7 +37,7 @@ export interface UnifiedNearbyHospital {
   emergencyAvailable?: boolean;
   coordinates: { lat: number; lng: number } | null;
   distanceMeters: number;
-  source: 'google_places' | 'database';
+  source: 'google_places' | 'database' | 'openstreetmap';
   googlePlaceId?: string;
 }
 
@@ -167,18 +168,11 @@ export async function findNearestHospital(
   });
 
   if (!hospital) {
-    hospital = await Hospital.findOne({
-      isActive: true,
-      emergencyAvailable: true,
-      'coordinates.lat': { $exists: true },
-      'coordinates.lng': { $exists: true },
-    }).sort({ createdAt: 1 });
+    return findNearestHospitalGlobally(lat, lng);
   }
 
-  if (!hospital) return null;
-
   const coords = hospitalCoords(hospital);
-  if (!coords) return null;
+  if (!coords) return findNearestHospitalGlobally(lat, lng);
 
   const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
 
@@ -452,10 +446,11 @@ export async function findNearbyHospitalsUnified(
   lat: number,
   lng: number,
   radiusKm = 25
-): Promise<{ hospitals: UnifiedNearbyHospital[]; source: 'google_places' | 'database' | 'mixed' }> {
+): Promise<{ hospitals: UnifiedNearbyHospital[]; source: 'google_places' | 'database' | 'mixed' | 'openstreetmap' }> {
   const merged = new Map<string, UnifiedNearbyHospital>();
   let usedGoogle = false;
   let usedDb = false;
+  let usedOsm = false;
 
   if (isGooglePlacesConfigured()) {
     try {
@@ -478,6 +473,18 @@ export async function findNearbyHospitalsUnified(
       }
     } catch (err) {
       console.error('Google Places nearby search failed:', err);
+    }
+  }
+
+  if (!usedGoogle || merged.size === 0) {
+    try {
+      const osmRows = await searchOsmHospitals(lat, lng, radiusKm * 1000);
+      if (osmRows.length > 0) usedOsm = true;
+      for (const row of osmRows) {
+        merged.set(`o:${row._id}`, { ...row });
+      }
+    } catch (err) {
+      console.error('OpenStreetMap hospital search failed:', err);
     }
   }
 
@@ -519,8 +526,8 @@ export async function findNearbyHospitalsUnified(
   }
 
   const hospitals = [...merged.values()].sort((a, b) => a.distanceMeters - b.distanceMeters);
-  const source: 'google_places' | 'database' | 'mixed' =
-    usedGoogle && usedDb ? 'mixed' : usedGoogle ? 'google_places' : 'database';
+  const source: 'google_places' | 'database' | 'mixed' | 'openstreetmap' =
+    usedGoogle && usedDb ? 'mixed' : usedGoogle ? 'google_places' : usedOsm && usedDb ? 'mixed' : usedOsm ? 'openstreetmap' : 'database';
 
   return { hospitals, source };
 }

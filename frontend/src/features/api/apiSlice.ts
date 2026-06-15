@@ -205,9 +205,18 @@ export const api = createApi({
       ApiResponse<NearbyHospitalsResponse>,
       { lat: number; lng: number; radius?: number }
     >({
-      query: ({ lat, lng, radius = 25 }) => ({
+      query: ({ lat, lng, radius = 15 }) => ({
         url: '/emergency/nearby-hospitals',
         params: { lat, lng, radius },
+      }),
+    }),
+    geocodeEmergencyAddress: builder.query<
+      ApiResponse<{ lat: number; lng: number; displayName: string }>,
+      string
+    >({
+      query: (address) => ({
+        url: '/emergency/geocode',
+        params: { address },
       }),
     }),
     getLiveETA: builder.query<ApiResponse<EmergencyLiveEtaData>, string>({
@@ -807,6 +816,7 @@ export const {
   useTriggerSOSMutation,
   useGetEmergencyNearbyHospitalsQuery,
   useLazyGetEmergencyNearbyHospitalsQuery,
+  useLazyGeocodeEmergencyAddressQuery,
   useGetLiveETAQuery,
   useCancelEmergencyMutation,
   useGetDriverEmergencyActiveQuery,

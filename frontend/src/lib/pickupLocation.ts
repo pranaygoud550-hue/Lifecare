@@ -1,72 +1,125 @@
-/** Default map center when GPS is unavailable (Hyderabad — matches demo hospitals in seed). */
+/**
+ * Resolves pickup coordinates for emergency flows.
+ * SOS uses real GPS only — never silently substitutes a wrong city.
+ */
 export const FALLBACK_PICKUP = {
   lat: 17.385,
   lng: 78.4867,
-  address: 'Hyderabad area (approximate location)',
+  address: 'Location unavailable — enable GPS or enter your address',
 } as const;
 
 export type PickupCoords = { lat: number; lng: number };
 
 export type ResolvedPickup = PickupCoords & { address: string; fromGps: boolean };
 
+export class GpsLocationError extends Error {
+  constructor(message = 'Could not detect your location. Enable GPS and try again.') {
+    super(message);
+    this.name = 'GpsLocationError';
+  }
+}
+
 type GeolocationOptions = {
   timeoutMs?: number;
-  fallbackAfterMs?: number;
   maximumAgeMs?: number;
+  /** If false (default for SOS), reject instead of using a wrong-city fallback */
+  allowFallback?: boolean;
 };
 
+function isValidCoord(lat: number, lng: number): boolean {
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
 /**
- * Resolves pickup coordinates: tries GPS, then optional fallback after timeout.
+ * Waits for an accurate GPS fix. Does NOT resolve early with Hyderabad/Mumbai defaults.
  */
-export function resolvePickupLocation(
-  options: GeolocationOptions = {}
-): Promise<ResolvedPickup> {
+export function resolvePickupLocation(options: GeolocationOptions = {}): Promise<ResolvedPickup> {
   const {
-    timeoutMs = 12_000,
-    fallbackAfterMs = 6_000,
-    maximumAgeMs = 120_000,
+    timeoutMs = 22_000,
+    maximumAgeMs = 30_000,
+    allowFallback = false,
   } = options;
 
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (result: ResolvedPickup) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-
-    const useFallback = (fromGps: boolean) =>
-      finish({
-        lat: FALLBACK_PICKUP.lat,
-        lng: FALLBACK_PICKUP.lng,
-        address: FALLBACK_PICKUP.address,
-        fromGps,
-      });
-
+  return new Promise((resolve, reject) => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      useFallback(false);
+      if (allowFallback) {
+        resolve({ ...FALLBACK_PICKUP, fromGps: false });
+      } else {
+        reject(new GpsLocationError('Geolocation is not supported on this device.'));
+      }
       return;
     }
 
-    const fallbackTimer = window.setTimeout(() => useFallback(false), fallbackAfterMs);
+    let settled = false;
+    let watchId: number | null = null;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
 
-    navigator.geolocation.getCurrentPosition(
+    const cleanup = () => {
+      if (watchId != null) navigator.geolocation.clearWatch(watchId);
+      if (timeoutId != null) clearTimeout(timeoutId);
+    };
+
+    const finishGps = (lat: number, lng: number, accuracy?: number) => {
+      if (settled || !isValidCoord(lat, lng)) return;
+      settled = true;
+      cleanup();
+      const acc = accuracy != null ? ` (±${Math.round(accuracy)} m)` : '';
+      resolve({
+        lat,
+        lng,
+        address: `Your location (${lat.toFixed(5)}, ${lng.toFixed(5)})${acc}`,
+        fromGps: true,
+      });
+    };
+
+    const finishFallback = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (allowFallback) {
+        resolve({ ...FALLBACK_PICKUP, fromGps: false });
+      } else {
+        reject(
+          new GpsLocationError(
+            'Could not get your GPS location. Please enable location access in your browser settings and try again.'
+          )
+        );
+      }
+    };
+
+    timeoutId = setTimeout(finishFallback, timeoutMs);
+
+    watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        window.clearTimeout(fallbackTimer);
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
-        finish({
-          lat,
-          lng,
-          address: `Your location (${lat.toFixed(4)}, ${lng.toFixed(4)})`,
-          fromGps: true,
-        });
+        const { latitude: lat, longitude: lng, accuracy } = pos.coords;
+        if (!isValidCoord(lat, lng)) return;
+        const elapsed = Date.now() - startedAt;
+        if (accuracy <= 150 || elapsed >= 4000) {
+          finishGps(lat, lng, accuracy);
+        }
       },
       () => {
-        window.clearTimeout(fallbackTimer);
-        useFallback(false);
+        /* watch errors — getCurrentPosition may still succeed */
+      },
+      { enableHighAccuracy: true, maximumAge: maximumAgeMs, timeout: timeoutMs }
+    );
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => finishGps(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
+      () => {
+        /* wait for watch or timeout */
       },
       { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: maximumAgeMs }
     );
+  });
+}
+
+/** Strict GPS for SOS — never substitute wrong-city defaults */
+export function resolveSosLocation(): Promise<ResolvedPickup> {
+  return resolvePickupLocation({
+    timeoutMs: 25_000,
+    maximumAgeMs: 15_000,
+    allowFallback: false,
   });
 }

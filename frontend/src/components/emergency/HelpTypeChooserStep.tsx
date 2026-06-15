@@ -25,7 +25,7 @@ import { useLazyGetEmergencyNearbyHospitalsQuery } from '@/features/api/apiSlice
 import { cn } from '@/lib/utils';
 import type { HelpType } from '@/features/emergency/emergencySlice';
 import type { EmergencyHospitalInfo } from '@/types';
-import { resolvePickupLocation } from '@/lib/pickupLocation';
+import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m away`;
@@ -95,7 +95,7 @@ export function HelpTypeChooserStep() {
 
     const loadHospitals = async (lat: number, lng: number) => {
       try {
-        const res = await fetchHospitals({ lat, lng, radius: 50 }).unwrap();
+        const res = await fetchHospitals({ lat, lng, radius: 15 }).unwrap();
         if (cancelled) return;
         const list = res.data?.hospitals ?? [];
         dispatch(
@@ -109,22 +109,29 @@ export function HelpTypeChooserStep() {
       }
     };
 
-    void resolvePickupLocation({ fallbackAfterMs: 6_000 }).then(async (resolved) => {
-      if (cancelled) return;
-      const coords = { lat: resolved.lat, lng: resolved.lng };
-      dispatch(
-        setEmergencyLocation({
-          lat: coords.lat,
-          lng: coords.lng,
-          address: resolved.address,
-        })
-      );
-      setLocating(false);
-      if (!resolved.fromGps) {
-        toast.info('Using approximate location — enable GPS for your nearest hospital.');
-      }
-      await loadHospitals(coords.lat, coords.lng);
-    });
+    void resolveSosLocation()
+      .then(async (resolved) => {
+        if (cancelled) return;
+        const coords = { lat: resolved.lat, lng: resolved.lng };
+        dispatch(
+          setEmergencyLocation({
+            lat: coords.lat,
+            lng: coords.lng,
+            address: resolved.address,
+          })
+        );
+        setLocating(false);
+        await loadHospitals(coords.lat, coords.lng);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setLocating(false);
+        toast.error(
+          err instanceof GpsLocationError
+            ? err.message
+            : 'Enable GPS to find your nearest hospital.'
+        );
+      });
 
     return () => {
       cancelled = true;
@@ -245,24 +252,29 @@ export function HelpTypeChooserStep() {
         className="mt-6 text-white/70 hover:text-white hover:bg-white/10 gap-2"
         onClick={() => {
           setLocating(true);
-          void resolvePickupLocation().then(async (resolved) => {
-            const coords = { lat: resolved.lat, lng: resolved.lng };
-            dispatch(
-              setEmergencyLocation({
-                lat: coords.lat,
-                lng: coords.lng,
-                address: resolved.address,
-              })
-            );
-            setLocating(false);
-            try {
-              const res = await fetchHospitals({ lat: coords.lat, lng: coords.lng, radius: 50 }).unwrap();
-              const list = res.data?.hospitals ?? [];
-              dispatch(setNearbyHospitals({ hospitals: list, nearest: list[0] ?? null }));
-            } catch {
-              toast.info('Could not refresh hospitals.');
-            }
-          });
+          void resolveSosLocation()
+            .then(async (resolved) => {
+              const coords = { lat: resolved.lat, lng: resolved.lng };
+              dispatch(
+                setEmergencyLocation({
+                  lat: coords.lat,
+                  lng: coords.lng,
+                  address: resolved.address,
+                })
+              );
+              setLocating(false);
+              try {
+                const res = await fetchHospitals({ lat: coords.lat, lng: coords.lng, radius: 15 }).unwrap();
+                const list = res.data?.hospitals ?? [];
+                dispatch(setNearbyHospitals({ hospitals: list, nearest: list[0] ?? null }));
+              } catch {
+                toast.info('Could not refresh hospitals.');
+              }
+            })
+            .catch(() => {
+              setLocating(false);
+              toast.error('Enable GPS to refresh nearest hospital.');
+            });
         }}
         disabled={locating}
       >
