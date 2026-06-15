@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -93,19 +94,13 @@ export function PatientDashboard() {
   const greetingName = user.profile?.firstName ?? t('dashboard.healthHub');
 
   return (
-    <div className={patientShell ? 'bg-background' : 'min-h-screen bg-gradient-to-b from-primary/[0.04] via-background to-background'}>
+    <div className={patientShell ? 'bg-background section-page-bg min-h-screen' : 'min-h-screen bg-gradient-to-b from-primary/[0.04] via-background to-background'} style={patientShell ? { '--section-tint': '#ecfdf5' } as CSSProperties : undefined}>
       <div className={`mx-auto max-w-7xl px-4 sm:px-6 ${patientShell ? 'py-4' : 'container-custom py-6 sm:py-8'} space-y-6`}>
         {!patientShell && (
           <header>
             <h1 className="text-2xl font-bold">{t('dashboard.healthHub')}</h1>
             <p className="text-sm text-muted">{t('dashboard.healthHubDesc')}</p>
           </header>
-        )}
-
-        {patientShell && activeTab === 'overview' && (
-          <p className="text-sm text-muted">
-            {t('dashboard.greetingShort', { name: greetingName })}
-          </p>
         )}
 
         {activeTab === 'overview' && (
@@ -118,6 +113,7 @@ export function PatientDashboard() {
               upcomingCount={upcomingAppointments.length}
               liveCount={liveCount}
               onTabChange={setTab}
+              greetingName={patientShell ? greetingName : undefined}
             />
           </>
         )}

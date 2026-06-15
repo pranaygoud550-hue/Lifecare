@@ -16,31 +16,31 @@ export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: Dash
       label: t('dashboard.actionLogVitals'),
       icon: Activity,
       onClick: () => onTabChange('vitals'),
-      className: 'hover:border-primary/40',
-      iconClass: 'text-primary',
+      className: 'hover:border-sky-200 bg-gradient-to-br from-sky-50/80 to-white',
+      iconClass: 'text-sky-600',
     },
     {
       id: 'need-help',
       label: t('dashboard.needHelp', 'Need Help'),
       icon: LifeBuoy,
       onClick: () => dispatchNeedHelp(dispatch),
-      className: 'hover:border-sky-400/50 bg-sky-50/40',
-      iconClass: 'text-sky-700',
+      className: 'hover:border-cyan-200 bg-gradient-to-br from-cyan-50/80 to-white',
+      iconClass: 'text-cyan-600',
     },
     {
       id: 'doctor',
       label: t('dashboard.bookDoctor'),
       icon: Stethoscope,
       to: '/doctors',
-      className: 'hover:border-primary/40',
-      iconClass: 'text-primary',
+      className: 'hover:border-violet-200 bg-gradient-to-br from-violet-50/80 to-white',
+      iconClass: 'text-violet-600',
     },
     {
       id: 'chest-scan',
       label: 'Chest X-Ray AI',
       icon: ScanLine,
       to: '/patient/scan-analysis',
-      className: 'hover:border-emerald-400/50 bg-emerald-50/30',
+      className: 'hover:border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white',
       iconClass: 'text-emerald-600',
     },
     {
@@ -48,40 +48,46 @@ export function DashboardQuickActions({ onTabChange }: { onTabChange: (tab: Dash
       label: t('dashboard.actionMediscan'),
       icon: ScanLine,
       to: '/dashboard/mediscan',
-      className: 'hover:border-emerald-400/50 bg-emerald-50/30',
-      iconClass: 'text-emerald-600',
+      className: 'hover:border-teal-200 bg-gradient-to-br from-teal-50/80 to-white',
+      iconClass: 'text-teal-600',
     },
   ];
 
   return (
     <section aria-labelledby="quick-actions-title">
-      <h2 id="quick-actions-title" className="text-xs font-bold uppercase tracking-wide text-muted mb-3">
+      <h2 id="quick-actions-title" className="text-xs font-bold uppercase tracking-wide text-emerald-700 mb-3">
         {t('dashboard.quickActions')}
       </h2>
       <div className="grid grid-cols-2 gap-3">
-        {actions.map((action) => {
+        {actions.map((action, i) => {
           const Icon = action.icon;
           const inner = (
             <>
-              <Icon className={cn('h-6 w-6', action.iconClass)} />
+              <Icon className={cn('h-6 w-6 lc-wiggle', action.iconClass)} style={{ animationDelay: `${i * 0.3}s` }} />
               <span className="font-semibold text-sm leading-tight">{action.label}</span>
             </>
           );
           const base = cn(
-            'flex flex-col items-center justify-center gap-2 rounded-2xl border border-border bg-card p-4 min-h-[5.5rem] transition-all text-center',
+            'lc-card-pop lc-hover-lift flex flex-col items-center justify-center gap-2 rounded-2xl border border-border p-4 min-h-[5.5rem] text-center',
             action.className
           );
 
           if ('to' in action && action.to) {
             return (
-              <Link key={action.id} to={action.to} className={base}>
+              <Link key={action.id} to={action.to} className={base} style={{ animationDelay: `${0.1 + i * 0.06}s` }}>
                 {inner}
               </Link>
             );
           }
 
           return (
-            <button key={action.id} type="button" onClick={action.onClick} className={base}>
+            <button
+              key={action.id}
+              type="button"
+              onClick={action.onClick}
+              className={base}
+              style={{ animationDelay: `${0.1 + i * 0.06}s` }}
+            >
               {inner}
             </button>
           );

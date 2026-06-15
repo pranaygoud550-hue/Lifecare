@@ -18,19 +18,22 @@ export function DashboardStatsRow({
       label: t('dashboard.statUpcoming'),
       value: upcomingCount,
       icon: Calendar,
-      accent: 'text-primary bg-primary/10',
+      accent: 'text-sky-600 bg-sky-100',
+      bg: 'from-sky-50 to-white border-sky-100',
     },
     {
       label: t('dashboard.statVitals'),
       value: vitalsLogged,
       icon: Activity,
-      accent: 'text-secondary bg-secondary/10',
+      accent: 'text-emerald-600 bg-emerald-100',
+      bg: 'from-emerald-50 to-white border-emerald-100',
     },
     {
       label: t('dashboard.statScans'),
       value: scansCount,
       icon: ScanLine,
-      accent: 'text-violet-600 bg-violet-500/10',
+      accent: 'text-violet-600 bg-violet-100',
+      bg: 'from-violet-50 to-white border-violet-100',
     },
   ];
 
@@ -41,7 +44,10 @@ export function DashboardStatsRow({
         return (
           <div
             key={stat.label}
-            className="rounded-2xl border border-border bg-card p-3 sm:p-4 text-center shadow-sm"
+            className={cn(
+              'lc-stat-bounce lc-hover-lift rounded-2xl border bg-gradient-to-br p-3 sm:p-4 text-center shadow-sm',
+              stat.bg
+            )}
           >
             <div
               className={cn(
@@ -51,7 +57,7 @@ export function DashboardStatsRow({
             >
               <Icon className="h-4 w-4" />
             </div>
-            <p className="text-2xl font-bold tabular-nums leading-none">{stat.value}</p>
+            <p className="text-2xl font-bold tabular-nums leading-none text-foreground">{stat.value}</p>
             <p className="text-[10px] sm:text-xs text-muted mt-1.5 leading-tight">{stat.label}</p>
           </div>
         );

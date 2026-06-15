@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronRight, ScanLine } from 'lucide-react';
+import { ChevronRight, ScanLine, HeartPulse } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { SectionHero } from '@/components/common/SectionHero';
+import { PositivePageShell } from '@/components/common/PositivePageShell';
 import { DashboardStatsRow } from '@/components/dashboard/DashboardStatsRow';
 import { DashboardLivePill } from '@/components/dashboard/DashboardLivePill';
 import { DashboardQuickActions } from '@/components/dashboard/DashboardQuickActions';
@@ -19,6 +21,7 @@ export function DashboardOverviewSection({
   upcomingCount,
   liveCount,
   onTabChange,
+  greetingName,
 }: {
   latestVitals: VitalReading[];
   scans: ScanReport[];
@@ -26,6 +29,7 @@ export function DashboardOverviewSection({
   upcomingCount: number;
   liveCount: number;
   onTabChange: (tab: DashboardTab) => void;
+  greetingName?: string;
 }) {
   const { t } = useTranslation();
   const analyzedScans = scans.filter((s) =>
@@ -33,11 +37,14 @@ export function DashboardOverviewSection({
   ).length;
 
   return (
-    <div className="space-y-5 pb-4">
-      <div>
-        <h1 className="text-xl font-bold text-foreground">{t('dashboard.healthOverview')}</h1>
-        <p className="text-sm text-muted mt-0.5">{t('dashboard.healthOverviewDesc')}</p>
-      </div>
+    <PositivePageShell className="space-y-5 pb-4">
+      <SectionHero
+        icon={HeartPulse}
+        theme="home"
+        title={greetingName ? t('dashboard.greetingShort', { name: greetingName }) : t('dashboard.healthOverview')}
+        subtitle={t('dashboard.healthOverviewDesc')}
+        className="!rounded-2xl"
+      />
 
       <DashboardStatsRow
         upcomingCount={upcomingCount}
@@ -71,18 +78,18 @@ export function DashboardOverviewSection({
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           <SkinHealthCard scan={latestSkin} />
-          <Card className="border-0 overflow-hidden p-0">
+          <Card className="border-0 overflow-hidden p-0 lc-hover-lift">
             <Link to="/dashboard/mediscan" className="block h-full min-h-[140px]">
-              <div className="h-full p-4 flex flex-col justify-center bg-gradient-to-br from-slate-900 to-emerald-900 text-white rounded-2xl">
-                <ScanLine className="h-7 w-7 text-emerald-400 mb-2" />
+              <div className="h-full p-4 flex flex-col justify-center bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-400 text-white rounded-2xl lc-positive-glow">
+                <ScanLine className="h-7 w-7 text-white mb-2 lc-wiggle" />
                 <p className="font-bold">{t('dashboard.openMediscanStudio')}</p>
-                <p className="text-xs text-white/70 mt-1">{t('dashboard.mediscanStudioDesc')}</p>
+                <p className="text-xs text-white/85 mt-1">{t('dashboard.mediscanStudioDesc')}</p>
               </div>
             </Link>
           </Card>
         </div>
         {scans.length > 0 && <ScanHealthStrip scans={scans} />}
       </section>
-    </div>
+    </PositivePageShell>
   );
 }

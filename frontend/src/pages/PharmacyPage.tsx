@@ -1,10 +1,13 @@
 import { Search, ShoppingCart, SlidersHorizontal, Package } from 'lucide-react';
 import { useState, useMemo, useEffect } from 'react';
+import type { CSSProperties } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useGetMedicinesQuery } from '@/features/api/apiSlice';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { addToCart, updateQuantity, selectCartCount } from '@/features/cart/cartSlice';
+import { SectionHero } from '@/components/common/SectionHero';
+import { PositivePageShell } from '@/components/common/PositivePageShell';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,33 +92,34 @@ export function PharmacyPage() {
   const getCartQuantity = (id: string) => cartItems.find((i) => i._id === id)?.quantity || 0;
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero strip */}
-      <div className="bg-gradient-to-b from-primary/8 to-background border-b border-border">
-        <div className="container-custom py-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Package className="h-6 w-6 text-primary" />
-                <Badge variant="secondary">Licensed partners</Badge>
-                <Badge className="bg-emerald-600/90 text-white border-0">Featured store</Badge>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">LifeCare+ Pharmacy</h1>
-              <p className="text-muted mt-2 max-w-xl">
-                Genuine medicines · Up to 40% off · Free delivery on orders above ₹500
-              </p>
+    <div className="section-page-bg min-h-screen pb-6" style={{ '--section-tint': '#eff6ff' } as CSSProperties}>
+      <div className="container-custom pt-4 sm:pt-6">
+        <PositivePageShell className="space-y-6">
+        <SectionHero
+          icon={Package}
+          theme="pharmacy"
+          title="LifeCare+ Pharmacy"
+          subtitle="Genuine medicines · Up to 40% off · Free delivery on orders above ₹500"
+          badge={
+            <div className="flex gap-2">
+              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/20">
+                Licensed partners
+              </Badge>
+              <Badge className="bg-emerald-500/80 text-white border-0 hover:bg-emerald-500/80">
+                Featured store
+              </Badge>
             </div>
+          }
+          action={
             <Link to="/cart">
-              <Button size="lg" variant="outline" className="gap-2 shadow-sm">
+              <Button size="lg" variant="outline" className="gap-2 bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white shadow-lg">
                 <ShoppingCart className="h-5 w-5" />
                 Cart ({cartCount})
               </Button>
             </Link>
-          </div>
-        </div>
-      </div>
+          }
+        />
 
-      <div className="container-custom py-8">
         <UploadPrescriptionBanner />
 
         {/* Search + sort */}
@@ -217,6 +221,7 @@ export function PharmacyPage() {
             })}
           </div>
         )}
+        </PositivePageShell>
       </div>
     </div>
   );

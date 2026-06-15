@@ -245,6 +245,151 @@
   .mediscan-scan-line {
     animation: mediscan-scan-line 2.8s ease-in-out infinite;
   }
+
+  /* Wellness / Diet — immersive health experience */
+  .wellness-page {
+    --wellness-emerald: #10b981;
+    --wellness-teal: #14b8a6;
+    --wellness-mint: #6ee7b7;
+    background: linear-gradient(180deg, #ecfdf5 0%, #f8f9fa 28%, #f8f9fa 100%);
+  }
+
+  .wellness-glass {
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(16, 185, 129, 0.15);
+    backdrop-filter: blur(12px);
+    box-shadow: 0 4px 24px rgba(16, 185, 129, 0.08);
+  }
+
+  .wellness-card-shine {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .wellness-card-shine::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255, 255, 255, 0.35) 50%,
+      transparent 60%
+    );
+    transform: translateX(-100%);
+    animation: wellness-shine 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .wellness-meal-breakfast {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+    border-color: rgba(251, 146, 60, 0.35);
+  }
+
+  .wellness-meal-lunch {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+
+  .wellness-meal-dinner {
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border-color: rgba(99, 102, 241, 0.35);
+  }
+
+  .wellness-meal-snack {
+    background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+    border-color: rgba(236, 72, 153, 0.3);
+  }
+
+  .wellness-score-ring {
+    animation: wellness-ring-pulse 3s ease-in-out infinite;
+  }
+
+  .wellness-float {
+    animation: wellness-float 6s ease-in-out infinite;
+  }
+
+  .section-page-bg {
+    background: linear-gradient(180deg, var(--section-tint, transparent) 0%, #f8f9fa 24%);
+  }
+
+  /* Positive patient experience — light, uplifting motion */
+  .lc-stagger-children > * {
+    animation: lc-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .lc-stagger-children > *:nth-child(1) { animation-delay: 0.04s; }
+  .lc-stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+  .lc-stagger-children > *:nth-child(3) { animation-delay: 0.16s; }
+  .lc-stagger-children > *:nth-child(4) { animation-delay: 0.22s; }
+  .lc-stagger-children > *:nth-child(5) { animation-delay: 0.28s; }
+  .lc-stagger-children > *:nth-child(6) { animation-delay: 0.34s; }
+  .lc-stagger-children > *:nth-child(7) { animation-delay: 0.4s; }
+  .lc-stagger-children > *:nth-child(8) { animation-delay: 0.46s; }
+
+  .lc-hero-enter {
+    animation: lc-hero-pop 0.65s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+
+  .lc-fade-in-up {
+    animation: lc-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+  }
+
+  .lc-fade-in-up-delay {
+    animation: lc-fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.28s both;
+  }
+
+  .lc-card-pop {
+    animation: lc-card-pop 0.5s cubic-bezier(0.34, 1.3, 0.64, 1) both;
+  }
+
+  .lc-celebrate {
+    animation: lc-celebrate 0.65s cubic-bezier(0.34, 1.5, 0.64, 1) both;
+  }
+
+  .lc-wiggle {
+    animation: lc-wiggle 3s ease-in-out infinite;
+  }
+
+  .lc-orb-drift {
+    animation: lc-orb-drift 8s ease-in-out infinite;
+  }
+
+  .lc-orb-drift-reverse {
+    animation: lc-orb-drift 10s ease-in-out infinite reverse;
+  }
+
+  .lc-sparkle {
+    animation: lc-sparkle 2.5s ease-in-out infinite;
+  }
+
+  .lc-sparkle-delay {
+    animation: lc-sparkle 2.5s ease-in-out 0.8s infinite;
+  }
+
+  .lc-hover-lift {
+    transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.64, 1), box-shadow 0.25s ease;
+  }
+
+  .lc-hover-lift:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
+  }
+
+  .lc-hover-lift:active {
+    transform: scale(0.97);
+  }
+
+  .lc-stat-bounce {
+    animation: lc-stat-bounce 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  }
+
+  .lc-stat-bounce:nth-child(1) { animation-delay: 0.12s; }
+  .lc-stat-bounce:nth-child(2) { animation-delay: 0.2s; }
+  .lc-stat-bounce:nth-child(3) { animation-delay: 0.28s; }
+
+  .lc-positive-glow {
+    animation: lc-positive-glow 4s ease-in-out infinite;
+  }
 }
 
 @keyframes mediscan-float {
@@ -282,6 +427,146 @@
   }
   100% {
     opacity: 0;
+  }
+}
+
+@keyframes wellness-shine {
+  0%,
+  100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes wellness-ring-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+}
+
+@keyframes wellness-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes lc-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lc-hero-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes lc-card-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes lc-celebrate {
+  0% {
+    transform: scale(1);
+  }
+  30% {
+    transform: scale(1.04);
+  }
+  55% {
+    transform: scale(0.98);
+  }
+  75% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes lc-wiggle {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  25% {
+    transform: rotate(-3deg) scale(1.03);
+  }
+  75% {
+    transform: rotate(3deg) scale(1.03);
+  }
+}
+
+@keyframes lc-orb-drift {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(10px, -12px);
+  }
+}
+
+@keyframes lc-sparkle {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(15deg);
+  }
+}
+
+@keyframes lc-stat-bounce {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.9);
+  }
+  60% {
+    transform: translateY(-4px) scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes lc-positive-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 20px 4px rgba(16, 185, 129, 0.15);
   }
 }
 

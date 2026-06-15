@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
+import type { CSSProperties } from 'react';
 import { Calendar, Video, X, Star, CheckCircle, FileText, Scan } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { toast } from 'react-toastify';
@@ -9,6 +10,8 @@ import {
 } from '@/features/api/apiSlice';
 import { useAppSelector } from '@/hooks/redux';
 import { RatingModal } from '@/components/review/RatingModal';
+import { SectionHero } from '@/components/common/SectionHero';
+import { PositivePageShell } from '@/components/common/PositivePageShell';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -107,31 +110,35 @@ export function AppointmentsPage() {
   ];
 
   return (
-    <div className="container-custom py-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold mb-1">My Appointments</h1>
-          <p className="text-muted text-sm">Manage bookings — join live checkups from the Live Checkup tab</p>
-        </div>
-        {!isDoctor && (
-          <Link to="/doctors">
-            <Button className="gap-2 shrink-0">
-              <Calendar className="h-4 w-4" /> Book New
-            </Button>
-          </Link>
-        )}
-      </div>
+    <div className="section-page-bg min-h-screen pb-6" style={{ '--section-tint': '#eef2ff' } as CSSProperties}>
+      <div className="container-custom pt-4 sm:pt-6">
+        <PositivePageShell className="space-y-6">
+        <SectionHero
+          icon={Calendar}
+          theme="appointments"
+          title="My Appointments"
+          subtitle="Manage bookings — join live checkups when your doctor is ready."
+          action={
+            !isDoctor ? (
+              <Link to="/doctors">
+                <Button className="gap-2 shrink-0 bg-white text-indigo-700 hover:bg-white/90 shadow-lg">
+                  <Calendar className="h-4 w-4" /> Book New
+                </Button>
+              </Link>
+            ) : undefined
+          }
+        />
 
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {filterTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setFilter(tab.id)}
             className={cn(
-              'px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors',
+              'px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
               filter === tab.id
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-background border border-border text-muted hover:text-foreground'
+                ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                : 'bg-white border border-border text-muted hover:text-foreground hover:border-indigo-200'
             )}
           >
             {tab.label}
@@ -145,9 +152,11 @@ export function AppointmentsPage() {
           {[...Array(3)].map((_, i) => <div key={i} className="h-32 bg-border rounded-lg animate-pulse" />)}
         </div>
       ) : appointments.length === 0 ? (
-        <Card>
+        <Card className="border-indigo-100 bg-white/80 shadow-sm">
           <CardContent className="py-16 text-center">
-            <Calendar className="h-12 w-12 text-muted mx-auto mb-4" />
+            <div className="mx-auto w-16 h-16 rounded-2xl bg-indigo-100 flex items-center justify-center mb-4">
+              <Calendar className="h-8 w-8 text-indigo-600" />
+            </div>
             <p className="text-lg font-medium mb-2">No {filter === 'all' ? '' : filter} appointments</p>
             {!isDoctor && filter !== 'cancelled' && (
               <>
@@ -168,7 +177,15 @@ export function AppointmentsPage() {
             const attachedScan = scanFromAppointment(appointment.scanReportId);
 
             return (
-              <Card key={appointment._id} className={isLive ? 'border-secondary/30' : ''}>
+              <Card
+                key={appointment._id}
+                className={cn(
+                  'overflow-hidden transition-all hover:shadow-md',
+                  isLive
+                    ? 'border-emerald-300/60 bg-gradient-to-r from-emerald-50/50 to-white shadow-sm'
+                    : 'border-indigo-100/80 bg-white/90'
+                )}
+              >
                 <CardContent className="p-6 space-y-4">
                   {attachedScan && (
                     <AppointmentScanPreview
@@ -271,6 +288,8 @@ export function AppointmentsPage() {
           onSuccess={() => refetch()}
         />
       )}
+        </PositivePageShell>
+      </div>
     </div>
   );
 }
