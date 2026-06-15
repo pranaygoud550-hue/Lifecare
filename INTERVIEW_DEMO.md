@@ -48,6 +48,45 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 - **Doctor:** log in as doctor → same page → join same room → WebRTC + chat
 - Mention: Socket.io signaling, room gated on payment status
 
+---
+
+## How to test a real video call (two users)
+
+Use **two browsers** (Chrome + Safari, or normal + incognito) so each person has their own camera session.
+
+| Step | Patient (`9876543210`) | Doctor (`9876543211`) |
+|------|------------------------|------------------------|
+| 1 | Open [Login](https://lifecare-frontend-navy.vercel.app/login) → **Try as Patient** | Same link → **Try as Doctor** |
+| 2 | Go to **Live Checkup** (`/live-checkup`) | Go to **Live Checkup** |
+| 3 | Click **Join now** on **DEMO-LIVE-VIDEO** | Click **Join now** on the **same** appointment |
+| 4 | Allow **camera + microphone** | Allow **camera + microphone** |
+
+**What you should see**
+- Your own video in the small tile (bottom-right)
+- The other person’s video on the main screen
+- Working mic mute, video off, and in-call chat
+
+**Technical notes (for interviews)**
+- Real **WebRTC** (`getUserMedia` + `RTCPeerConnection`) — not a mock UI
+- **Socket.io** relays `offer` / `answer` / `ice-candidate` into a shared `roomId`
+- Join is gated: same appointment, payment `paid`, status `confirmed` or `in-progress`
+- Uses Google **STUN** only (no TURN) — works on home WiFi; strict corporate firewalls may block P2P
+
+**If video doesn’t connect**
+| Symptom | Try |
+|---------|-----|
+| Black remote video | Refresh both tabs; join doctor **after** patient is in the room |
+| Camera blocked | Browser site settings → allow camera/mic for the Vercel URL |
+| No appointment listed | Log out and demo-login again (seeds `DEMO-LIVE-VIDEO` on login) |
+| “Complete payment” error | Re-login as patient (demo wallet is topped up automatically) |
+| One-way audio only | Check mic isn’t muted; try Chrome on both sides |
+
+**Book a new video call (optional)**
+1. Patient → **Doctors** → pick a doctor → **Video Consultation** → pay with **Wallet**
+2. Doctor → accepts appointment (or use pre-confirmed demo booking)
+3. Both join from **Live Checkup** within 5 minutes of scheduled time
+
+---
 ### 4. MediScan deep-dive (45 sec)
 - **Dashboard → MediScan** → Chest X-ray → upload PNG/JPG
 - Works without Cloudinary (local ML fallback on server)
@@ -97,9 +136,10 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 |-------|-----|
 | Blank screen / slow load | Render waking up — wait 30–60s, refresh |
 | Demo login fails | Ensure `ALLOW_DEMO_LOGIN=true` on Render backend |
+| “Too many authentication attempts” | Fixed in latest deploy — demo-login exempt; refresh after ~1 min if you hit an old limit |
 | API shows `database.connected: false` | Set valid `MONGODB_URI` on Render **or** rely on in-memory demo fallback (`ALLOW_DEMO_LOGIN=true`) |
 | Onboarding shows again | Clear `lifecare-onboarding-complete` in browser localStorage |
-| SOS “no ambulance” | Backend uses fallback search (10→500 km); retry once |
+| SOS “no ambulance” | Previous demo may have dispatched the unit — refresh backend or wait; call 108 in real emergencies |
 | MediScan chest upload | `/dashboard/mediscan` — local ML fallback | ✅ |
 | Unified scan history | `/patient/scan-history` — X-ray, skin, eye on profile | ✅ |
 | Health vault sync | Scans auto-saved to `/health-records` | ✅ |
