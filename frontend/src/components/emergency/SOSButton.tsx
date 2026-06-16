@@ -194,7 +194,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
                   onSelect={handleAreaSelect}
                   inputClassName="h-12 bg-white text-base text-slate-900"
                   showPopular
-                  showLandmark={false}
+                  showLandmark
                 />
               </>
             )}

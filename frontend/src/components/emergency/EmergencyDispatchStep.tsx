@@ -232,6 +232,7 @@ export function EmergencyDispatchStep() {
           onSelect={(sel) => void handleAreaSelect(sel)}
           inputClassName="h-12 bg-white text-lg"
           showPopular
+          showLandmark
         />
       )}
 

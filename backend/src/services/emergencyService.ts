@@ -12,6 +12,7 @@ import {
   enrichPlacesWithPhones,
 } from './googlePlacesService.js';
 import { searchOsmHospitals } from './osmHospitalService.js';
+import { isWithinHyderabadServiceArea } from '../data/hyderabadAreas.js';
 
 export interface AmbulanceWithDistance {
   unit: IAmbulanceUnit;
@@ -525,7 +526,15 @@ export async function findNearbyHospitalsUnified(
     });
   }
 
-  const hospitals = [...merged.values()].sort((a, b) => a.distanceMeters - b.distanceMeters);
+  const partnerBoostMeters = isWithinHyderabadServiceArea(lat, lng) ? 1200 : 500;
+
+  const hospitals = [...merged.values()].sort((a, b) => {
+    const scoreA =
+      a.distanceMeters - (a.source === 'database' ? partnerBoostMeters : 0);
+    const scoreB =
+      b.distanceMeters - (b.source === 'database' ? partnerBoostMeters : 0);
+    return scoreA - scoreB || a.distanceMeters - b.distanceMeters;
+  });
   const source: 'google_places' | 'database' | 'mixed' | 'openstreetmap' =
     usedGoogle && usedDb ? 'mixed' : usedGoogle ? 'google_places' : usedOsm && usedDb ? 'mixed' : usedOsm ? 'openstreetmap' : 'database';
 

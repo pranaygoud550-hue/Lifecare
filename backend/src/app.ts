@@ -90,6 +90,14 @@ export function createApp(): Express {
         name: mongoose.connection.name || null,
         host: mongoose.connection.host || null,
       },
+      integrations: {
+        googlePlaces: !!config.google.placesApiKey,
+        twilioSms: !!(
+          config.twilio.accountSid &&
+          config.twilio.authToken &&
+          config.twilio.phoneNumber
+        ),
+      },
       timestamp: new Date().toISOString(),
     });
   });

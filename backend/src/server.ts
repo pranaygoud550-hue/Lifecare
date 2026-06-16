@@ -59,6 +59,21 @@ const startServer = async () => {
     await connectDB();
     await autoSeedIfEmpty();
     if (config.nodeEnv !== 'test') {
+      const { ensureHyderabadEmergencyData } = await import(
+        './services/hyderabadEmergencySeedService.js'
+      );
+      await ensureHyderabadEmergencyData();
+
+      const googleOk = !!config.google.placesApiKey;
+      const twilioOk = !!(
+        config.twilio.accountSid &&
+        config.twilio.authToken &&
+        config.twilio.phoneNumber
+      );
+      console.log(
+        `Integrations: Google Places ${googleOk ? 'ON' : 'OFF'} | Twilio SMS ${twilioOk ? 'ON' : 'OFF (demo log only)'}`
+      );
+
       startCronJobs();
       startNavigationEtaBroadcast();
     }

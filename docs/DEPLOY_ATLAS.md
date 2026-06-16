@@ -31,6 +31,17 @@ In [Render Dashboard](https://dashboard.render.com) → your API service → **E
 | `FRONTEND_URL` | `https://lifecare-frontend-navy.vercel.app` |
 | `JWT_SECRET` | Long random string |
 | `JWT_REFRESH_SECRET` | Different long random string |
+| `GOOGLE_PLACES_API_KEY` | Same as `GOOGLE_MAPS_API_KEY` — server-side Places + Directions |
+| `GOOGLE_MAPS_API_KEY` | Google Cloud API key (restrict to Places + Directions, not HTTP referrers) |
+| `TWILIO_ACCOUNT_SID` | Twilio console — SOS SMS to patient + emergency contacts |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token |
+| `TWILIO_PHONE_NUMBER` | Twilio sender number (E.164, e.g. +1…) |
+
+Or sync from local `backend/.env` in one command (after creating a [Render API key](https://dashboard.render.com/u/settings#api-keys)):
+
+```bash
+RENDER_API_KEY=rnd_xxx node scripts/sync-render-env.mjs
+```
 
 Redeploy the service.
 
