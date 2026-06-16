@@ -157,7 +157,9 @@ export function HelpTypeChooserStep() {
           What kind of help do you need?
         </h2>
         <p className="text-base text-white/70 mt-2">
-          Emergency help is available in <strong>{HYDERABAD_SERVICE_LABEL}</strong> only.
+          Type your street or colony (like Rapido/Uber), then choose{' '}
+          <strong>Ambulance SOS</strong> for emergencies or <strong>I need a ride</strong> for non-urgent help.
+          Service area: <strong>{HYDERABAD_SERVICE_LABEL}</strong>.
         </p>
       </div>
 

@@ -1,3 +1,4 @@
+import { config } from '../config/index.js';
 import { cacheGet, cacheSet, cacheKey } from './cacheService.js';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
@@ -7,21 +8,88 @@ export interface GeocodeResult {
   lat: number;
   lng: number;
   displayName: string;
+  placeId?: string;
 }
 
-/**
- * Convert a typed address (e.g. "Warangal, Telangana") to coordinates via OpenStreetMap Nominatim.
- */
-export async function geocodeAddress(query: string): Promise<GeocodeResult | null> {
-  const trimmed = query.trim();
+function googleApiKey(): string | null {
+  return config.google.placesApiKey || config.google.mapsApiKey || null;
+}
+
+async function geocodeWithGoogle(query: string): Promise<GeocodeResult | null> {
+  const key = googleApiKey();
+  if (!key) return null;
+
+  const params = new URLSearchParams({
+    address: query,
+    key,
+    components: 'country:IN',
+    region: 'in',
+  });
+
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as {
+    status: string;
+    results?: Array<{
+      place_id: string;
+      formatted_address: string;
+      geometry: { location: { lat: number; lng: number } };
+    }>;
+    error_message?: string;
+  };
+
+  if (data.status !== 'OK' || !data.results?.[0]) return null;
+
+  const hit = data.results[0];
+  return {
+    lat: hit.geometry.location.lat,
+    lng: hit.geometry.location.lng,
+    displayName: hit.formatted_address,
+    placeId: hit.place_id,
+  };
+}
+
+/** Resolve coordinates from a Google place_id (from autocomplete pick). */
+export async function geocodePlaceId(placeId: string): Promise<GeocodeResult | null> {
+  const trimmed = placeId.trim();
   if (!trimmed) return null;
 
-  const cacheKeyStr = cacheKey(['geocode', trimmed.toLowerCase()]);
+  const cacheKeyStr = cacheKey(['geocode-place', trimmed]);
   const cached = cacheGet<GeocodeResult>(cacheKeyStr);
   if (cached) return cached;
 
+  const key = googleApiKey();
+  if (!key) return null;
+
+  const params = new URLSearchParams({ place_id: trimmed, key });
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as {
+    status: string;
+    results?: Array<{
+      place_id: string;
+      formatted_address: string;
+      geometry: { location: { lat: number; lng: number } };
+    }>;
+  };
+
+  if (data.status !== 'OK' || !data.results?.[0]) return null;
+
+  const hit = data.results[0];
+  const result: GeocodeResult = {
+    lat: hit.geometry.location.lat,
+    lng: hit.geometry.location.lng,
+    displayName: hit.formatted_address,
+    placeId: hit.place_id,
+  };
+
+  cacheSet(cacheKeyStr, result, 3600);
+  return result;
+}
+
+async function geocodeWithNominatim(query: string): Promise<GeocodeResult | null> {
   const params = new URLSearchParams({
-    q: trimmed.includes('India') ? trimmed : `${trimmed}, India`,
+    q: query.includes('India') ? query : `${query}, India`,
     format: 'json',
     limit: '1',
     countrycodes: 'in',
@@ -39,12 +107,33 @@ export async function geocodeAddress(query: string): Promise<GeocodeResult | nul
   const hit = rows[0];
   if (!hit) return null;
 
-  const result: GeocodeResult = {
+  return {
     lat: parseFloat(hit.lat),
     lng: parseFloat(hit.lon),
     displayName: hit.display_name,
   };
+}
 
-  cacheSet(cacheKeyStr, result, 3600);
-  return result;
+/**
+ * Convert a typed address to coordinates — Google Geocoding first, then OpenStreetMap fallback.
+ */
+export async function geocodeAddress(query: string): Promise<GeocodeResult | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+
+  const cacheKeyStr = cacheKey(['geocode', trimmed.toLowerCase()]);
+  const cached = cacheGet<GeocodeResult>(cacheKeyStr);
+  if (cached) return cached;
+
+  const google = await geocodeWithGoogle(trimmed);
+  if (google) {
+    cacheSet(cacheKeyStr, google, 3600);
+    return google;
+  }
+
+  const osm = await geocodeWithNominatim(trimmed);
+  if (osm) {
+    cacheSet(cacheKeyStr, osm, 3600);
+  }
+  return osm;
 }

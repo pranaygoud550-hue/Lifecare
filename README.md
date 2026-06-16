@@ -5,8 +5,8 @@
 <h1 align="center">LifeCare+</h1>
 
 <p align="center">
-  <strong>End-to-end digital health prototype</strong> — teleconsultation, emergency dispatch, pharmacy, AI screening, and payments in one demo surface.<br/>
-  Built as a TypeScript MERN monorepo with real-time tracking, WebRTC video, and Stripe-ready billing.
+  <strong>End-to-end digital health prototype</strong> — teleconsultation, pharmacy, Hyderabad-scoped emergency help, and AI screening.<br/>
+  Built as a TypeScript MERN monorepo over multiple iterations (see <a href="docs/CHANGELOG.md">changelog</a> and <a href="docs/ENGINEERING.md">engineering notes</a>).
 </p>
 
 <p align="center">
@@ -16,11 +16,11 @@
   &nbsp;·&nbsp;
   <a href="https://lifecare-l42k.onrender.com/health">Health Check</a>
   &nbsp;·&nbsp;
+  <a href="docs/ENGINEERING.md"><strong>How it was built</strong></a>
+  &nbsp;·&nbsp;
   <a href="INTERVIEW_DEMO.md">Interview Guide</a>
   &nbsp;·&nbsp;
-  <a href="POSITIONING.md">Positioning</a>
-  &nbsp;·&nbsp;
-  <a href="PRIVACY_AND_SAFETY.md">Privacy & AI Safety</a>
+  <a href="https://github.com/pranaygoud550-hue/Lifecare">GitHub</a>
 </p>
 
 <p align="center">
@@ -32,6 +32,22 @@
   <img src="https://img.shields.io/badge/Stripe-payments-635BFF?logo=stripe&logoColor=white" alt="Stripe" />
   <img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker" />
 </p>
+
+---
+
+## Why this repo exists
+
+Most student health projects are static landing pages. This one grew in layers:
+
+1. Auth + doctor booking + wallet payments  
+2. WebRTC consults (real signaling, not a fake UI)  
+3. Emergency SOS — then **fixed** when GPS failed and hospitals showed the wrong city  
+4. **Hyderabad area picker** + seeded partner hospitals when GPS wasn’t reliable  
+5. Interview polish: demo login, onboarding, OpenAPI, lazy loading  
+
+The [commit history](https://github.com/pranaygoud550-hue/Lifecare/commits/main) shows that progression — including bug fixes, not just feature dumps.
+
+**Proof for recruiters:** [docs/ENGINEERING.md](./docs/ENGINEERING.md) (trade-offs + bugs) · [docs/CHANGELOG.md](./docs/CHANGELOG.md) · [docs/DEMO_VIDEO.md](./docs/DEMO_VIDEO.md) · [POSITIONING.md](./POSITIONING.md)
 
 ---
 
@@ -69,7 +85,7 @@ A portfolio project that goes beyond CRUD — each flow maps to patterns used in
 | Capability | What we built |
 |------------|---------------|
 | **WebRTC teleconsult** | Peer signaling over Socket.io; room join gated on auth + payment status |
-| **Emergency SOS** | Geo-matched driver assignment, live GPS streaming, pickup OTP verification |
+| **Emergency SOS** | Hyderabad area search → nearest hospital → ambulance dispatch + live map (no GPS required) |
 | **Real-time layer** | Socket.io rooms for consult, SOS, ambulance, and notifications |
 | **Payments** | Stripe PaymentIntents + webhooks; patient wallet with top-up and debit |
 | **MediScan** | Chest / skin / retina upload → AI or integrated fallback → profile history + health vault |
@@ -202,7 +218,7 @@ Interactive OpenAPI docs with **Try it out** and persistent bearer-token auth:
 | | URL |
 |---|---|
 | Local | http://localhost:5001/api/docs |
-| Production | https://lifecare-backend.up.railway.app/api/docs |
+| Production | https://lifecare-l42k.onrender.com/api/docs |
 | Raw spec | `/api/docs.json` |
 
 **Quick auth flow:** `POST /api/auth/login` → copy `data.accessToken` → **Authorize** in Swagger → test protected routes.
@@ -213,7 +229,10 @@ Covers auth, appointments, emergency SOS, pharmacy, and payments. Full route map
 
 ## Screenshots
 
-> Add captures to `docs/screenshots/` and uncomment below.
+Capture instructions: [docs/screenshots/README.md](./docs/screenshots/README.md).  
+Demo video script: [docs/DEMO_VIDEO.md](./docs/DEMO_VIDEO.md).
+
+> Add PNGs to `docs/screenshots/` then uncomment the table below.
 
 <!--
 | Home & discovery | Video consult | Emergency SOS |

@@ -215,12 +215,44 @@ export const api = createApi({
       }),
     }),
     geocodeEmergencyAddress: builder.query<
-      ApiResponse<{ lat: number; lng: number; displayName: string }>,
+      ApiResponse<{
+        lat: number;
+        lng: number;
+        displayName: string;
+        areaId?: string;
+        zone?: string;
+        placeId?: string;
+      }>,
+      { address?: string; placeId?: string }
+    >({
+      query: ({ address, placeId }) => ({
+        url: '/emergency/geocode',
+        params: { ...(address ? { address } : {}), ...(placeId ? { placeId } : {}) },
+      }),
+    }),
+    searchEmergencyAddresses: builder.query<
+      ApiResponse<{
+        suggestions: Array<{
+          placeId: string;
+          description: string;
+          mainText: string;
+          secondaryText: string;
+        }>;
+        areas: Array<{
+          id: string;
+          name: string;
+          zone: string;
+          lat: number;
+          lng: number;
+        }>;
+        configured: boolean;
+        serviceLabel?: string;
+      }>,
       string
     >({
-      query: (address) => ({
-        url: '/emergency/geocode',
-        params: { address },
+      query: (q) => ({
+        url: '/emergency/address-suggestions',
+        params: { q },
       }),
     }),
     getLiveETA: builder.query<ApiResponse<EmergencyLiveEtaData>, string>({
@@ -822,6 +854,7 @@ export const {
   useGetEmergencyNearbyHospitalsQuery,
   useLazyGetEmergencyNearbyHospitalsQuery,
   useLazyGeocodeEmergencyAddressQuery,
+  useLazySearchEmergencyAddressesQuery,
   useGetLiveETAQuery,
   useCancelEmergencyMutation,
   useGetDriverEmergencyActiveQuery,

@@ -63,7 +63,15 @@ Atlas starts empty. Demo login (`9876543210`) auto-creates users on first sign-i
 
 ```bash
 # In backend/.env set MONGODB_URI to the same Atlas URI
-npm run db:seed -w backend
+npm run db:setup
 ```
 
-Or trigger empty-db auto-seed on first Render boot (only when `User.countDocuments() === 0`).
+Hyderabad emergency hospitals only:
+
+```bash
+npm run seed:hyderabad-emergency -w backend
+```
+
+Or trigger empty-db auto-seed on first Render boot (only when `User.countDocuments() === 0`). Partner hospitals also upsert on every API boot via `ensureHyderabadEmergencyData()`.
+
+See [ENGINEERING.md](./ENGINEERING.md) for architecture and trade-offs.

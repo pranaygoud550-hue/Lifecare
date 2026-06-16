@@ -40,7 +40,9 @@ Password login (optional): `patient@demo.com` / `Password@123` — same seeded d
 2. **Live Checkup** → **Join now** on the pre-seeded demo call (instant — no wait)
 3. **MediScan** → upload chest X-ray sample (`backend/tests/fixtures/sample-chest.png`) → AI results
 4. **Pharmacy** → cart → checkout
-5. **Need Help** → dispatch ambulance
+5. **Need Help** → pick **Madhapur** (or any area) → add flat/landmark → show nearest hospital → dispatch ambulance
+
+> Emergency is **Hyderabad-only** in this build. We use area search instead of GPS because laptop GPS failed in real testing.
 
 ### 3. Video consult deep-dive (1 min)
 - **Patient:** `/live-checkup` → join **DEMO-LIVE-VIDEO** room (camera/mic prompt is normal)
@@ -101,7 +103,7 @@ Use **two browsers** (Chrome + Safari, or normal + incognito) so each person has
 ### 6. Technical talking points (30 sec)
 - MERN + TypeScript monorepo, RTK Query, Socket.io real-time
 - JWT auth with refresh, role-based routes
-- Geo-matched ambulance dispatch + hospital routing
+- Geo-matched ambulance dispatch + **Hyderabad area search** (180+ localities)
 - Stripe + wallet payments, WebRTC video consults
 - ML MediScan with API fallback
 
@@ -119,7 +121,7 @@ Use **two browsers** (Chrome + Safari, or normal + incognito) so each person has
 | Video consult | `/live-checkup` — demo call ready on login | ✅ |
 | Pharmacy shop | `/pharmacy` → cart → checkout | ✅ |
 | Pharmacy staff | `/pharmacy/portal` | ✅ |
-| Need Help / SOS | Dashboard → Need Help modal | ✅ |
+| Need Help / SOS | Dashboard → area search → Need Help modal | ✅ |
 | Ambulance driver | `/driver` | ✅ |
 | Doctor patients | `/doctor/patients` | ✅ |
 | Care plans | Doctor publish → Patient Wellness | ✅ |
@@ -139,6 +141,8 @@ Use **two browsers** (Chrome + Safari, or normal + incognito) so each person has
 | API shows `database.connected: false` | Set valid `MONGODB_URI` on Render **or** rely on in-memory demo fallback (`ALLOW_DEMO_LOGIN=true`) |
 | Onboarding shows again | Clear `lifecare-onboarding-complete` in browser localStorage |
 | SOS “no ambulance” | Previous demo may have dispatched the unit — refresh backend or wait; call 108 in real emergencies |
+| SOS outside Hyderabad | Only Hyderabad & outskirts supported — pick an area from the list |
+| Wrong nearest hospital | Ensure Render has `GOOGLE_PLACES_API_KEY` + Atlas `MONGODB_URI`; partner hospitals seed on boot |
 | MediScan chest upload | `/dashboard/mediscan` — local ML fallback | ✅ |
 | Unified scan history | `/patient/scan-history` — X-ray, skin, eye on profile | ✅ |
 | Health vault sync | Scans auto-saved to `/health-records` | ✅ |

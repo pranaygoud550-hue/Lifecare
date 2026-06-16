@@ -28,7 +28,11 @@ import {
 } from '../services/emergencyService.js';
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
-import { geocodeAddress } from '../services/geocodeService.js';
+import { geocodeAddress, geocodePlaceId } from '../services/geocodeService.js';
+import {
+  searchAddressSuggestions,
+  isAddressAutocompleteConfigured,
+} from '../services/addressAutocompleteService.js';
 import {
   areaToDisplayName,
   isWithinHyderabadServiceArea,
@@ -400,10 +404,62 @@ export const searchHyderabadAreasHandler = asyncHandler(async (req: Request, res
   res.json({ success: true, data: { areas, serviceLabel: HYDERABAD_SERVICE_LABEL } });
 });
 
+export const searchEmergencyAddresses = asyncHandler(async (req: Request, res: Response) => {
+  const q = String(req.query.q ?? '').trim();
+  if (q.length < 2) {
+    res.json({ success: true, data: { suggestions: [], areas: [], configured: isAddressAutocompleteConfigured() } });
+    return;
+  }
+
+  const areas = searchHyderabadAreas(q, 8);
+  let suggestions: Awaited<ReturnType<typeof searchAddressSuggestions>> = [];
+
+  if (isAddressAutocompleteConfigured()) {
+    try {
+      suggestions = await searchAddressSuggestions(q);
+    } catch (err) {
+      console.error('Address autocomplete failed:', err);
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      suggestions,
+      areas,
+      configured: isAddressAutocompleteConfigured(),
+      serviceLabel: HYDERABAD_SERVICE_LABEL,
+    },
+  });
+});
+
 export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Response) => {
   const address = String(req.query.address ?? '').trim();
-  if (!address) {
-    res.status(400).json({ success: false, message: 'address query parameter is required' });
+  const placeId = String(req.query.placeId ?? '').trim();
+
+  if (!address && !placeId) {
+    res.status(400).json({ success: false, message: 'address or placeId query parameter is required' });
+    return;
+  }
+
+  if (placeId) {
+    const fromPlace = await geocodePlaceId(placeId);
+    if (!fromPlace || !isWithinHyderabadServiceArea(fromPlace.lat, fromPlace.lng)) {
+      res.status(404).json({
+        success: false,
+        message: `That location is outside ${HYDERABAD_SERVICE_LABEL}. Pick an address within the service area.`,
+      });
+      return;
+    }
+    res.json({
+      success: true,
+      data: {
+        lat: fromPlace.lat,
+        lng: fromPlace.lng,
+        displayName: fromPlace.displayName,
+        placeId: fromPlace.placeId,
+      },
+    });
     return;
   }
 
@@ -431,11 +487,15 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
     return;
   }
 
-  const result = await geocodeAddress(`${address}, Hyderabad, Telangana`);
+  const result = await geocodeAddress(
+    lower.includes('hyderabad') || lower.includes('telangana')
+      ? address
+      : `${address}, Hyderabad, Telangana`
+  );
   if (!result || !isWithinHyderabadServiceArea(result.lat, result.lng)) {
     res.status(404).json({
       success: false,
-      message: `Could not find that area in ${HYDERABAD_SERVICE_LABEL}. Choose from the Hyderabad area list.`,
+      message: `Could not find that address in ${HYDERABAD_SERVICE_LABEL}. Try a nearby landmark or colony name.`,
     });
     return;
   }

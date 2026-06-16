@@ -9,15 +9,21 @@ export type HyderabadArea = {
   aliases?: string[];
 };
 
-/** Generous bounding box — city + ORR outskirts */
+/** City center — used for radius checks and map bias */
+export const HYDERABAD_CENTER = { lat: 17.385, lng: 78.4867 } as const;
+
+/** ~100 km service radius (Medchal, Kompally, Secunderabad, Shamshabad, Patancheru, etc.) */
+export const SERVICE_RADIUS_KM = 100;
+
+/** Bounding box for quick reject + autocomplete bias */
 export const HYDERABAD_BOUNDS = {
-  minLat: 17.18,
-  maxLat: 17.62,
-  minLng: 78.22,
-  maxLng: 78.72,
+  minLat: 16.48,
+  maxLat: 18.29,
+  minLng: 77.59,
+  maxLng: 79.38,
 } as const;
 
-export const HYDERABAD_SERVICE_LABEL = 'Hyderabad & outskirts';
+export const HYDERABAD_SERVICE_LABEL = 'Hyderabad & surroundings (100 km)';
 
 export const HYDERABAD_AREAS: HyderabadArea[] = [
   // Central & Old City
@@ -235,13 +241,28 @@ function tokens(text: string): string[] {
   return normalize(text).split(' ').filter((t) => t.length > 1);
 }
 
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export function isWithinHyderabadServiceArea(lat: number, lng: number): boolean {
-  return (
-    lat >= HYDERABAD_BOUNDS.minLat &&
-    lat <= HYDERABAD_BOUNDS.maxLat &&
-    lng >= HYDERABAD_BOUNDS.minLng &&
-    lng <= HYDERABAD_BOUNDS.maxLng
-  );
+  if (
+    lat < HYDERABAD_BOUNDS.minLat ||
+    lat > HYDERABAD_BOUNDS.maxLat ||
+    lng < HYDERABAD_BOUNDS.minLng ||
+    lng > HYDERABAD_BOUNDS.maxLng
+  ) {
+    return false;
+  }
+  return distanceKm(HYDERABAD_CENTER.lat, HYDERABAD_CENTER.lng, lat, lng) <= SERVICE_RADIUS_KM;
 }
 
 function scoreArea(area: HyderabadArea, query: string): number {
