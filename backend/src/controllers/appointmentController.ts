@@ -261,6 +261,21 @@ async function sendConfirmationNotifications(
   }
 }
 
+export const getLiveConsultationCount = asyncHandler(async (req: Request, res: Response) => {
+  const filter: Record<string, unknown> = {
+    status: { $in: ['confirmed', 'in-progress'] },
+    consultationType: { $in: ['video', 'audio'] },
+  };
+  if (req.user!.userType === 'doctor') {
+    filter.doctorId = req.user!.userId;
+  } else {
+    filter.patientId = req.user!.userId;
+  }
+
+  const count = await Appointment.countDocuments(filter);
+  res.json({ success: true, data: { count } });
+});
+
 export const getAppointments = asyncHandler(async (req: Request, res: Response) => {
   const { status, page = '1', limit = '10' } = req.query;
   const pageNum = parseInt(page as string, 10);

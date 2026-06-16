@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { LifeBuoy, ChevronRight } from 'lucide-react';
 import { useAppDispatch } from '@/hooks/redux';
-import { openHospitalRideFlow } from '@/features/emergency/emergencySlice';
+import { dispatchHospitalRide } from '@/lib/needHelp';
 import { Button } from '@/components/ui/button';
 
 export function DashboardNeedHelpCard() {
@@ -21,7 +21,7 @@ export function DashboardNeedHelpCard() {
       </div>
       <Button
         className="w-full mt-4 gap-2 bg-sky-600 hover:bg-sky-700 h-12 text-base font-semibold"
-        onClick={() => dispatch(openHospitalRideFlow())}
+        onClick={() => dispatchHospitalRide(dispatch)}
       >
         {t('dashboard.needHelpCta')}
         <ChevronRight className="h-5 w-5" />

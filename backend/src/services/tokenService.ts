@@ -98,6 +98,7 @@ export async function revokeTokenPair(accessJti?: string, refreshJti?: string, u
   const ops: Promise<unknown>[] = [];
 
   if (accessJti) {
+    cacheBlacklistedJti(accessJti, new Date(Date.now() + parseExpiryMs(config.jwt.expiresIn)));
     ops.push(
       TokenBlacklist.findOneAndUpdate(
         { jti: accessJti },
@@ -113,6 +114,7 @@ export async function revokeTokenPair(accessJti?: string, refreshJti?: string, u
   }
 
   if (refreshJti) {
+    cacheBlacklistedJti(refreshJti, new Date(Date.now() + parseExpiryMs(config.jwt.refreshExpiresIn)));
     ops.push(
       RefreshToken.updateOne({ jti: refreshJti }, { revokedAt: new Date() }),
       TokenBlacklist.findOneAndUpdate(
@@ -135,9 +137,26 @@ export async function revokeAllUserRefreshTokens(userId: string) {
   await RefreshToken.updateMany({ userId, revokedAt: { $exists: false } }, { revokedAt: new Date() });
 }
 
+const blacklistCache = new Map<string, number>();
+
+function cacheBlacklistedJti(jti: string, expiresAt?: Date) {
+  const expiryMs = expiresAt?.getTime() ?? Date.now() + parseExpiryMs(config.jwt.expiresIn);
+  blacklistCache.set(jti, expiryMs);
+}
+
 export async function isTokenBlacklisted(jti: string): Promise<boolean> {
-  const found = await TokenBlacklist.findOne({ jti });
-  return !!found;
+  const cachedExpiry = blacklistCache.get(jti);
+  if (cachedExpiry !== undefined) {
+    if (cachedExpiry > Date.now()) return true;
+    blacklistCache.delete(jti);
+    return false;
+  }
+
+  const found = await TokenBlacklist.findOne({ jti }).select('expiresAt').lean();
+  if (!found) return false;
+
+  cacheBlacklistedJti(jti, found.expiresAt);
+  return true;
 }
 
 export function verifyAccessToken(token: string): JwtPayload & { jti?: string } {

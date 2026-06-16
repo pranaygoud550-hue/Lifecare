@@ -1,12 +1,15 @@
 import { Link, useNavigate } from 'react-router-dom';
+import { LifeBuoy } from 'lucide-react';
 import { LifeCareLogo } from '@/components/brand/LifeCareLogo';
 import { NotificationBell } from '@/components/common/NotificationBell';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { useAppSelector } from '@/hooks/redux';
+import { useAppDispatch, useAppSelector } from '@/hooks/redux';
+import { dispatchNeedHelp } from '@/lib/needHelp';
 import { getInitials } from '@/lib/utils';
 
 export function PatientTopBar() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { user } = useAppSelector((s) => s.auth);
   if (!user) return null;
 
@@ -21,6 +24,15 @@ export function PatientTopBar() {
         </Link>
 
         <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => dispatchNeedHelp(dispatch)}
+            className="flex items-center gap-1.5 rounded-full bg-red-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-red-700 min-h-[36px]"
+            aria-label="Need Help — emergency and hospital transport"
+          >
+            <LifeBuoy className="h-4 w-4" aria-hidden />
+            <span className="hidden sm:inline">Need Help</span>
+          </button>
           <NotificationBell />
           <button
             type="button"

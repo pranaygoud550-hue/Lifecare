@@ -3,8 +3,7 @@ import { LifeBuoy, Building2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch } from '@/hooks/redux';
-import { openHospitalRideFlow } from '@/features/emergency/emergencySlice';
-import { dispatchNeedHelp } from '@/lib/needHelp';
+import { dispatchHospitalRide, dispatchNeedHelp } from '@/lib/needHelp';
 
 /** Need Help card on patient dashboard — opens the unified help flow */
 export function LifeCareAmbulanceCard() {
@@ -41,7 +40,7 @@ export function LifeCareAmbulanceCard() {
                 size="sm"
                 variant="outline"
                 className="border-white/40 bg-transparent text-white hover:bg-white/10"
-                onClick={() => dispatch(openHospitalRideFlow())}
+                onClick={() => dispatchHospitalRide(dispatch)}
               >
                 <Building2 className="mr-1.5 h-4 w-4" />
                 {t('dashboard.hospitalRide', 'Hospital ride')}

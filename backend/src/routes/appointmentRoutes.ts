@@ -4,6 +4,7 @@ import {
   uploadBookingReports,
   confirmAppointmentPayment,
   getAppointments,
+  getLiveConsultationCount,
   getAppointmentById,
   cancelAppointment,
   joinConsultation,
@@ -49,6 +50,7 @@ router.post(
   validate(confirmAppointmentPaymentSchema),
   confirmAppointmentPayment
 );
+router.get('/live-count', getLiveConsultationCount);
 router.get('/', validate(appointmentsQuerySchema), getAppointments);
 router.get('/:id', validate(appointmentIdParamSchema), getAppointmentById);
 router.put('/:id/accept', authorize('doctor'), validate(appointmentIdParamSchema), acceptAppointment);

@@ -1,16 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
-import { useEmergencyLocation } from '@/hooks/useEmergencyLocation';
 import { useTriggerSOSMutation } from '@/features/api/apiSlice';
 import { activateOneTapEmergency } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
+import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
 import type { EmergencyType } from '@/types';
 
-const COUNTDOWN_SECONDS = 3;
+const COUNTDOWN_SECONDS = 5;
 
 interface SOSButtonProps {
   emergencyType?: EmergencyType;
@@ -19,33 +18,59 @@ interface SOSButtonProps {
 
 export function SOSButton({ emergencyType = 'other', className = '' }: SOSButtonProps) {
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const { user } = useAppSelector((s) => s.auth);
-  const { isActive } = useAppSelector((s) => s.emergency);
+  const { isActive, location: savedLocation } = useAppSelector((s) => s.emergency);
 
   const [phase, setPhase] = useState<'idle' | 'countdown' | 'dispatching'>('idle');
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
-
-  const { lat, lng, isLoading: locating, error: locationError } = useEmergencyLocation(
-    user?.userType === 'patient' && phase === 'countdown'
-  );
+  const [locating, setLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [triggerSOS, { isLoading: sosLoading }] = useTriggerSOSMutation();
+
+  const primeLocation = useCallback(async () => {
+    if (coordsRef.current) return coordsRef.current;
+
+    if (savedLocation?.lat != null && savedLocation?.lng != null) {
+      coordsRef.current = { lat: savedLocation.lat, lng: savedLocation.lng };
+      return coordsRef.current;
+    }
+
+    setLocating(true);
+    setLocationError(null);
+    try {
+      const resolved = await resolveSosLocation();
+      coordsRef.current = { lat: resolved.lat, lng: resolved.lng };
+      return coordsRef.current;
+    } catch (err) {
+      const message =
+        err instanceof GpsLocationError
+          ? err.message
+          : 'Could not detect your location. Enable GPS and try again.';
+      setLocationError(message);
+      return null;
+    } finally {
+      setLocating(false);
+    }
+  }, [savedLocation]);
 
   const cancelCountdown = useCallback(() => {
     setPhase('idle');
     setSecondsLeft(COUNTDOWN_SECONDS);
+    setLocationError(null);
   }, []);
 
   const dispatchSos = useCallback(async () => {
     if (!user?._id) {
       toast.error('Sign in as a patient to use emergency SOS.');
-      navigate('/login');
+      setPhase('idle');
       return;
     }
 
-    if (lat == null || lng == null) {
-      toast.error(locationError || 'Waiting for your location…');
+    const coords = coordsRef.current ?? (await primeLocation());
+    if (!coords) {
+      toast.error(locationError || 'Could not get your GPS location. Enable location access and try again.');
       setPhase('idle');
       return;
     }
@@ -53,8 +78,8 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
     setPhase('dispatching');
     try {
       const result = await triggerSOS({
-        patientLat: lat,
-        patientLng: lng,
+        patientLat: coords.lat,
+        patientLng: coords.lng,
         emergencyType,
         patientId: user._id,
       }).unwrap();
@@ -64,7 +89,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
           requestId: result.data.requestId,
           dispatch: result.data,
           status: 'searching',
-          patientLocation: { lat, lng },
+          patientLocation: coords,
         })
       );
 
@@ -75,14 +100,17 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
       }
 
       setPhase('idle');
+      coordsRef.current = null;
     } catch (err: unknown) {
       toast.error(getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.'));
       setPhase('idle');
     }
-  }, [user, lat, lng, locationError, triggerSOS, dispatch, emergencyType, navigate]);
+  }, [user?._id, primeLocation, locationError, triggerSOS, dispatch, emergencyType]);
 
   useEffect(() => {
     if (phase !== 'countdown') return;
+
+    void primeLocation();
 
     let remaining = COUNTDOWN_SECONDS;
     setSecondsLeft(remaining);
@@ -97,12 +125,11 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
     }, 1000);
 
     return () => clearInterval(id);
-  }, [phase, dispatchSos]);
+  }, [phase, dispatchSos, primeLocation]);
 
   const handlePress = () => {
     if (!user) {
       toast.error('Sign in to send an emergency SOS.');
-      navigate('/login');
       return;
     }
 
@@ -113,13 +140,15 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
 
     if (isActive) return;
 
+    coordsRef.current = null;
+    setLocationError(null);
     setSecondsLeft(COUNTDOWN_SECONDS);
     setPhase('countdown');
   };
 
   if (isActive) return null;
 
-  const isBusy = phase === 'dispatching' || sosLoading || (phase === 'countdown' && locating);
+  const isBusy = phase === 'dispatching' || sosLoading;
 
   return (
     <>
@@ -143,7 +172,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
         {isBusy ? (
           <>
             <Loader2 className="h-5 w-5 animate-spin shrink-0" />
-            Finding nearest ambulance…
+            Dispatching ambulance…
           </>
         ) : (
           <>
@@ -166,7 +195,13 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
             </p>
             <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
             <p className="text-red-100 text-sm mb-6">
-              {locating ? 'Getting your GPS location…' : locationError ? locationError : 'Sending your location to dispatch'}
+              {locating
+                ? 'Getting your GPS location…'
+                : locationError
+                  ? locationError
+                  : coordsRef.current
+                    ? 'Location ready — sending to dispatch'
+                    : 'Allow location access if prompted'}
             </p>
             <Button
               type="button"

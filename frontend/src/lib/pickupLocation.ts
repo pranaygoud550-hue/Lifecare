@@ -30,6 +30,19 @@ function isValidCoord(lat: number, lng: number): boolean {
   return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
+function geoErrorMessage(err: GeolocationPositionError): string {
+  switch (err.code) {
+    case err.PERMISSION_DENIED:
+      return 'Location access was denied. Click the lock icon in your browser address bar, allow location, and try again.';
+    case err.POSITION_UNAVAILABLE:
+      return 'GPS signal not available. Move outdoors or near a window, or enter your address manually.';
+    case err.TIMEOUT:
+      return 'Location timed out. Move near a window or outdoors and try again.';
+    default:
+      return 'Could not get your GPS location. Please enable location access in your browser settings and try again.';
+  }
+}
+
 /**
  * Waits for an accurate GPS fix. Does NOT resolve early with Hyderabad/Mumbai defaults.
  */
@@ -53,11 +66,33 @@ export function resolvePickupLocation(options: GeolocationOptions = {}): Promise
     let settled = false;
     let watchId: number | null = null;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let getCurrentFailed = false;
+    let watchFailed = false;
     const startedAt = Date.now();
 
     const cleanup = () => {
       if (watchId != null) navigator.geolocation.clearWatch(watchId);
       if (timeoutId != null) clearTimeout(timeoutId);
+    };
+
+    const handleGeoError = (source: 'get' | 'watch') => (err: GeolocationPositionError) => {
+      if (settled) return;
+
+      if (err.code === err.PERMISSION_DENIED) {
+        settled = true;
+        cleanup();
+        reject(new GpsLocationError(geoErrorMessage(err)));
+        return;
+      }
+
+      if (source === 'get') getCurrentFailed = true;
+      else watchFailed = true;
+
+      if (getCurrentFailed && watchFailed && err.code !== err.TIMEOUT) {
+        settled = true;
+        cleanup();
+        reject(new GpsLocationError(geoErrorMessage(err)));
+      }
     };
 
     const finishGps = (lat: number, lng: number, accuracy?: number) => {
@@ -99,17 +134,13 @@ export function resolvePickupLocation(options: GeolocationOptions = {}): Promise
           finishGps(lat, lng, accuracy);
         }
       },
-      () => {
-        /* watch errors — getCurrentPosition may still succeed */
-      },
+      handleGeoError('watch'),
       { enableHighAccuracy: true, maximumAge: maximumAgeMs, timeout: timeoutMs }
     );
 
     navigator.geolocation.getCurrentPosition(
       (pos) => finishGps(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy),
-      () => {
-        /* wait for watch or timeout */
-      },
+      handleGeoError('get'),
       { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: maximumAgeMs }
     );
   });

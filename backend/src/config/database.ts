@@ -61,6 +61,9 @@ async function connectWithUri(
   await mongoose.connect(uri, {
     serverSelectionTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
     connectTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
+    maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE) || 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 30_000,
     family: 4,
     autoSelectFamily: false,
   });

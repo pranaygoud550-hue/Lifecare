@@ -31,7 +31,17 @@ export function NotificationBell() {
     useCallback(
       (notification: Notification) => {
         toast.info(notification.title, { autoClose: 4000 });
-        dispatch(api.util.invalidateTags(['Notifications']));
+        dispatch(
+          api.util.updateQueryData('getNotifications', { limit: '15' }, (draft) => {
+            if (!draft?.data) return;
+            const exists = draft.data.some((n) => n._id === notification._id);
+            if (exists) return;
+            draft.data.unshift(notification);
+            if (draft.meta) {
+              draft.meta.unreadCount = (draft.meta.unreadCount ?? 0) + 1;
+            }
+          })
+        );
       },
       [dispatch]
     )

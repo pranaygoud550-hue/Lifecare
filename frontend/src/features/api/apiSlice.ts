@@ -94,6 +94,10 @@ export const api = createApi({
       query: (params) => ({ url: '/appointments', params }),
       providesTags: ['Appointments'],
     }),
+    getLiveConsultationCount: builder.query<ApiResponse<{ count: number }>, void>({
+      query: () => '/appointments/live-count',
+      providesTags: ['Appointments'],
+    }),
     getAppointmentById: builder.query<ApiResponse<Appointment>, string>({
       query: (id) => `/appointments/${id}`,
       providesTags: (_r, _e, id) => [{ type: 'Appointments', id }],
@@ -782,6 +786,7 @@ export const {
   useCreateAppointmentPaymentIntentMutation,
   useConfirmAppointmentPaymentMutation,
   useGetAppointmentsQuery,
+  useGetLiveConsultationCountQuery,
   useGetAppointmentByIdQuery,
   useCancelAppointmentMutation,
   useJoinConsultationMutation,

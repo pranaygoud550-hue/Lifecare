@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LifeBuoy, ScanLine, Activity, Salad, User, Camera, Calendar, Pill } from 'lucide-react';
 import { useAppDispatch } from '@/hooks/redux';
-import { openHospitalRideFlow } from '@/features/emergency/emergencySlice';
+import { dispatchNeedHelp } from '@/lib/needHelp';
 import { cn } from '@/lib/utils';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
 
@@ -59,7 +59,7 @@ export function DashboardActionHub({ onTabChange }: { onTabChange?: (tab: Dashbo
               <button
                 key={action.id}
                 type="button"
-                onClick={() => dispatch(openHospitalRideFlow())}
+                onClick={() => dispatchNeedHelp(dispatch)}
                 className={className}
               >
                 {inner}

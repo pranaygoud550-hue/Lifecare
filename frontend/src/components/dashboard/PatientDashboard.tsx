@@ -1,4 +1,5 @@
-import { useCallback, useEffect } from 'react';
+import { lazy, Suspense, useCallback, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +12,11 @@ import {
 import { useAppSelector } from '@/hooks/redux';
 import { usePatientAppShell } from '@/hooks/usePatientAppShell';
 import { DashboardOverviewSection } from '@/components/dashboard/DashboardOverviewSection';
-import { HealthVitalsDashboard } from '@/components/dashboard/HealthVitalsDashboard';
+const HealthVitalsDashboard = lazy(() =>
+  import('@/components/dashboard/HealthVitalsDashboard').then((m) => ({
+    default: m.HealthVitalsDashboard,
+  }))
+);
 import { DashboardCareSection } from '@/components/dashboard/DashboardCareSection';
 import { DashboardProfileSection } from '@/components/dashboard/DashboardProfileSection';
 import { LifeCareAmbulanceCard } from '@/components/dashboard/LifeCareAmbulanceCard';
@@ -120,7 +125,15 @@ export function PatientDashboard() {
 
         {activeTab === 'vitals' && (
           <div id="vitals" className="space-y-6">
-            <HealthVitalsDashboard />
+            <Suspense
+              fallback={
+                <div className="flex justify-center py-16">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary" aria-hidden />
+                </div>
+              }
+            >
+              <HealthVitalsDashboard />
+            </Suspense>
           </div>
         )}
 

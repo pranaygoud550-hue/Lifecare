@@ -17,7 +17,7 @@ import {
   useRegenerateTrackingLinkMutation,
   useLazyGeocodeEmergencyAddressQuery,
 } from '@/features/api/apiSlice';
-import { LiveTransportMap } from './LiveTransportMap';
+import { LazyLiveTransportMap } from './LazyLiveTransportMap';
 import { joinTransportTracking, getSocket } from '@/lib/socket';
 
 type Phase = 'locating' | 'manual' | 'dispatching' | 'searching' | 'tracking';
@@ -279,7 +279,7 @@ export function EmergencySOSView() {
       </div>
 
       {location && (
-        <LiveTransportMap
+        <LazyLiveTransportMap
           patient={location}
           driver={driverInfo?.location}
           className="h-72 w-full"

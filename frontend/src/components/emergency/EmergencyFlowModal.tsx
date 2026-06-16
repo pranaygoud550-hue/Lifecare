@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { X } from 'lucide-react';
+import { lazy, Suspense, useEffect } from 'react';
+import { Loader2, X } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   closeEmergency,
@@ -7,14 +7,35 @@ import {
   setGuest,
   skipGuest,
 } from '@/features/emergency/emergencySlice';
-import { GuestContactStep } from './GuestContactStep';
-import { HelpTypeChooserStep } from './HelpTypeChooserStep';
-import { EmergencyDispatchStep } from './EmergencyDispatchStep';
-import { HospitalRideStep } from './HospitalRideStep';
-import { TriageStep } from './TriageStep';
-import { EmergencySOSView } from './EmergencySOSView';
-import { HelpComingView } from './HelpComingView';
 import { cn } from '@/lib/utils';
+
+const GuestContactStep = lazy(() =>
+  import('./GuestContactStep').then((m) => ({ default: m.GuestContactStep }))
+);
+const HelpTypeChooserStep = lazy(() =>
+  import('./HelpTypeChooserStep').then((m) => ({ default: m.HelpTypeChooserStep }))
+);
+const EmergencyDispatchStep = lazy(() =>
+  import('./EmergencyDispatchStep').then((m) => ({ default: m.EmergencyDispatchStep }))
+);
+const HospitalRideStep = lazy(() =>
+  import('./HospitalRideStep').then((m) => ({ default: m.HospitalRideStep }))
+);
+const TriageStep = lazy(() => import('./TriageStep').then((m) => ({ default: m.TriageStep })));
+const EmergencySOSView = lazy(() =>
+  import('./EmergencySOSView').then((m) => ({ default: m.EmergencySOSView }))
+);
+const HelpComingView = lazy(() =>
+  import('./HelpComingView').then((m) => ({ default: m.HelpComingView }))
+);
+
+function StepFallback() {
+  return (
+    <div className="flex flex-1 items-center justify-center p-8">
+      <Loader2 className="h-10 w-10 animate-spin text-white/80" aria-hidden />
+    </div>
+  );
+}
 
 function modalTheme(step: string, helpType: string | null): string {
   if (step === 'choose') return 'bg-slate-900';
@@ -101,13 +122,15 @@ export function EmergencyFlowModal() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-        {step === 'choose' && <HelpTypeChooserStep />}
-        {step === 'guest' && <GuestContactStep />}
-        {step === 'emergency-dispatch' && <EmergencyDispatchStep />}
-        {step === 'hospital-ride' && <HospitalRideStep />}
-        {step === 'triage' && <TriageStep />}
-        {step === 'sos' && <EmergencySOSView />}
-        {step === 'help-coming' && <HelpComingView />}
+        <Suspense fallback={<StepFallback />}>
+          {step === 'choose' && <HelpTypeChooserStep />}
+          {step === 'guest' && <GuestContactStep />}
+          {step === 'emergency-dispatch' && <EmergencyDispatchStep />}
+          {step === 'hospital-ride' && <HospitalRideStep />}
+          {step === 'triage' && <TriageStep />}
+          {step === 'sos' && <EmergencySOSView />}
+          {step === 'help-coming' && <HelpComingView />}
+        </Suspense>
       </div>
     </div>
   );

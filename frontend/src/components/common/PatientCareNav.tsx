@@ -2,9 +2,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Calendar, FileText, Video } from 'lucide-react';
 import { useAppSelector } from '@/hooks/redux';
-import { useGetAppointmentsQuery } from '@/features/api/apiSlice';
+import { useGetLiveConsultationCountQuery } from '@/features/api/apiSlice';
 import { cn } from '@/lib/utils';
-import type { Appointment } from '@/types';
 
 const legacyCarePaths = ['/appointments', '/prescriptions', '/live-checkup'];
 
@@ -13,7 +12,10 @@ export function PatientCareNav() {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const location = useLocation();
 
-  const { data: appointmentsData } = useGetAppointmentsQuery({}, { skip: !isAuthenticated || user?.userType !== 'patient' });
+  const { data: liveCountData } = useGetLiveConsultationCountQuery(undefined, {
+    skip: !isAuthenticated || user?.userType !== 'patient',
+    refetchOnMountOrArgChange: 60,
+  });
 
   if (!isAuthenticated || user?.userType !== 'patient') {
     return null;
@@ -23,10 +25,7 @@ export function PatientCareNav() {
 
   if (!onLegacyCare) return null;
 
-  const appointments = (appointmentsData?.data?.appointments || []) as Appointment[];
-  const liveCount = appointments.filter((a) =>
-    ['confirmed', 'in-progress'].includes(a.status) && ['video', 'audio'].includes(a.consultationType)
-  ).length;
+  const liveCount = liveCountData?.data?.count ?? 0;
 
   const tabs = [
     { to: '/dashboard?tab=care&care=appointments', label: t('nav.appointments'), icon: Calendar },

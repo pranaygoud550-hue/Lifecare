@@ -34,7 +34,7 @@ export function EmergencyDispatchStep() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { user } = useAppSelector((s) => s.auth);
-  const { nearestHospital, guest } = useAppSelector((s) => s.emergency);
+  const { nearestHospital, guest, location: savedLocation } = useAppSelector((s) => s.emergency);
 
   const [phase, setPhase] = useState<'ready' | 'locating' | 'dispatching'>(
     () => (user?._id ? 'locating' : 'ready')
@@ -139,6 +139,12 @@ export function EmergencyDispatchStep() {
     setDispatchError(null);
 
     try {
+      if (savedLocation?.lat != null && savedLocation?.lng != null) {
+        await loadNearestHospital(savedLocation.lat, savedLocation.lng);
+        await dispatchEmergency(savedLocation.lat, savedLocation.lng, savedLocation.address);
+        return;
+      }
+
       const resolved = await resolveSosLocation();
       await loadNearestHospital(resolved.lat, resolved.lng);
       await dispatchEmergency(resolved.lat, resolved.lng, resolved.address);
@@ -151,7 +157,7 @@ export function EmergencyDispatchStep() {
       toast.error(message);
       setPhase('ready');
     }
-  }, [dispatchEmergency, loadNearestHospital]);
+  }, [dispatchEmergency, loadNearestHospital, savedLocation]);
 
   useEffect(() => {
     if (!user?._id || startedRef.current) return;
@@ -230,9 +236,19 @@ export function EmergencyDispatchStep() {
         </div>
       )}
 
-      {phase === 'ready' && !user?._id && (
+      {phase === 'ready' && (
         <>
-          <Label className="text-white text-lg">Your location</Label>
+          {user?._id && (
+            <Button
+              className="h-14 text-lg bg-white text-red-700 w-full mb-4"
+              onClick={() => void captureAndDispatch()}
+            >
+              Retry with GPS
+            </Button>
+          )}
+          <Label className="text-white text-lg">
+            {dispatchError ? 'Or enter your address' : 'Your location'}
+          </Label>
           <Input
             value={manualAddress}
             onChange={(e) => setManualAddress(e.target.value)}
@@ -256,15 +272,6 @@ export function EmergencyDispatchStep() {
             Dispatch ambulance now
           </Button>
         </>
-      )}
-
-      {phase === 'ready' && user?._id && (
-        <Button
-          className="h-14 text-lg bg-white text-red-700 w-full"
-          onClick={() => void captureAndDispatch()}
-        >
-          Retry dispatch
-        </Button>
       )}
 
       <a href="tel:108" className="block mt-6">

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGetMedicationRemindersQuery } from '@/features/api/apiSlice';
 import { useAppSelector } from '@/hooks/redux';
 
@@ -24,9 +24,19 @@ async function showMedNotification(title: string, body: string, tag: string) {
 export function useMedicationRemindersEngine() {
   const user = useAppSelector((s) => s.auth.user);
   const firedRef = useRef<Set<string>>(new Set());
+  const [tabVisible, setTabVisible] = useState(
+    () => typeof document === 'undefined' || !document.hidden
+  );
+
+  useEffect(() => {
+    const onVisibility = () => setTabVisible(!document.hidden);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
+
   const { data } = useGetMedicationRemindersQuery(undefined, {
-    skip: !user || user.userType !== 'patient',
-    pollingInterval: 60_000,
+    skip: !user || user.userType !== 'patient' || !tabVisible,
+    pollingInterval: tabVisible ? 60_000 : undefined,
   });
 
   useEffect(() => {

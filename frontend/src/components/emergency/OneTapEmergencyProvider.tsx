@@ -1,7 +1,7 @@
 import { useAppSelector } from '@/hooks/redux';
 import { usePatientAppShell } from '@/hooks/usePatientAppShell';
 import { SOSButton } from './SOSButton';
-import { EmergencyActiveView } from './EmergencyActiveView';
+import { LazyEmergencyActiveView } from './LazyEmergencyActiveView';
 
 /** Global one-tap SOS — available on every page via Layout */
 export function OneTapEmergencyProvider() {
@@ -11,7 +11,7 @@ export function OneTapEmergencyProvider() {
   return (
     <>
       {!patientShell && <SOSButton />}
-      {isActive && requestId && patientLocation ? <EmergencyActiveView /> : null}
+      {isActive && requestId && patientLocation ? <LazyEmergencyActiveView /> : null}
     </>
   );
 }

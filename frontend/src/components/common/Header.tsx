@@ -12,9 +12,8 @@ import { logout } from '@/features/auth/authSlice';
 import { selectCartCount } from '@/features/cart/cartSlice';
 import { NotificationBell } from '@/components/common/NotificationBell';
 import { NeedHelpButton } from '@/components/emergency/NeedHelpButton';
-import { useGetAppointmentsQuery, useLogoutMutation } from '@/features/api/apiSlice';
+import { useGetLiveConsultationCountQuery, useLogoutMutation } from '@/features/api/apiSlice';
 import { cn } from '@/lib/utils';
-import type { Appointment } from '@/types';
 
 export function Header() {
   const { t } = useTranslation();
@@ -31,11 +30,11 @@ export function Header() {
 
   const showCareNav = isAuthenticated && user && !['admin', 'pharmacy', 'ambulance'].includes(user.userType);
 
-  const { data: appointmentsData } = useGetAppointmentsQuery({}, { skip: !showCareNav });
-  const appointments = (appointmentsData?.data?.appointments || []) as Appointment[];
-  const liveCount = appointments.filter((a) =>
-    ['confirmed', 'in-progress'].includes(a.status) && ['video', 'audio'].includes(a.consultationType)
-  ).length;
+  const { data: liveCountData } = useGetLiveConsultationCountQuery(undefined, {
+    skip: !showCareNav,
+    refetchOnMountOrArgChange: 60,
+  });
+  const liveCount = liveCountData?.data?.count ?? 0;
 
   const handleLogout = async () => {
     try {
