@@ -298,6 +298,9 @@ const emergencySlice = createSlice({
         state.eta = action.payload.eta;
       }
     },
+    updatePatientLocation: (state, action: PayloadAction<{ lat: number; lng: number }>) => {
+      state.patientLocation = action.payload;
+    },
     updateStatus: (state, action: PayloadAction<EmergencyRequestStatus>) => {
       state.status = action.payload;
       if (action.payload === 'arrived') {
@@ -399,6 +402,7 @@ export const {
   resetTriage,
   setEmergencyActive,
   updateAmbulanceLocation,
+  updatePatientLocation,
   updateStatus,
   setEmergencyArrived,
   dismissArrivedAlert,

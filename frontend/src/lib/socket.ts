@@ -30,6 +30,10 @@ export function leaveEmergencyRoom(requestId: string) {
   getSocket().emit('leave-emergency-room', requestId);
 }
 
+export function emitPatientEmergencyLocation(requestId: string, lat: number, lng: number) {
+  getSocket().emit('patient:locationUpdate', { requestId, lat, lng });
+}
+
 /** @deprecated use joinEmergencyRoom */
 export function joinEmergencyTracking(requestId: string) {
   joinEmergencyRoom(requestId);

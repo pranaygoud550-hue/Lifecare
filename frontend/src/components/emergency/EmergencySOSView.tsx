@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { MapPin, Phone, Share2, Loader2, Navigation } from 'lucide-react';
+import { MapPin, Phone, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import {
   setEmergencyLocation,
@@ -15,20 +13,26 @@ import {
   useLazyGetTransportTrackQuery,
   useLazyGetTransportByTokenQuery,
   useRegenerateTrackingLinkMutation,
-  useLazyGeocodeEmergencyAddressQuery,
 } from '@/features/api/apiSlice';
 import { LazyLiveTransportMap } from './LazyLiveTransportMap';
 import { joinTransportTracking, getSocket } from '@/lib/socket';
+import {
+  HyderabadAreaSearch,
+  type HyderabadAreaSelection,
+} from '@/components/emergency/HyderabadAreaSearch';
+import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 
-type Phase = 'locating' | 'manual' | 'dispatching' | 'searching' | 'tracking';
+type Phase = 'pick-area' | 'dispatching' | 'searching' | 'tracking';
 
 export function EmergencySOSView() {
   const dispatch = useAppDispatch();
   const { guest, triage, location, activeBookingId } = useAppSelector((s) => s.emergency);
+  const savedLocation = location;
   const { user } = useAppSelector((s) => s.auth);
 
-  const [phase, setPhase] = useState<Phase>('locating');
-  const [manualAddress, setManualAddress] = useState('');
+  const [phase, setPhase] = useState<Phase>(() =>
+    savedLocation?.lat != null && savedLocation?.lng != null ? 'dispatching' : 'pick-area'
+  );
   const [bookingId, setBookingId] = useState<string | null>(activeBookingId);
   const [trackingToken, setTrackingToken] = useState<string | null>(null);
   const [driverInfo, setDriverInfo] = useState<{
@@ -41,46 +45,17 @@ export function EmergencySOSView() {
   const [otp, setOtp] = useState<string | null>(null);
   const [expandedSearch, setExpandedSearch] = useState(false);
 
-  const [requestSos, { isLoading: sosLoading }] = useRequestEmergencySosMutation();
+  const [requestSos] = useRequestEmergencySosMutation();
   const [fetchTrack] = useLazyGetTransportTrackQuery();
   const [fetchTrackByToken] = useLazyGetTransportByTokenQuery();
   const [regenerateLink] = useRegenerateTrackingLinkMutation();
-  const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
 
   const patientName =
     guest?.name ||
     (user?.profile ? `${user.profile.firstName} ${user.profile.lastName}` : 'Patient');
   const patientPhone = guest?.phone || user?.phone || '';
 
-  const captureLocation = useCallback(() => {
-    if (!navigator.geolocation) {
-      setPhase('manual');
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = {
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          address: `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`,
-        };
-        dispatch(setEmergencyLocation(loc));
-        setPhase('dispatching');
-        void dispatchSos(loc);
-      },
-      () => {
-        toast.info('Location blocked — enter your address manually');
-        setPhase('manual');
-      },
-      { enableHighAccuracy: true, timeout: 12000 }
-    );
-  }, []);
-
-  useEffect(() => {
-    captureLocation();
-  }, [captureLocation]);
-
-  const dispatchSos = async (loc: { lat: number; lng: number; address: string }) => {
+  const dispatchSos = useCallback(async (loc: { lat: number; lng: number; address: string }) => {
     setPhase('searching');
     try {
       const result = await requestSos({
@@ -134,8 +109,29 @@ export function EmergencySOSView() {
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
       toast.error(error.data?.message || 'Could not send SOS');
-      setPhase('manual');
+      setPhase('pick-area');
     }
+  }, [requestSos, triage, guest, patientName, patientPhone, dispatch]);
+
+  useEffect(() => {
+    if (
+      phase === 'dispatching' &&
+      savedLocation?.lat != null &&
+      savedLocation?.lng != null &&
+      savedLocation.address
+    ) {
+      void dispatchSos(savedLocation);
+    }
+  }, [phase, savedLocation, dispatchSos]);
+
+  const handleAreaSelect = (selection: HyderabadAreaSelection) => {
+    const loc = {
+      lat: selection.lat,
+      lng: selection.lng,
+      address: selection.address,
+    };
+    dispatch(setEmergencyLocation(loc));
+    void dispatchSos(loc);
   };
 
   const refreshTrack = async (id: string) => {
@@ -171,19 +167,6 @@ export function EmergencySOSView() {
     return () => clearInterval(interval);
   }, [bookingId, phase]);
 
-  const handleManualSubmit = async () => {
-    if (!manualAddress.trim()) return;
-    try {
-      const geo = await geocodeAddress(manualAddress.trim()).unwrap();
-      const { lat, lng, displayName } = geo.data!;
-      const loc = { lat, lng, address: displayName };
-      dispatch(setEmergencyLocation(loc));
-      void dispatchSos(loc);
-    } catch {
-      toast.error('Could not find that address. Try "Area, City" e.g. Hyderabad, Telangana');
-    }
-  };
-
   const handleShare = async () => {
     if (!bookingId) return;
     let token = trackingToken;
@@ -201,39 +184,30 @@ export function EmergencySOSView() {
     }
   };
 
-  if (phase === 'locating' || phase === 'dispatching') {
+  if (phase === 'pick-area') {
+    return (
+      <div className="flex flex-col flex-1 p-6 max-w-lg mx-auto w-full">
+        <h2 className="text-2xl font-bold text-white mb-2">Where do you need help?</h2>
+        <p className="text-red-100 text-sm mb-4">
+          I Need Help is available in {HYDERABAD_SERVICE_LABEL} only.
+        </p>
+        <HyderabadAreaSearch
+          onSelect={handleAreaSelect}
+          inputClassName="h-14 text-lg bg-white"
+          showPopular
+        />
+      </div>
+    );
+  }
+
+  if (phase === 'dispatching') {
     return (
       <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
         <div className="w-24 h-24 rounded-full bg-red-500/30 flex items-center justify-center mb-8 animate-pulse-urgent">
           <Loader2 className="h-12 w-12 text-white animate-spin" />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-4">Getting your location...</h2>
-        <p className="text-xl text-red-100">Please allow location access</p>
-      </div>
-    );
-  }
-
-  if (phase === 'manual') {
-    return (
-      <div className="flex flex-col flex-1 p-6 max-w-lg mx-auto w-full">
-        <h2 className="text-2xl font-bold text-white mb-4">Enter your address</h2>
-        <Label className="text-lg text-white">Where do you need help?</Label>
-        <Input
-          value={manualAddress}
-          onChange={(e) => setManualAddress(e.target.value)}
-          placeholder="House no, street, landmark, city"
-          className="mt-2 h-14 text-lg bg-white"
-        />
-        <Button
-          className="mt-6 h-14 text-lg bg-white text-red-700"
-          onClick={handleManualSubmit}
-          disabled={sosLoading || !manualAddress.trim()}
-        >
-          Send I Need Help Now
-        </Button>
-        <Button variant="ghost" className="mt-3 text-white" onClick={captureLocation}>
-          <Navigation className="h-4 w-4 mr-2" /> Try GPS again
-        </Button>
+        <h2 className="text-3xl font-bold text-white mb-4">Sending help request…</h2>
+        <p className="text-xl text-red-100">Connecting to nearest attendant in Hyderabad</p>
       </div>
     );
   }

@@ -6,7 +6,11 @@ import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { useTriggerSOSMutation } from '@/features/api/apiSlice';
 import { activateOneTapEmergency } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
+import {
+  HyderabadAreaSearch,
+  type HyderabadAreaSelection,
+} from '@/components/emergency/HyderabadAreaSearch';
+import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 import type { EmergencyType } from '@/types';
 
 const COUNTDOWN_SECONDS = 5;
@@ -21,96 +25,61 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
   const { user } = useAppSelector((s) => s.auth);
   const { isActive, location: savedLocation } = useAppSelector((s) => s.emergency);
 
-  const [phase, setPhase] = useState<'idle' | 'countdown' | 'dispatching'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'pick-area' | 'countdown' | 'dispatching'>('idle');
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
-  const [locating, setLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [triggerSOS, { isLoading: sosLoading }] = useTriggerSOSMutation();
 
-  const primeLocation = useCallback(async () => {
-    if (coordsRef.current) return coordsRef.current;
-
-    if (savedLocation?.lat != null && savedLocation?.lng != null) {
-      coordsRef.current = { lat: savedLocation.lat, lng: savedLocation.lng };
-      return coordsRef.current;
-    }
-
-    setLocating(true);
-    setLocationError(null);
-    try {
-      const resolved = await resolveSosLocation();
-      coordsRef.current = { lat: resolved.lat, lng: resolved.lng };
-      return coordsRef.current;
-    } catch (err) {
-      const message =
-        err instanceof GpsLocationError
-          ? err.message
-          : 'Could not detect your location. Enable GPS and try again.';
-      setLocationError(message);
-      return null;
-    } finally {
-      setLocating(false);
-    }
-  }, [savedLocation]);
-
-  const cancelCountdown = useCallback(() => {
+  const cancelFlow = useCallback(() => {
     setPhase('idle');
     setSecondsLeft(COUNTDOWN_SECONDS);
-    setLocationError(null);
+    coordsRef.current = null;
   }, []);
 
-  const dispatchSos = useCallback(async () => {
-    if (!user?._id) {
-      toast.error('Sign in as a patient to use emergency SOS.');
-      setPhase('idle');
-      return;
-    }
-
-    const coords = coordsRef.current ?? (await primeLocation());
-    if (!coords) {
-      toast.error(locationError || 'Could not get your GPS location. Enable location access and try again.');
-      setPhase('idle');
-      return;
-    }
-
-    setPhase('dispatching');
-    try {
-      const result = await triggerSOS({
-        patientLat: coords.lat,
-        patientLng: coords.lng,
-        emergencyType,
-        patientId: user._id,
-      }).unwrap();
-
-      dispatch(
-        activateOneTapEmergency({
-          requestId: result.data.requestId,
-          dispatch: result.data,
-          status: 'searching',
-          patientLocation: coords,
-        })
-      );
-
-      if (result.data.isDelayed) {
-        toast.warn(`Ambulance dispatched — ETA ${result.data.calculatedETA} min (heavy traffic).`);
-      } else {
-        toast.success(`Help is on the way — ETA ${result.data.calculatedETA} min.`);
+  const dispatchSos = useCallback(
+    async (coords: { lat: number; lng: number }) => {
+      if (!user?._id) {
+        toast.error('Sign in as a patient to use emergency SOS.');
+        setPhase('idle');
+        return;
       }
 
-      setPhase('idle');
-      coordsRef.current = null;
-    } catch (err: unknown) {
-      toast.error(getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.'));
-      setPhase('idle');
-    }
-  }, [user?._id, primeLocation, locationError, triggerSOS, dispatch, emergencyType]);
+      setPhase('dispatching');
+      try {
+        const result = await triggerSOS({
+          patientLat: coords.lat,
+          patientLng: coords.lng,
+          emergencyType,
+          patientId: user._id,
+        }).unwrap();
+
+        dispatch(
+          activateOneTapEmergency({
+            requestId: result.data.requestId,
+            dispatch: result.data,
+            status: 'searching',
+            patientLocation: coords,
+          })
+        );
+
+        if (result.data.isDelayed) {
+          toast.warn(`Ambulance dispatched — ETA ${result.data.calculatedETA} min (heavy traffic).`);
+        } else {
+          toast.success(`Help is on the way — ETA ${result.data.calculatedETA} min.`);
+        }
+
+        cancelFlow();
+      } catch (err: unknown) {
+        toast.error(getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.'));
+        setPhase('pick-area');
+      }
+    },
+    [user?._id, triggerSOS, dispatch, emergencyType, cancelFlow]
+  );
 
   useEffect(() => {
     if (phase !== 'countdown') return;
-
-    void primeLocation();
 
     let remaining = COUNTDOWN_SECONDS;
     setSecondsLeft(remaining);
@@ -120,12 +89,20 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
       setSecondsLeft(remaining);
       if (remaining <= 0) {
         clearInterval(id);
-        void dispatchSos();
+        const coords = coordsRef.current;
+        if (coords) void dispatchSos(coords);
+        else setPhase('pick-area');
       }
     }, 1000);
 
     return () => clearInterval(id);
-  }, [phase, dispatchSos, primeLocation]);
+  }, [phase, dispatchSos]);
+
+  const handleAreaSelect = (selection: HyderabadAreaSelection) => {
+    coordsRef.current = { lat: selection.lat, lng: selection.lng };
+    setSecondsLeft(COUNTDOWN_SECONDS);
+    setPhase('countdown');
+  };
 
   const handlePress = () => {
     if (!user) {
@@ -141,9 +118,14 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
     if (isActive) return;
 
     coordsRef.current = null;
-    setLocationError(null);
     setSecondsLeft(COUNTDOWN_SECONDS);
-    setPhase('countdown');
+
+    if (savedLocation?.lat != null && savedLocation?.lng != null) {
+      coordsRef.current = { lat: savedLocation.lat, lng: savedLocation.lng };
+      setPhase('countdown');
+    } else {
+      setPhase('pick-area');
+    }
   };
 
   if (isActive) return null;
@@ -182,32 +164,45 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
         )}
       </button>
 
-      {phase === 'countdown' && (
+      {(phase === 'countdown' || phase === 'pick-area') && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/90 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="sos-countdown-title"
         >
-          <div className="w-full max-w-sm rounded-2xl bg-red-900 border border-red-500/50 p-8 text-center text-white shadow-2xl">
-            <p id="sos-countdown-title" className="text-sm uppercase tracking-widest text-red-200 mb-2">
-              Emergency dispatch in
-            </p>
-            <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
-            <p className="text-red-100 text-sm mb-6">
-              {locating
-                ? 'Getting your GPS location…'
-                : locationError
-                  ? locationError
-                  : coordsRef.current
-                    ? 'Location ready — sending to dispatch'
-                    : 'Allow location access if prompted'}
-            </p>
+          <div className="w-full max-w-sm rounded-2xl bg-red-900 border border-red-500/50 p-8 text-white shadow-2xl">
+            {phase === 'countdown' ? (
+              <>
+                <p id="sos-countdown-title" className="text-sm uppercase tracking-widest text-red-200 mb-2">
+                  Emergency dispatch in
+                </p>
+                <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
+                <p className="text-red-100 text-sm mb-6">
+                  Hyderabad area selected — sending to dispatch
+                </p>
+              </>
+            ) : (
+              <>
+                <p id="sos-countdown-title" className="text-lg font-bold mb-2">
+                  Where are you in Hyderabad?
+                </p>
+                <p className="text-red-100 text-sm mb-4">
+                  SOS is available in {HYDERABAD_SERVICE_LABEL} only. Pick your area to dispatch help.
+                </p>
+                <HyderabadAreaSearch
+                  onSelect={handleAreaSelect}
+                  inputClassName="h-12 bg-white text-base text-slate-900"
+                  showPopular
+                  showLandmark={false}
+                />
+              </>
+            )}
             <Button
               type="button"
               variant="outline"
-              className="w-full border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-              onClick={cancelCountdown}
+              className="w-full mt-4 border-white/30 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+              onClick={cancelFlow}
             >
               <X className="h-4 w-4 mr-2" />
               Cancel — false alarm

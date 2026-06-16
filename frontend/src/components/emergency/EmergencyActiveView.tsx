@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MapWrapper } from '@/components/emergency/MapWrapper';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { useEmergencySocket } from '@/hooks/useEmergencySocket';
+import { usePatientEmergencyLocationStream } from '@/hooks/usePatientEmergencyLocationStream';
 import {
   useCancelEmergencyMutation,
   useGetLiveETAQuery,
@@ -84,6 +85,7 @@ export function EmergencyActiveView() {
   } = useAppSelector((s) => s.emergency);
 
   useEmergencySocket();
+  usePatientEmergencyLocationStream();
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);

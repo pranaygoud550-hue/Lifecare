@@ -1,10 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   AlertTriangle,
   Building2,
   Loader2,
   MapPin,
-  Navigation,
   Phone,
   Stethoscope,
   Video,
@@ -25,7 +24,11 @@ import { useLazyGetEmergencyNearbyHospitalsQuery } from '@/features/api/apiSlice
 import { cn } from '@/lib/utils';
 import type { HelpType } from '@/features/emergency/emergencySlice';
 import type { EmergencyHospitalInfo } from '@/types';
-import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
+import {
+  HyderabadAreaSearch,
+  type HyderabadAreaSelection,
+} from '@/components/emergency/HyderabadAreaSearch';
+import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m away`;
@@ -35,10 +38,19 @@ function formatDistance(meters: number): string {
 function NearestHospitalCard({
   hospital,
   loading,
+  hasLocation,
 }: {
   hospital: EmergencyHospitalInfo | null;
   loading: boolean;
+  hasLocation: boolean;
 }) {
+  if (!hasLocation) {
+    return (
+      <div className="p-4 rounded-xl bg-sky-500/15 border border-sky-400/30 text-sky-100 text-sm">
+        Pick your Hyderabad area below to find the nearest hospital.
+      </div>
+    );
+  }
   if (loading) {
     return (
       <div className="flex items-center gap-3 p-4 rounded-xl bg-white/10 border border-white/15 text-white/80">
@@ -50,7 +62,7 @@ function NearestHospitalCard({
   if (!hospital) {
     return (
       <div className="p-4 rounded-xl bg-amber-500/15 border border-amber-400/30 text-amber-100 text-sm">
-        Allow location to connect you to the nearest hospital automatically.
+        No hospital found near this area — you can still continue.
       </div>
     );
   }
@@ -85,60 +97,38 @@ export function HelpTypeChooserStep() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { isAuthenticated, user } = useAppSelector((s) => s.auth);
-  const { nearestHospital } = useAppSelector((s) => s.emergency);
+  const { nearestHospital, location: savedLocation } = useAppSelector((s) => s.emergency);
 
-  const [locating, setLocating] = useState(true);
-  const [fetchHospitals, { isFetching: hospitalsLoading }] = useLazyGetEmergencyNearbyHospitalsQuery();
+  const [pickupAddress, setPickupAddress] = useState(savedLocation?.address ?? '');
+  const [hasLocation, setHasLocation] = useState(
+    savedLocation?.lat != null && savedLocation?.lng != null
+  );
+  const [hospitalsLoading, setHospitalsLoading] = useState(false);
+  const [fetchHospitals] = useLazyGetEmergencyNearbyHospitalsQuery();
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadHospitals = async (lat: number, lng: number) => {
-      try {
-        const res = await fetchHospitals({ lat, lng, radius: 15 }).unwrap();
-        if (cancelled) return;
-        const list = res.data?.hospitals ?? [];
-        dispatch(
-          setNearbyHospitals({
-            hospitals: list,
-            nearest: list[0] ?? null,
-          })
-        );
-      } catch {
-        if (!cancelled) toast.info('Could not load nearby hospitals — you can still continue.');
-      }
-    };
-
-    void resolveSosLocation()
-      .then(async (resolved) => {
-        if (cancelled) return;
-        const coords = { lat: resolved.lat, lng: resolved.lng };
-        dispatch(
-          setEmergencyLocation({
-            lat: coords.lat,
-            lng: coords.lng,
-            address: resolved.address,
-          })
-        );
-        setLocating(false);
-        await loadHospitals(coords.lat, coords.lng);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setLocating(false);
-        toast.error(
-          err instanceof GpsLocationError
-            ? err.message
-            : 'Enable GPS to find your nearest hospital.'
-        );
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [dispatch, fetchHospitals]);
+  const applyArea = async (selection: HyderabadAreaSelection) => {
+    const { lat, lng, address } = selection;
+    setPickupAddress(address);
+    setHasLocation(true);
+    dispatch(setEmergencyLocation({ lat, lng, address }));
+    setHospitalsLoading(true);
+    try {
+      const res = await fetchHospitals({ lat, lng, radius: 8 }).unwrap();
+      const list = res.data?.hospitals ?? [];
+      dispatch(setNearbyHospitals({ hospitals: list, nearest: list[0] ?? null }));
+    } catch {
+      toast.info('Could not load nearby hospitals — you can still continue.');
+    } finally {
+      setHospitalsLoading(false);
+    }
+  };
 
   const continueWithType = (type: HelpType) => {
+    if ((type === 'emergency' || type === 'hospital_ride') && !hasLocation) {
+      toast.error(`Pick your area in ${HYDERABAD_SERVICE_LABEL} first.`);
+      return;
+    }
+
     dispatch(setHelpType(type));
 
     if (type === 'teleconsult') {
@@ -167,11 +157,23 @@ export function HelpTypeChooserStep() {
           What kind of help do you need?
         </h2>
         <p className="text-base text-white/70 mt-2">
-          Choose clearly — this is not the same as a normal doctor appointment.
+          Emergency help is available in <strong>{HYDERABAD_SERVICE_LABEL}</strong> only.
         </p>
       </div>
 
-      <NearestHospitalCard hospital={nearestHospital} loading={locating || hospitalsLoading} />
+        <HyderabadAreaSearch
+          value={pickupAddress}
+          onSelect={(sel) => void applyArea(sel)}
+          inputClassName="h-11 bg-white text-base"
+          className="mb-4"
+          showLandmark
+        />
+
+      <NearestHospitalCard
+        hospital={nearestHospital}
+        loading={hospitalsLoading}
+        hasLocation={hasLocation}
+      />
 
       <div className="grid gap-4 mt-6 flex-1">
         <button
@@ -180,7 +182,8 @@ export function HelpTypeChooserStep() {
           className={cn(
             'text-left p-5 sm:p-6 rounded-2xl border-2 transition-all',
             'bg-red-600/90 border-red-400 hover:bg-red-600 hover:border-red-300',
-            'focus:outline-none focus:ring-4 focus:ring-red-300/50 active:scale-[0.99]'
+            'focus:outline-none focus:ring-4 focus:ring-red-300/50 active:scale-[0.99]',
+            !hasLocation && 'opacity-60'
           )}
         >
           <div className="flex items-start gap-4">
@@ -198,7 +201,7 @@ export function HelpTypeChooserStep() {
               </p>
               <p className="text-xs font-semibold text-white/90 mt-3 flex items-center gap-1">
                 <Stethoscope className="h-3.5 w-3.5" />
-                Not for scheduled visits
+                Hyderabad service area only
               </p>
             </div>
           </div>
@@ -210,7 +213,8 @@ export function HelpTypeChooserStep() {
           className={cn(
             'text-left p-5 sm:p-6 rounded-2xl border-2 transition-all',
             'bg-sky-700/90 border-sky-400 hover:bg-sky-700 hover:border-sky-300',
-            'focus:outline-none focus:ring-4 focus:ring-sky-300/50 active:scale-[0.99]'
+            'focus:outline-none focus:ring-4 focus:ring-sky-300/50 active:scale-[0.99]',
+            !hasLocation && 'opacity-60'
           )}
         >
           <div className="flex items-start gap-4">
@@ -223,11 +227,11 @@ export function HelpTypeChooserStep() {
               </p>
               <p className="text-xl sm:text-2xl font-bold text-white">I need a ride</p>
               <p className="text-sm text-sky-50 mt-2 leading-relaxed">
-                Medical cab to your nearest hospital — we detect your location, assign a vehicle, and
-                show the route on the map{nearestHospital ? ` to ${nearestHospital.name}` : ''}.
+                Medical cab to your nearest hospital — pick your area above, then we assign a vehicle
+                and show the route{nearestHospital ? ` to ${nearestHospital.name}` : ''}.
               </p>
               <p className="text-xs font-semibold text-white/90 mt-3">
-                No vehicle choice · Location auto-detected
+                No vehicle choice · Hyderabad areas only
               </p>
             </div>
           </div>
@@ -247,42 +251,7 @@ export function HelpTypeChooserStep() {
         </button>
       </div>
 
-      <Button
-        variant="ghost"
-        className="mt-6 text-white/70 hover:text-white hover:bg-white/10 gap-2"
-        onClick={() => {
-          setLocating(true);
-          void resolveSosLocation()
-            .then(async (resolved) => {
-              const coords = { lat: resolved.lat, lng: resolved.lng };
-              dispatch(
-                setEmergencyLocation({
-                  lat: coords.lat,
-                  lng: coords.lng,
-                  address: resolved.address,
-                })
-              );
-              setLocating(false);
-              try {
-                const res = await fetchHospitals({ lat: coords.lat, lng: coords.lng, radius: 15 }).unwrap();
-                const list = res.data?.hospitals ?? [];
-                dispatch(setNearbyHospitals({ hospitals: list, nearest: list[0] ?? null }));
-              } catch {
-                toast.info('Could not refresh hospitals.');
-              }
-            })
-            .catch(() => {
-              setLocating(false);
-              toast.error('Enable GPS to refresh nearest hospital.');
-            });
-        }}
-        disabled={locating}
-      >
-        <Navigation className="h-4 w-4" />
-        Refresh nearest hospital
-      </Button>
-
-      <a href="tel:108" className="block mt-4">
+      <a href="tel:108" className="block mt-6">
         <Button variant="outline" className="w-full h-12 border-white/30 text-white hover:bg-white/10">
           Call national emergency 108
         </Button>

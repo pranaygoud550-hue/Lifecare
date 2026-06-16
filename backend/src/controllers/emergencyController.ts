@@ -29,6 +29,14 @@ import {
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
 import { geocodeAddress } from '../services/geocodeService.js';
+import {
+  areaToDisplayName,
+  isWithinHyderabadServiceArea,
+  resolveHyderabadArea,
+  searchHyderabadAreas,
+  HYDERABAD_SERVICE_LABEL,
+} from '../data/hyderabadAreas.js';
+import { notifyEmergencySosCreated } from '../services/emergencyNotificationService.js';
 
 function resolvePatientId(body: { patientId?: string; userId?: string }): string | null {
   return body.patientId ?? body.userId ?? null;
@@ -59,6 +67,14 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
 
   if (req.user && req.user.userId !== patientId) {
     res.status(403).json({ success: false, message: 'patientId must match the authenticated user' });
+    return;
+  }
+
+  if (!isWithinHyderabadServiceArea(patientLat, patientLng)) {
+    res.status(400).json({
+      success: false,
+      message: `Emergency SOS is available only in ${HYDERABAD_SERVICE_LABEL}. Please select a Hyderabad area.`,
+    });
     return;
   }
 
@@ -156,6 +172,17 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     (assigned.unit.driverId as { _id?: Types.ObjectId })._id ?? assigned.unit.driverId
   );
   const trackLink = buildTrackLink(emergencyRequest.requestId);
+
+  void notifyEmergencySosCreated({
+    patientId,
+    requestId: emergencyRequest.requestId,
+    lat: patientLat,
+    lng: patientLng,
+    etaMinutes: eta.etaMinutes,
+    trackLink,
+    hospitalName:
+      typeof nearestHospitalPayload?.name === 'string' ? nearestHospitalPayload.name : undefined,
+  });
 
   await scheduleDriverAcceptTimeout(getIO(), emergencyRequest.requestId);
 
@@ -308,32 +335,69 @@ export const cancelEmergencyRequest = asyncHandler(async (req: Request, res: Res
 export const getNearbyHospitals = asyncHandler(async (req: Request, res: Response) => {
   const lat = Number(req.query.lat);
   const lng = Number(req.query.lng);
-  let radius = Number(req.query.radius ?? 25);
+  let radius = Number(req.query.radius ?? 15);
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     res.status(400).json({ success: false, message: 'Valid lat and lng are required' });
     return;
   }
 
-  let { hospitals, source } = await findNearbyHospitalsUnified(lat, lng, radius);
+  if (!isWithinHyderabadServiceArea(lat, lng)) {
+    res.status(400).json({
+      success: false,
+      message: `Hospital search is limited to ${HYDERABAD_SERVICE_LABEL}. Pick a Hyderabad area.`,
+    });
+    return;
+  }
 
-  if (hospitals.length === 0 && radius < 50) {
+  const tierRadii = [5, 8, 15, 25, 50].filter((r) => r >= Math.min(radius, 5));
+  let hospitals: Awaited<ReturnType<typeof findNearbyHospitalsUnified>>['hospitals'] = [];
+  let source: Awaited<ReturnType<typeof findNearbyHospitalsUnified>>['source'] = 'database';
+  let usedRadius = radius;
+
+  for (const r of tierRadii) {
+    const result = await findNearbyHospitalsUnified(lat, lng, r);
+    const inTier = result.hospitals.filter(
+      (h) =>
+        h.distanceMeters <= r * 1000 &&
+        h.coordinates &&
+        isWithinHyderabadServiceArea(h.coordinates.lat, h.coordinates.lng)
+    );
+    if (inTier.length > 0) {
+      hospitals = inTier;
+      source = result.source;
+      usedRadius = r;
+      break;
+    }
+  }
+
+  if (hospitals.length === 0) {
     const expanded = await findNearbyHospitalsUnified(lat, lng, 50);
-    hospitals = expanded.hospitals;
+    hospitals = expanded.hospitals.filter(
+      (h) =>
+        h.coordinates && isWithinHyderabadServiceArea(h.coordinates.lat, h.coordinates.lng)
+    );
     source = expanded.source;
-    radius = 50;
+    usedRadius = 50;
   }
 
   res.json({
     success: true,
     data: {
       count: hospitals.length,
-      radiusKm: radius,
+      radiusKm: usedRadius,
       source,
       patientLocation: { lat, lng },
       hospitals,
     },
   });
+});
+
+export const searchHyderabadAreasHandler = asyncHandler(async (req: Request, res: Response) => {
+  const q = String(req.query.q ?? '').trim();
+  const limit = Math.min(parseInt(String(req.query.limit ?? '20'), 10) || 20, 50);
+  const areas = searchHyderabadAreas(q, limit);
+  res.json({ success: true, data: { areas, serviceLabel: HYDERABAD_SERVICE_LABEL } });
 });
 
 export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Response) => {
@@ -343,9 +407,36 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
     return;
   }
 
-  const result = await geocodeAddress(address);
-  if (!result) {
-    res.status(404).json({ success: false, message: 'Could not find that address. Try city + area, e.g. Warangal, Telangana' });
+  const local = resolveHyderabadArea(address);
+  if (local) {
+    res.json({
+      success: true,
+      data: {
+        lat: local.lat,
+        lng: local.lng,
+        displayName: areaToDisplayName(local),
+        areaId: local.id,
+        zone: local.zone,
+      },
+    });
+    return;
+  }
+
+  const lower = address.toLowerCase();
+  if (/warangal|bengaluru|bangalore|mumbai|delhi|chennai|vizag|vijayawada|pune/i.test(lower)) {
+    res.status(400).json({
+      success: false,
+      message: `Only ${HYDERABAD_SERVICE_LABEL} is supported. Pick an area like Madhapur or Gachibowli.`,
+    });
+    return;
+  }
+
+  const result = await geocodeAddress(`${address}, Hyderabad, Telangana`);
+  if (!result || !isWithinHyderabadServiceArea(result.lat, result.lng)) {
+    res.status(404).json({
+      success: false,
+      message: `Could not find that area in ${HYDERABAD_SERVICE_LABEL}. Choose from the Hyderabad area list.`,
+    });
     return;
   }
 

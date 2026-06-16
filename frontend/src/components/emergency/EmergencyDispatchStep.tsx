@@ -10,8 +10,6 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { useLazyGetEmergencyNearbyHospitalsQuery, useTriggerSOSMutation } from '@/features/api/apiSlice';
 import {
@@ -21,8 +19,11 @@ import {
   setNearbyHospitals,
 } from '@/features/emergency/emergencySlice';
 import { getApiErrorMessage } from '@/lib/apiError';
-import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
-import { useLazyGeocodeEmergencyAddressQuery } from '@/features/api/apiSlice';
+import {
+  HyderabadAreaSearch,
+  type HyderabadAreaSelection,
+} from '@/components/emergency/HyderabadAreaSearch';
+import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 import type { EmergencyHospitalInfo, EmergencyType } from '@/types';
 
 function formatDistance(meters: number): string {
@@ -36,21 +37,22 @@ export function EmergencyDispatchStep() {
   const { user } = useAppSelector((s) => s.auth);
   const { nearestHospital, guest, location: savedLocation } = useAppSelector((s) => s.emergency);
 
-  const [phase, setPhase] = useState<'ready' | 'locating' | 'dispatching'>(
-    () => (user?._id ? 'locating' : 'ready')
+  const hasSaved =
+    savedLocation?.lat != null && savedLocation?.lng != null && !!savedLocation.address;
+
+  const [phase, setPhase] = useState<'ready' | 'locating' | 'dispatching'>(() =>
+    hasSaved && user?._id ? 'locating' : 'ready'
   );
-  const [manualAddress, setManualAddress] = useState('');
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const startedRef = useRef(false);
 
   const [triggerSOS, { isLoading }] = useTriggerSOSMutation();
   const [fetchHospitals] = useLazyGetEmergencyNearbyHospitalsQuery();
-  const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
 
   const loadNearestHospital = useCallback(
     async (lat: number, lng: number) => {
       try {
-        const res = await fetchHospitals({ lat, lng, radius: 15 }).unwrap();
+        const res = await fetchHospitals({ lat, lng, radius: 8 }).unwrap();
         const list = (res.data?.hospitals ?? []) as EmergencyHospitalInfo[];
         dispatch(
           setNearbyHospitals({
@@ -134,36 +136,25 @@ export function EmergencyDispatchStep() {
     [dispatch, loadNearestHospital, navigate, triggerSOS, user?._id]
   );
 
-  const captureAndDispatch = useCallback(async () => {
+  const dispatchFromSaved = useCallback(async () => {
+    if (!hasSaved || !savedLocation) return;
     setPhase('locating');
     setDispatchError(null);
-
-    try {
-      if (savedLocation?.lat != null && savedLocation?.lng != null) {
-        await loadNearestHospital(savedLocation.lat, savedLocation.lng);
-        await dispatchEmergency(savedLocation.lat, savedLocation.lng, savedLocation.address);
-        return;
-      }
-
-      const resolved = await resolveSosLocation();
-      await loadNearestHospital(resolved.lat, resolved.lng);
-      await dispatchEmergency(resolved.lat, resolved.lng, resolved.address);
-    } catch (err) {
-      const message =
-        err instanceof GpsLocationError
-          ? err.message
-          : 'Could not detect your location. Enable GPS and try again.';
-      setDispatchError(message);
-      toast.error(message);
-      setPhase('ready');
-    }
-  }, [dispatchEmergency, loadNearestHospital, savedLocation]);
+    await loadNearestHospital(savedLocation.lat, savedLocation.lng);
+    await dispatchEmergency(savedLocation.lat, savedLocation.lng, savedLocation.address);
+  }, [dispatchEmergency, hasSaved, loadNearestHospital, savedLocation]);
 
   useEffect(() => {
-    if (!user?._id || startedRef.current) return;
+    if (!user?._id || !hasSaved || startedRef.current) return;
     startedRef.current = true;
-    void captureAndDispatch();
-  }, [user?._id, captureAndDispatch]);
+    void dispatchFromSaved();
+  }, [user?._id, hasSaved, dispatchFromSaved]);
+
+  const handleAreaSelect = async (selection: HyderabadAreaSelection) => {
+    const { lat, lng, address } = selection;
+    await loadNearestHospital(lat, lng);
+    await dispatchEmergency(lat, lng, address);
+  };
 
   const hospital = nearestHospital ?? null;
 
@@ -176,6 +167,7 @@ export function EmergencyDispatchStep() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-200">Medical emergency</p>
           <h2 className="text-2xl font-bold text-white">Ambulance + hospital</h2>
+          <p className="text-sm text-red-100/80 mt-1">{HYDERABAD_SERVICE_LABEL} only</p>
         </div>
       </div>
 
@@ -185,7 +177,7 @@ export function EmergencyDispatchStep() {
             <Ambulance className="h-4 w-4" /> What happens
           </p>
           <ul className="text-sm text-white/90 space-y-2 list-disc list-inside">
-            <li>We find the nearest hospital (2 km, then 4 km, then wider)</li>
+            <li>We find the nearest hospital in Hyderabad</li>
             <li>Nearest available ambulance is dispatched to you</li>
             <li>Live map with route appears automatically</li>
           </ul>
@@ -205,12 +197,10 @@ export function EmergencyDispatchStep() {
               {formatDistance(hospital.distanceMeters)} from your location
             </p>
           </div>
+        ) : phase === 'ready' ? (
+          <p className="text-sm text-red-100">Pick your Hyderabad area below to dispatch.</p>
         ) : (
-          <p className="text-sm text-red-100">
-            {phase === 'locating'
-              ? 'Detecting your location and nearest emergency hospital…'
-              : 'Connecting to the nearest hospital from your GPS…'}
-          </p>
+          <p className="text-sm text-red-100">Finding nearest emergency hospital…</p>
         )}
 
         {guest && (
@@ -230,48 +220,19 @@ export function EmergencyDispatchStep() {
         <div className="flex flex-col items-center py-10 text-center">
           <Loader2 className="h-14 w-14 text-white animate-spin mb-4" />
           <p className="text-xl font-bold text-white">
-            {phase === 'locating' ? 'Getting your location…' : 'Connecting ambulance & hospital…'}
+            {phase === 'locating' ? 'Connecting to nearest hospital…' : 'Dispatching ambulance…'}
           </p>
           <p className="text-red-100 mt-2">Live map will open when dispatch confirms</p>
         </div>
       )}
 
       {phase === 'ready' && (
-        <>
-          {user?._id && (
-            <Button
-              className="h-14 text-lg bg-white text-red-700 w-full mb-4"
-              onClick={() => void captureAndDispatch()}
-            >
-              Retry with GPS
-            </Button>
-          )}
-          <Label className="text-white text-lg">
-            {dispatchError ? 'Or enter your address' : 'Your location'}
-          </Label>
-          <Input
-            value={manualAddress}
-            onChange={(e) => setManualAddress(e.target.value)}
-            placeholder="Address or landmark"
-            className="mt-2 h-12 bg-white text-lg"
-          />
-          <Button
-            className="mt-4 h-14 text-lg bg-white text-red-700 w-full"
-            disabled={!manualAddress.trim()}
-            onClick={async () => {
-              try {
-                const geo = await geocodeAddress(manualAddress.trim()).unwrap();
-                const { lat, lng, displayName } = geo.data!;
-                await loadNearestHospital(lat, lng);
-                await dispatchEmergency(lat, lng, displayName);
-              } catch {
-                toast.error('Could not find that address. Try "Area, City" e.g. Warangal, Telangana');
-              }
-            }}
-          >
-            Dispatch ambulance now
-          </Button>
-        </>
+        <HyderabadAreaSearch
+          value={savedLocation?.address}
+          onSelect={(sel) => void handleAreaSelect(sel)}
+          inputClassName="h-12 bg-white text-lg"
+          showPopular
+        />
       )}
 
       <a href="tel:108" className="block mt-6">

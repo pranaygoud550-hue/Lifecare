@@ -6,16 +6,22 @@ import { useTranslation } from 'react-i18next';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
-import { useTriggerSOSMutation, useLazyGetEmergencyNearbyHospitalsQuery } from '@/features/api/apiSlice';
+import {
+  useTriggerSOSMutation,
+  useLazyGetEmergencyNearbyHospitalsQuery,
+} from '@/features/api/apiSlice';
 import { activateOneTapEmergency } from '@/features/emergency/emergencySlice';
-import { resolveSosLocation, GpsLocationError } from '@/lib/pickupLocation';
 import { getApiErrorMessage } from '@/lib/apiError';
+import {
+  HyderabadAreaSearch,
+  type HyderabadAreaSelection,
+} from '@/components/emergency/HyderabadAreaSearch';
+import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 import type { EmergencyHospitalInfo } from '@/types';
 
 const COUNTDOWN_SECONDS = 5;
-const LOCATE_MIN_MS = 2000;
 
-type Phase = 'idle' | 'locating' | 'hospital' | 'countdown' | 'dispatching';
+type Phase = 'idle' | 'pick-area' | 'hospital' | 'countdown' | 'dispatching';
 
 function formatDistance(meters: number): string {
   if (meters < 1000) return `${Math.round(meters)} m away`;
@@ -44,6 +50,28 @@ export function ProfileEmergencySosCard() {
     setNearestHospital(null);
     coordsRef.current = null;
   }, []);
+
+  const proceedAfterLocation = useCallback(
+    async (lat: number, lng: number, address: string) => {
+      coordsRef.current = { lat, lng };
+      setPickupAddress(address);
+      setPhase('hospital');
+
+      let nearest: EmergencyHospitalInfo | null = null;
+      try {
+        const res = await fetchHospitals({ lat, lng, radius: 8 }).unwrap();
+        nearest = res.data?.hospitals?.[0] ?? null;
+        setNearestHospital(nearest);
+      } catch {
+        toast.info('Could not load nearby hospitals — ambulance will still be dispatched.');
+      }
+
+      await new Promise((r) => setTimeout(r, 1500));
+      setSecondsLeft(COUNTDOWN_SECONDS);
+      setPhase('countdown');
+    },
+    [fetchHospitals]
+  );
 
   const dispatchSos = useCallback(async () => {
     const coords = coordsRef.current;
@@ -84,7 +112,7 @@ export function ProfileEmergencySosCard() {
     }
   }, [user?._id, triggerSOS, dispatch, navigate, cancel]);
 
-  const startSosFlow = useCallback(async () => {
+  const startSosFlow = useCallback(() => {
     if (!user) {
       toast.error('Sign in to send an emergency SOS.');
       navigate('/login');
@@ -96,45 +124,16 @@ export function ProfileEmergencySosCard() {
     }
     if (isActive) return;
 
-    setPhase('locating');
     setNearestHospital(null);
-    const startedAt = Date.now();
+    setPhase('pick-area');
+  }, [user, isActive, navigate]);
 
-    let resolved;
-    try {
-      resolved = await resolveSosLocation();
-    } catch (err) {
-      const message =
-        err instanceof GpsLocationError
-          ? err.message
-          : 'Could not detect your location. Enable GPS and try again.';
-      toast.error(message);
-      setPhase('idle');
-      return;
-    }
-
-    coordsRef.current = { lat: resolved.lat, lng: resolved.lng };
-    setPickupAddress(resolved.address);
-
-    const elapsed = Date.now() - startedAt;
-    if (elapsed < LOCATE_MIN_MS) {
-      await new Promise((r) => setTimeout(r, LOCATE_MIN_MS - elapsed));
-    }
-
-    setPhase('hospital');
-    let nearest: EmergencyHospitalInfo | null = null;
-    try {
-      const res = await fetchHospitals({ lat: resolved.lat, lng: resolved.lng, radius: 15 }).unwrap();
-      nearest = res.data?.hospitals?.[0] ?? null;
-      setNearestHospital(nearest);
-    } catch {
-      toast.info('Could not load nearby hospitals — ambulance will still be dispatched.');
-    }
-
-    await new Promise((r) => setTimeout(r, 1500));
-    setSecondsLeft(COUNTDOWN_SECONDS);
-    setPhase('countdown');
-  }, [user, isActive, navigate, fetchHospitals]);
+  const handleAreaSelect = useCallback(
+    (selection: HyderabadAreaSelection) => {
+      void proceedAfterLocation(selection.lat, selection.lng, selection.address);
+    },
+    [proceedAfterLocation]
+  );
 
   useEffect(() => {
     if (phase !== 'countdown') return;
@@ -171,7 +170,7 @@ export function ProfileEmergencySosCard() {
               <p className="mt-1 text-sm text-red-800/90">
                 {t(
                   'dashboard.profileSosDesc',
-                  'We detect your location, find the nearest hospital, then dispatch an ambulance.'
+                  `Pick your area in ${HYDERABAD_SERVICE_LABEL}, find the nearest hospital, then dispatch an ambulance.`
                 )}
               </p>
               <Button
@@ -179,13 +178,13 @@ export function ProfileEmergencySosCard() {
                 variant="danger"
                 className="mt-4 w-full sm:w-auto"
                 disabled={busy || isActive}
-                onClick={() => void startSosFlow()}
+                onClick={startSosFlow}
               >
                 {busy ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {phase === 'locating'
-                      ? t('dashboard.sosLocating', 'Detecting location…')
+                    {phase === 'pick-area'
+                      ? t('dashboard.sosPickArea', 'Pick your area…')
                       : phase === 'hospital'
                         ? t('dashboard.sosFindingHospital', 'Finding nearest hospital…')
                         : t('dashboard.sosDispatching', 'Dispatching…')}
@@ -199,7 +198,10 @@ export function ProfileEmergencySosCard() {
         </CardContent>
       </Card>
 
-      {(phase === 'locating' || phase === 'hospital' || phase === 'countdown' || phase === 'dispatching') && (
+      {(phase === 'pick-area' ||
+        phase === 'hospital' ||
+        phase === 'countdown' ||
+        phase === 'dispatching') && (
         <div
           className="fixed inset-0 z-[105] flex items-center justify-center bg-red-950/92 p-4"
           role="dialog"
@@ -207,13 +209,19 @@ export function ProfileEmergencySosCard() {
           aria-labelledby="profile-sos-title"
         >
           <div className="w-full max-w-md rounded-2xl border border-red-500/40 bg-red-900 p-6 sm:p-8 text-center text-white shadow-2xl">
-            {phase === 'locating' && (
+            {phase === 'pick-area' && (
               <>
-                <Loader2 className="mx-auto h-14 w-14 animate-spin text-red-200 mb-4" />
-                <h2 id="profile-sos-title" className="text-xl font-bold">
-                  {t('dashboard.sosLocating', 'Detecting your location…')}
+                <h2 id="profile-sos-title" className="text-xl font-bold mb-2">
+                  Where are you in Hyderabad?
                 </h2>
-                <p className="mt-2 text-red-100 text-sm">Please allow GPS access if prompted.</p>
+                <p className="text-red-100 text-sm mb-4">
+                  SOS is available in {HYDERABAD_SERVICE_LABEL} only.
+                </p>
+                <HyderabadAreaSearch
+                  onSelect={handleAreaSelect}
+                  inputClassName="h-12 bg-white text-base text-slate-900"
+                  showPopular
+                />
               </>
             )}
 
@@ -247,7 +255,7 @@ export function ProfileEmergencySosCard() {
                   </div>
                 ) : (
                   <p className="text-sm text-red-100 mb-4">
-                    Hospital will be assigned automatically from your GPS.
+                    Hospital will be assigned from your selected Hyderabad area.
                   </p>
                 )}
 

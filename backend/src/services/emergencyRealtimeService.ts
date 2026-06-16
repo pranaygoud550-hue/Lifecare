@@ -30,6 +30,7 @@ function emitToEmergencyRoomId(io: IoServer, requestId: string, event: string, d
 
 const ACCEPT_TIMEOUT_MS = 60_000;
 const LOCATION_DB_INTERVAL_MS = 10_000;
+const PATIENT_LOCATION_DB_INTERVAL_MS = 8_000;
 
 function getAcceptTimeoutMs(): number {
   const override = process.env.EMERGENCY_ACCEPT_TIMEOUT_MS;
@@ -54,6 +55,7 @@ interface AuthenticatedSocket extends Socket {
 
 const acceptTimeouts = new Map<string, NodeJS.Timeout>();
 const locationDbLastWrite = new Map<string, number>();
+const patientLocationDbLastWrite = new Map<string, number>();
 
 function patientCoords(request: IEmergencyRequest): { lat: number; lng: number } {
   const [lng, lat] = request.patientLocation.coordinates;
@@ -314,6 +316,57 @@ export async function joinAdminEmergencyRoom(
   return { success: true };
 }
 
+export async function handlePatientLocationUpdate(
+  io: Server,
+  socket: AuthenticatedSocket,
+  payload: { requestId: string; lat: number; lng: number }
+): Promise<void> {
+  if (!payload.requestId || !Number.isFinite(payload.lat) || !Number.isFinite(payload.lng)) return;
+
+  const request = await findEmergencyRequestByIdentifier(payload.requestId);
+  if (!request) return;
+
+  if (socket.data.authenticated && socket.data.userId !== String(request.patientId)) {
+    return;
+  }
+
+  const activeStatuses: IEmergencyRequest['status'][] = [
+    'searching',
+    'dispatched',
+    'arrived',
+    'pickedUp',
+  ];
+  if (!activeStatuses.includes(request.status)) return;
+
+  const now = Date.now();
+  const lastWrite = patientLocationDbLastWrite.get(request.requestId) ?? 0;
+  const shouldPersist = now - lastWrite >= PATIENT_LOCATION_DB_INTERVAL_MS;
+
+  if (shouldPersist) {
+    request.patientLocation = {
+      type: 'Point',
+      coordinates: [payload.lng, payload.lat],
+    };
+    await request.save();
+    patientLocationDbLastWrite.set(request.requestId, now);
+  }
+
+  const broadcast = {
+    requestId: request.requestId,
+    location: { lat: payload.lat, lng: payload.lng },
+    timestamp: new Date().toISOString(),
+  };
+
+  io.to(emergencyRoom(request.requestId)).emit('patient:locationUpdate', broadcast);
+  emitToUserId(io, String(request.patientId), 'patient:locationUpdate', broadcast);
+
+  const unit = await loadAssignedUnit(request);
+  if (unit) {
+    const driverId = driverUserIdFromUnit(unit);
+    emitToUserId(io, driverId, 'patient:locationUpdate', broadcast);
+  }
+}
+
 export async function handleDriverLocationUpdate(
   io: Server,
   socket: AuthenticatedSocket,
@@ -554,6 +607,10 @@ export function registerEmergencySocketHandlers(io: Server, socket: Authenticate
 
   socket.on('leave-emergency-room', (requestId: string) => {
     socket.leave(emergencyRoom(requestId));
+  });
+
+  socket.on('patient:locationUpdate', (payload: { requestId: string; lat: number; lng: number }) => {
+    void handlePatientLocationUpdate(io, socket, payload);
   });
 
   socket.on('driver:locationUpdate', (payload: { requestId: string; lat: number; lng: number }) => {
