@@ -96,7 +96,7 @@ export function LoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-10 px-4">
-      <Card className="w-full max-w-md shadow-lg">
+      <Card className="w-full max-w-lg shadow-lg">
         <CardHeader className="text-center pb-2">
           <div className="flex justify-center mb-3">
             <Heart className="h-11 w-11 text-primary fill-primary" />

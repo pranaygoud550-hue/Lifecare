@@ -14,7 +14,7 @@ import {
   useLazyGetTransportByTokenQuery,
   useRegenerateTrackingLinkMutation,
 } from '@/features/api/apiSlice';
-import { LazyLiveTransportMap } from './LazyLiveTransportMap';
+import { LazyRideLiveMap } from './LazyRideLiveMap';
 import { joinTransportTracking, getSocket } from '@/lib/socket';
 import {
   HyderabadAreaSearch,
@@ -26,7 +26,7 @@ type Phase = 'pick-area' | 'dispatching' | 'searching' | 'tracking';
 
 export function EmergencySOSView() {
   const dispatch = useAppDispatch();
-  const { guest, triage, location, activeBookingId } = useAppSelector((s) => s.emergency);
+  const { guest, triage, location, activeBookingId, nearestHospital } = useAppSelector((s) => s.emergency);
   const savedLocation = location;
   const { user } = useAppSelector((s) => s.auth);
 
@@ -253,10 +253,23 @@ export function EmergencySOSView() {
       </div>
 
       {location && (
-        <LazyLiveTransportMap
-          patient={location}
+        <LazyRideLiveMap
+          pickup={location}
           driver={driverInfo?.location}
+          hospital={
+            nearestHospital?.coordinates?.lat != null
+              ? {
+                  lat: nearestHospital.coordinates.lat,
+                  lng: nearestHospital.coordinates.lng,
+                  name: nearestHospital.name,
+                  address: nearestHospital.address,
+                }
+              : null
+          }
+          vehicleType="BLS"
+          rideStatus={driverInfo ? 'en-route-to-patient' : 'requested'}
           className="h-72 w-full"
+          showOpenMaps
         />
       )}
 

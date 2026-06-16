@@ -230,6 +230,22 @@ export const api = createApi({
         params: { ...(address ? { address } : {}), ...(placeId ? { placeId } : {}) },
       }),
     }),
+    reverseGeocodeEmergency: builder.query<
+      ApiResponse<{
+        lat: number;
+        lng: number;
+        displayName: string;
+        areaId?: string;
+        zone?: string;
+        placeId?: string;
+      }>,
+      { lat: number; lng: number }
+    >({
+      query: ({ lat, lng }) => ({
+        url: '/emergency/reverse-geocode',
+        params: { lat, lng },
+      }),
+    }),
     searchEmergencyAddresses: builder.query<
       ApiResponse<{
         suggestions: Array<{
@@ -237,6 +253,7 @@ export const api = createApi({
           description: string;
           mainText: string;
           secondaryText: string;
+          kind?: 'address' | 'establishment';
         }>;
         areas: Array<{
           id: string;
@@ -854,6 +871,7 @@ export const {
   useGetEmergencyNearbyHospitalsQuery,
   useLazyGetEmergencyNearbyHospitalsQuery,
   useLazyGeocodeEmergencyAddressQuery,
+  useLazyReverseGeocodeEmergencyQuery,
   useLazySearchEmergencyAddressesQuery,
   useGetLiveETAQuery,
   useCancelEmergencyMutation,

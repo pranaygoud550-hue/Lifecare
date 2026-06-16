@@ -2,14 +2,24 @@ import { io, type Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
 
+function resolveSocketUrl(): string {
+  const configured = import.meta.env.VITE_SOCKET_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, '');
+
+  const apiUrl = import.meta.env.VITE_API_URL?.trim();
+  if (apiUrl?.startsWith('http')) {
+    return apiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+  }
+
+  return window.location.origin
+    .replace(':5173', ':5001')
+    .replace(':5174', ':5001')
+    .replace(':5175', ':5001');
+}
+
 export function getSocket(): Socket {
   if (!socket) {
-    const url =
-      import.meta.env.VITE_SOCKET_URL ||
-      window.location.origin
-        .replace(':5173', ':5001')
-        .replace(':5174', ':5001')
-        .replace(':5175', ':5001');
+    const url = resolveSocketUrl();
     socket = io(url, {
       transports: ['websocket', 'polling'],
       autoConnect: true,

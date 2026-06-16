@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'reac
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { HospitalMapLocation, MapCoordinate } from '@/features/emergency/emergencySlice';
+import { useDrivingRoute } from '@/hooks/useDrivingRoute';
 
 const patientIcon = L.divIcon({
   className: 'emergency-map-marker',
@@ -136,14 +137,20 @@ export function LiveTrackingMap({
     }
   }, [hospitalLocation?.name, hospitalLocation?.lat, hospitalLocation?.lng]);
 
-  const routeLine = useMemo(() => {
+  const ambulanceToPatient = useDrivingRoute(ambulanceLocation ?? null, patientLocation);
+  const patientToHospital = useDrivingRoute(patientLocation, hospitalLocation ?? null);
+
+  const ambulanceLine = useMemo(() => {
     if (routePath && routePath.length > 1) return routePath;
+    if (ambulanceToPatient.length >= 2) return ambulanceToPatient;
     if (!ambulanceLocation) return [];
     return [
       [ambulanceLocation.lat, ambulanceLocation.lng],
       [patientLocation.lat, patientLocation.lng],
     ] as [number, number][];
-  }, [routePath, ambulanceLocation, patientLocation]);
+  }, [routePath, ambulanceToPatient, ambulanceLocation, patientLocation]);
+
+  const hospitalLine = patientToHospital;
 
   return (
     <div className={className ?? 'h-72 w-full rounded-2xl overflow-hidden border border-red-500/30 z-0'}>
@@ -167,9 +174,21 @@ export function LiveTrackingMap({
 
         <Marker position={[patientLocation.lat, patientLocation.lng]} icon={patientIcon} zIndexOffset={900} />
 
-        {routeLine.length >= 2 && (
+        {hospitalLine.length >= 2 && (
           <Polyline
-            positions={routeLine}
+            positions={hospitalLine}
+            pathOptions={{
+              color: '#16a34a',
+              weight: 4,
+              opacity: 0.55,
+              dashArray: '8 8',
+            }}
+          />
+        )}
+
+        {ambulanceLine.length >= 2 && (
+          <Polyline
+            positions={ambulanceLine}
             pathOptions={{
               color: '#2563eb',
               weight: 5,

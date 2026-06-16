@@ -1,5 +1,6 @@
 import { config } from '../config/index.js';
 import { cacheGet, cacheSet, cacheKey } from './cacheService.js';
+import { getPlaceDetails } from './googlePlacesService.js';
 
 const NOMINATIM_URL = 'https://nominatim.openstreetmap.org/search';
 const USER_AGENT = 'LifeCarePlus/1.0 (emergency geocoding)';
@@ -49,7 +50,7 @@ async function geocodeWithGoogle(query: string): Promise<GeocodeResult | null> {
   };
 }
 
-/** Resolve coordinates from a Google place_id (from autocomplete pick). */
+/** Resolve coordinates from a Google place_id — Place Details first, then Geocoding API. */
 export async function geocodePlaceId(placeId: string): Promise<GeocodeResult | null> {
   const trimmed = placeId.trim();
   if (!trimmed) return null;
@@ -61,7 +62,61 @@ export async function geocodePlaceId(placeId: string): Promise<GeocodeResult | n
   const key = googleApiKey();
   if (!key) return null;
 
+  try {
+    const details = await getPlaceDetails(trimmed);
+    const result: GeocodeResult = {
+      lat: details.coordinates.lat,
+      lng: details.coordinates.lng,
+      displayName: details.address || details.name,
+      placeId: details.place_id,
+    };
+    cacheSet(cacheKeyStr, result, 3600);
+    return result;
+  } catch {
+    /* fall through to Geocoding API */
+  }
+
   const params = new URLSearchParams({ place_id: trimmed, key });
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as {
+    status: string;
+    results?: Array<{
+      place_id: string;
+      formatted_address: string;
+      geometry: { location: { lat: number; lng: number } };
+    }>;
+  };
+
+  if (data.status !== 'OK' || !data.results?.[0]) return null;
+
+  const hit = data.results[0];
+  const result: GeocodeResult = {
+    lat: hit.geometry.location.lat,
+    lng: hit.geometry.location.lng,
+    displayName: hit.formatted_address,
+    placeId: hit.place_id,
+  };
+
+  cacheSet(cacheKeyStr, result, 3600);
+  return result;
+}
+
+/** GPS → readable street address (reverse geocode). */
+export async function reverseGeocode(lat: number, lng: number): Promise<GeocodeResult | null> {
+  const cacheKeyStr = cacheKey(['reverse-geocode', lat.toFixed(5), lng.toFixed(5)]);
+  const cached = cacheGet<GeocodeResult>(cacheKeyStr);
+  if (cached) return cached;
+
+  const key = googleApiKey();
+  if (!key) return null;
+
+  const params = new URLSearchParams({
+    latlng: `${lat},${lng}`,
+    key,
+    result_type: 'street_address|route|neighborhood|sublocality|locality',
+  });
+
   const url = `https://maps.googleapis.com/maps/api/geocode/json?${params}`;
   const res = await fetch(url);
   const data = (await res.json()) as {

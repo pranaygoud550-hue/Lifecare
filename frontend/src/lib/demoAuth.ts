@@ -7,13 +7,13 @@ export const DEMO_ACCOUNTS = [
     phone: '9876543210',
     label: 'Patient',
     role: 'patient' as const,
-    description: 'Book doctors, SOS, MediScan, pharmacy & wallet',
+    description: 'Doctors, SOS, MediScan & pharmacy',
   },
   {
     phone: '9876543211',
     label: 'Doctor',
     role: 'doctor' as const,
-    description: 'Patient list, live video consults & care plans',
+    description: 'Patient list, video consults & plans',
   },
 ] as const;
 

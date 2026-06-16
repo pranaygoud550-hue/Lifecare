@@ -3,6 +3,7 @@ import {
   createEmergencySos,
   searchHyderabadAreasHandler,
   searchEmergencyAddresses,
+  reverseGeocodeEmergency,
   getNearbyHospitals,
   geocodeEmergencyAddress,
   updateAmbulanceLocation,
@@ -27,6 +28,7 @@ const router = Router();
 
 router.get('/hyderabad-areas', searchHyderabadAreasHandler);
 router.get('/address-suggestions', searchEmergencyAddresses);
+router.get('/reverse-geocode', reverseGeocodeEmergency);
 router.get('/geocode', geocodeEmergencyAddress);
 router.get('/nearby-hospitals', validate(nearbyHospitalsQuerySchema), getNearbyHospitals);
 

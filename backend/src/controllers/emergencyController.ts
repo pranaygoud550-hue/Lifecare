@@ -28,7 +28,7 @@ import {
 } from '../services/emergencyService.js';
 import { recommendHospitalForPatient } from '../services/hospitalRecommendationService.js';
 import { isGooglePlacesConfigured } from '../services/googlePlacesService.js';
-import { geocodeAddress, geocodePlaceId } from '../services/geocodeService.js';
+import { geocodeAddress, geocodePlaceId, reverseGeocode } from '../services/geocodeService.js';
 import {
   searchAddressSuggestions,
   isAddressAutocompleteConfigured,
@@ -38,6 +38,7 @@ import {
   isWithinHyderabadServiceArea,
   resolveHyderabadArea,
   searchHyderabadAreas,
+  nearestHyderabadArea,
   HYDERABAD_SERVICE_LABEL,
 } from '../data/hyderabadAreas.js';
 import { notifyEmergencySosCreated } from '../services/emergencyNotificationService.js';
@@ -433,6 +434,65 @@ export const searchEmergencyAddresses = asyncHandler(async (req: Request, res: R
   });
 });
 
+export const reverseGeocodeEmergency = asyncHandler(async (req: Request, res: Response) => {
+  const lat = parseFloat(String(req.query.lat ?? ''));
+  const lng = parseFloat(String(req.query.lng ?? ''));
+
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    res.status(400).json({ success: false, message: 'lat and lng query parameters are required' });
+    return;
+  }
+
+  if (!isWithinHyderabadServiceArea(lat, lng)) {
+    res.status(400).json({
+      success: false,
+      message: `Your GPS location is outside ${HYDERABAD_SERVICE_LABEL}. Enter your address manually.`,
+    });
+    return;
+  }
+
+  const reversed = await reverseGeocode(lat, lng);
+  const nearest = nearestHyderabadArea(lat, lng);
+
+  if (reversed) {
+    res.json({
+      success: true,
+      data: {
+        lat: reversed.lat,
+        lng: reversed.lng,
+        displayName: reversed.displayName,
+        placeId: reversed.placeId,
+        areaId: nearest?.id,
+        zone: nearest?.zone,
+      },
+    });
+    return;
+  }
+
+  if (nearest) {
+    res.json({
+      success: true,
+      data: {
+        lat,
+        lng,
+        displayName: areaToDisplayName(nearest),
+        areaId: nearest.id,
+        zone: nearest.zone,
+      },
+    });
+    return;
+  }
+
+  res.json({
+    success: true,
+    data: {
+      lat,
+      lng,
+      displayName: `Your location (${lat.toFixed(5)}, ${lng.toFixed(5)})`,
+    },
+  });
+});
+
 export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Response) => {
   const address = String(req.query.address ?? '').trim();
   const placeId = String(req.query.placeId ?? '').trim();
@@ -443,8 +503,32 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
   }
 
   if (placeId) {
-    const fromPlace = await geocodePlaceId(placeId);
-    if (!fromPlace || !isWithinHyderabadServiceArea(fromPlace.lat, fromPlace.lng)) {
+    let fromPlace = await geocodePlaceId(placeId);
+    if (!fromPlace && address) {
+      fromPlace = await geocodeAddress(address);
+    }
+    if (!fromPlace) {
+      const localFromText = resolveHyderabadArea(address || placeId);
+      if (localFromText) {
+        res.json({
+          success: true,
+          data: {
+            lat: localFromText.lat,
+            lng: localFromText.lng,
+            displayName: areaToDisplayName(localFromText),
+            areaId: localFromText.id,
+            zone: localFromText.zone,
+          },
+        });
+        return;
+      }
+      res.status(404).json({
+        success: false,
+        message: `Could not resolve that address. Pick an area below or add flat/building details.`,
+      });
+      return;
+    }
+    if (!isWithinHyderabadServiceArea(fromPlace.lat, fromPlace.lng)) {
       res.status(404).json({
         success: false,
         message: `That location is outside ${HYDERABAD_SERVICE_LABEL}. Pick an address within the service area.`,
@@ -492,15 +576,33 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
       ? address
       : `${address}, Hyderabad, Telangana`
   );
-  if (!result || !isWithinHyderabadServiceArea(result.lat, result.lng)) {
-    res.status(404).json({
-      success: false,
-      message: `Could not find that address in ${HYDERABAD_SERVICE_LABEL}. Try a nearby landmark or colony name.`,
+  if (result && isWithinHyderabadServiceArea(result.lat, result.lng)) {
+    res.json({ success: true, data: result });
+    return;
+  }
+
+  const nearest = result
+    ? nearestHyderabadArea(result.lat, result.lng)
+    : resolveHyderabadArea(address.split(',')[0]?.trim() ?? address);
+
+  if (nearest && isWithinHyderabadServiceArea(nearest.lat, nearest.lng)) {
+    res.json({
+      success: true,
+      data: {
+        lat: nearest.lat,
+        lng: nearest.lng,
+        displayName: areaToDisplayName(nearest),
+        areaId: nearest.id,
+        zone: nearest.zone,
+      },
     });
     return;
   }
 
-  res.json({ success: true, data: result });
+  res.status(404).json({
+    success: false,
+    message: `Could not find that address in ${HYDERABAD_SERVICE_LABEL}. Try a nearby landmark or colony name.`,
+  });
 });
 
 export const updateAmbulanceLocation = asyncHandler(async (req: Request, res: Response) => {

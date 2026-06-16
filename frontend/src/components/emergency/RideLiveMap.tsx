@@ -153,14 +153,10 @@ export function RideLiveMap({
 
   const hospitalRoute = useDrivingRoute(pickup, hospital ?? null);
 
-  const driverRoute = useMemo(() => {
-    if (!driver) return [];
-    const target = goingToHospital && hospital ? hospital : pickup;
-    return [
-      [driver.lat, driver.lng],
-      [target.lat, target.lng],
-    ] as [number, number][];
-  }, [driver, pickup, hospital, goingToHospital]);
+  const driverToPickup = useDrivingRoute(driver ?? null, pickup);
+  const driverToHospital = useDrivingRoute(driver ?? null, hospital ?? null);
+
+  const activeDriverRoute = goingToHospital && hospital ? driverToHospital : driverToPickup;
 
   const fitPoints = useMemo(() => {
     const pts: MapPoint[] = [pickup];
@@ -200,9 +196,9 @@ export function RideLiveMap({
           />
         )}
 
-        {driverRoute.length === 2 && (
+        {activeDriverRoute.length >= 2 && (
           <Polyline
-            positions={driverRoute}
+            positions={activeDriverRoute}
             pathOptions={{ color: '#2563eb', weight: 5, opacity: 0.9 }}
           />
         )}

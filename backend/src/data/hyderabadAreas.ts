@@ -179,6 +179,7 @@ export const HYDERABAD_AREAS: HyderabadArea[] = [
   { id: 'jeedimetla', name: 'Jeedimetla', zone: 'North Outskirts', lat: 17.5185, lng: 78.4585 },
   { id: 'mailardevpally', name: 'Mailardevpally', zone: 'South', lat: 17.2985, lng: 78.4385 },
   { id: 'medchal', name: 'Medchal', zone: 'North Outskirts', lat: 17.6295, lng: 78.4815 },
+  { id: 'kandlakoya', name: 'Kandlakoya', zone: 'North Outskirts', lat: 17.5975, lng: 78.4834, aliases: ['Kandlakoya Medchal', 'Medchal Road Kandlakoya'] },
   { id: 'pahadi-shareef', name: 'Pahadi Shareef', zone: 'South', lat: 17.2885, lng: 78.4585 },
   { id: 'patancheru', name: 'Patancheru', zone: 'West Outskirts', lat: 17.5335, lng: 78.2645 },
   { id: 'petbasheerabad', name: 'Petbasheerabad', zone: 'North Outskirts', lat: 17.5485, lng: 78.4685 },

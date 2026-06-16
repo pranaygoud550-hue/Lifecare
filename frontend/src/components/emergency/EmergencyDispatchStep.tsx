@@ -24,6 +24,8 @@ import {
   type HyderabadAreaSelection,
 } from '@/components/emergency/HyderabadAreaSearch';
 import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
+import { AutoDetectedLocationCard } from '@/components/emergency/AutoDetectedLocationCard';
+import { useEmergencyAutoDetect } from '@/hooks/useEmergencyAutoDetect';
 import type { EmergencyHospitalInfo, EmergencyType } from '@/types';
 
 function formatDistance(meters: number): string {
@@ -45,6 +47,10 @@ export function EmergencyDispatchStep() {
   );
   const [dispatchError, setDispatchError] = useState<string | null>(null);
   const startedRef = useRef(false);
+  const autoGpsRef = useRef(false);
+
+  const { status: detectStatus, error: detectError, detect, location: autoLocation } =
+    useEmergencyAutoDetect({ autoRun: false });
 
   const [triggerSOS, { isLoading }] = useTriggerSOSMutation();
   const [fetchHospitals] = useLazyGetEmergencyNearbyHospitalsQuery();
@@ -52,7 +58,7 @@ export function EmergencyDispatchStep() {
   const loadNearestHospital = useCallback(
     async (lat: number, lng: number) => {
       try {
-        const res = await fetchHospitals({ lat, lng, radius: 8 }).unwrap();
+        const res = await fetchHospitals({ lat, lng, radius: 15 }).unwrap();
         const list = (res.data?.hospitals ?? []) as EmergencyHospitalInfo[];
         dispatch(
           setNearbyHospitals({
@@ -150,6 +156,20 @@ export function EmergencyDispatchStep() {
     void dispatchFromSaved();
   }, [user?._id, hasSaved, dispatchFromSaved]);
 
+  useEffect(() => {
+    if (hasSaved || autoGpsRef.current || !user?._id) return;
+    autoGpsRef.current = true;
+    void (async () => {
+      setPhase('locating');
+      const loc = await detect();
+      if (loc) {
+        await dispatchEmergency(loc.lat, loc.lng, loc.address);
+      } else {
+        setPhase('ready');
+      }
+    })();
+  }, [hasSaved, user?._id, detect, dispatchEmergency]);
+
   const handleAreaSelect = async (selection: HyderabadAreaSelection) => {
     const { lat, lng, address } = selection;
     await loadNearestHospital(lat, lng);
@@ -198,7 +218,9 @@ export function EmergencyDispatchStep() {
             </p>
           </div>
         ) : phase === 'ready' ? (
-          <p className="text-sm text-red-100">Pick your Hyderabad area below to dispatch.</p>
+          <p className="text-sm text-red-100">
+            Allow GPS above or search your shop/street to dispatch.
+          </p>
         ) : (
           <p className="text-sm text-red-100">Finding nearest emergency hospital…</p>
         )}
@@ -227,13 +249,23 @@ export function EmergencyDispatchStep() {
       )}
 
       {phase === 'ready' && (
-        <HyderabadAreaSearch
-          value={savedLocation?.address}
-          onSelect={(sel) => void handleAreaSelect(sel)}
-          inputClassName="h-12 bg-white text-lg"
-          showPopular
-          showLandmark
-        />
+        <>
+          <AutoDetectedLocationCard
+            status={detectStatus}
+            location={autoLocation ?? savedLocation}
+            error={detectError}
+            onRetry={() => void detect()}
+            className="mb-4"
+          />
+          <HyderabadAreaSearch
+            value={savedLocation?.address ?? autoLocation?.address}
+            onSelect={(sel) => void handleAreaSelect(sel)}
+            inputClassName="h-12 bg-white text-lg"
+            showPopular
+            showLandmark
+            showGpsButton={detectStatus === 'failed'}
+          />
+        </>
       )}
 
       <a href="tel:108" className="block mt-6">

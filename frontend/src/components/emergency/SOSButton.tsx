@@ -10,7 +10,9 @@ import {
   HyderabadAreaSearch,
   type HyderabadAreaSelection,
 } from '@/components/emergency/HyderabadAreaSearch';
-import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
+import { GpsLocationError, resolveSosLocation } from '@/lib/pickupLocation';
+import { useLazyReverseGeocodeEmergencyQuery } from '@/features/api/apiSlice';
+import { setEmergencyLocation } from '@/features/emergency/emergencySlice';
 import type { EmergencyType } from '@/types';
 
 const COUNTDOWN_SECONDS = 5;
@@ -25,11 +27,12 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
   const { user } = useAppSelector((s) => s.auth);
   const { isActive, location: savedLocation } = useAppSelector((s) => s.emergency);
 
-  const [phase, setPhase] = useState<'idle' | 'pick-area' | 'countdown' | 'dispatching'>('idle');
+  const [phase, setPhase] = useState<'idle' | 'locating' | 'pick-area' | 'countdown' | 'dispatching'>('idle');
   const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [triggerSOS, { isLoading: sosLoading }] = useTriggerSOSMutation();
+  const [reverseGeocode] = useLazyReverseGeocodeEmergencyQuery();
 
   const cancelFlow = useCallback(() => {
     setPhase('idle');
@@ -123,9 +126,42 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
     if (savedLocation?.lat != null && savedLocation?.lng != null) {
       coordsRef.current = { lat: savedLocation.lat, lng: savedLocation.lng };
       setPhase('countdown');
-    } else {
-      setPhase('pick-area');
+      return;
     }
+
+    setPhase('locating');
+    void (async () => {
+      try {
+        const gps = await resolveSosLocation();
+        let lat = gps.lat;
+        let lng = gps.lng;
+        try {
+          const res = await reverseGeocode({ lat: gps.lat, lng: gps.lng }).unwrap();
+          if (res.data) {
+            lat = res.data.lat;
+            lng = res.data.lng;
+            dispatch(
+              setEmergencyLocation({
+                lat,
+                lng,
+                address: res.data.displayName,
+              })
+            );
+          }
+        } catch {
+          dispatch(setEmergencyLocation({ lat, lng, address: gps.address }));
+        }
+        coordsRef.current = { lat, lng };
+        setPhase('countdown');
+      } catch (err) {
+        const msg =
+          err instanceof GpsLocationError
+            ? err.message
+            : 'Could not detect location. Pick your area below.';
+        toast.error(msg);
+        setPhase('pick-area');
+      }
+    })();
   };
 
   if (isActive) return null;
@@ -137,7 +173,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
       <button
         type="button"
         onClick={handlePress}
-        disabled={phase === 'countdown' || isBusy}
+        disabled={phase === 'countdown' || phase === 'locating' || isBusy}
         className={`
           fixed bottom-24 right-4 z-40 md:bottom-8 md:right-8
           flex items-center justify-center gap-2
@@ -164,7 +200,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
         )}
       </button>
 
-      {(phase === 'countdown' || phase === 'pick-area') && (
+      {(phase === 'countdown' || phase === 'pick-area' || phase === 'locating') && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-red-950/90 p-4"
           role="dialog"
@@ -179,7 +215,17 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
                 </p>
                 <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
                 <p className="text-red-100 text-sm mb-6">
-                  Hyderabad area selected — sending to dispatch
+                  Location detected — sending ambulance to nearest hospital
+                </p>
+              </>
+            ) : phase === 'locating' ? (
+              <>
+                <p id="sos-countdown-title" className="text-lg font-bold mb-2">
+                  Detecting your location…
+                </p>
+                <Loader2 className="h-12 w-12 text-white animate-spin mx-auto mb-4" />
+                <p className="text-red-100 text-sm">
+                  GPS + nearest street — no typing needed
                 </p>
               </>
             ) : (
@@ -188,13 +234,14 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
                   Where are you in Hyderabad?
                 </p>
                 <p className="text-red-100 text-sm mb-4">
-                  SOS is available in {HYDERABAD_SERVICE_LABEL} only. Pick your area to dispatch help.
+                  GPS failed — search shop or street (e.g. Chai Loaded, Kandlakoya)
                 </p>
                 <HyderabadAreaSearch
                   onSelect={handleAreaSelect}
                   inputClassName="h-12 bg-white text-base text-slate-900"
                   showPopular
                   showLandmark
+                  showGpsButton
                 />
               </>
             )}

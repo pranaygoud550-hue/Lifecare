@@ -159,6 +159,7 @@ async function main() {
   }
 
   console.log('\nVerify after deploy (~3 min):');
+  console.log('  node scripts/verify-production.mjs');
   console.log('  curl -s https://lifecare-l42k.onrender.com/health');
 }
 
