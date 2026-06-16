@@ -24,6 +24,7 @@ jobs:
       DISABLE_EMERGENCY_DEMO: 'true'
       GOOGLE_PLACES_API_KEY: ''
       GOOGLE_MAPS_API_KEY: ''
+      DISABLE_OSM_HOSPITALS: 'true'
 
     steps:
       - uses: actions/checkout@v4

@@ -27,8 +27,8 @@ export const TEST_COORDS = {
       slug: 'test-multi-beta',
     },
   },
-  /** Remote point with no seeded hospitals within 1 km. */
-  remote: { lat: 28.6139, lng: 77.209 },
+  /** In service area but ~95 km from seeded test hospitals (outside 50 km fallback). */
+  remote: { lat: 18.24, lng: 78.4867 },
 } as const;
 
 export function haversineMeters(

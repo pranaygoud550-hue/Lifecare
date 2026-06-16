@@ -46,6 +46,10 @@ export async function searchOsmHospitals(
   lng: number,
   radiusMeters: number
 ): Promise<OsmHospitalResult[]> {
+  if (process.env.DISABLE_OSM_HOSPITALS === 'true') {
+    return [];
+  }
+
   const radius = Math.min(Math.max(radiusMeters, 500), 50_000);
   const cacheKeyStr = cacheKey(['osm-hospitals', lat.toFixed(4), lng.toFixed(4), radius]);
   const cached = cacheGet<OsmHospitalResult[]>(cacheKeyStr);

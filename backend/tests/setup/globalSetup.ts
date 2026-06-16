@@ -10,5 +10,6 @@ export default async function globalSetup() {
   process.env.DISABLE_EMERGENCY_DEMO = 'true';
   process.env.GOOGLE_PLACES_API_KEY = '';
   process.env.GOOGLE_MAPS_API_KEY = '';
+  process.env.DISABLE_OSM_HOSPITALS = 'true';
   (globalThis as typeof globalThis & { __MONGOD__: MongoMemoryServer }).__MONGOD__ = mongod;
 }
