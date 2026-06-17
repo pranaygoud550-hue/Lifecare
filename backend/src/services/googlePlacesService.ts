@@ -200,6 +200,43 @@ export async function searchNearbyPlaces(
   return results;
 }
 
+/** Text search finds hospitals nearby search misses (e.g. CMR Hospital, Kandlakoya). */
+export async function searchHospitalsTextNearby(
+  lat: number,
+  lng: number,
+  radiusMeters: number
+): Promise<GooglePlaceResult[]> {
+  const key = apiKey();
+  if (!key) return [];
+
+  const radius = Math.min(Math.max(radiusMeters, 500), 50_000);
+  const cacheKeyStr = cacheKey(['places-text-hospital', lat.toFixed(4), lng.toFixed(4), radius]);
+  const cached = cacheGet<GooglePlaceResult[]>(cacheKeyStr);
+  if (cached) return cached;
+
+  const params = new URLSearchParams({
+    query: 'hospital',
+    location: `${lat},${lng}`,
+    radius: String(radius),
+    key,
+  });
+
+  const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`;
+  const res = await fetch(url);
+  const data = (await res.json()) as GoogleNearbyResult;
+
+  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+    throw new Error(data.error_message || `Google Text Search error: ${data.status}`);
+  }
+
+  const results = (data.results ?? [])
+    .map((row) => mapNearbyResult(row, lat, lng))
+    .sort((a, b) => a.distanceMeters - b.distanceMeters);
+
+  cacheSet(cacheKeyStr, results, config.google.placesCacheTtlSeconds);
+  return results;
+}
+
 export async function getPlaceDetails(placeId: string): Promise<GooglePlaceResult & { weekdayHours?: string[]; website?: string; googleMapsUrl?: string }> {
   const key = apiKey();
   if (!key) {

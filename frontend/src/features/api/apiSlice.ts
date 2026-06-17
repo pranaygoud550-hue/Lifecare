@@ -12,6 +12,7 @@ import type { ChestScan } from '@/types/chestScan';
 import type { GoogleHospitalPlace, HospitalRoutePreviewData, NavigationRouteData, NavigationEtaData, SmartHospitalRecommendation } from '@/types/googleMaps';
 import type { WellnessPlan, DietLogEntry, MealSlot, DietAdherenceStatus, OffPlanCategory } from '@/types/wellness';
 import type { DoctorCarePlan, DoctorPatientDetail, DoctorPatientListItem, HealthDataSharing } from '@/types/doctorCare';
+import type { BloodEmergencyAlert, HospitalAdminAccount, HospitalAdminProfile } from '@/types/bloodEmergency';
 
 export const api = createApi({
   reducerPath: 'api',
@@ -19,7 +20,7 @@ export const api = createApi({
   keepUnusedDataFor: 120,
   refetchOnFocus: false,
   refetchOnReconnect: true,
-  tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans', 'DoctorCare', 'HealthSharing'],
+  tagTypes: ['User', 'Doctors', 'Appointments', 'Medicines', 'Orders', 'Ambulance', 'Prescriptions', 'HealthRecords', 'Notifications', 'Wallet', 'Vitals', 'Wellness', 'DietLog', 'Admin', 'Emergency', 'Scans', 'DoctorCare', 'HealthSharing', 'BloodAlerts'],
   endpoints: (builder) => ({
     register: builder.mutation<ApiResponse<AuthSessionData>, Record<string, unknown>>({
       query: (body) => ({ url: '/auth/register', method: 'POST', body }),
@@ -578,6 +579,92 @@ export const api = createApi({
       query: () => '/users/diet-log/today',
       providesTags: ['DietLog'],
     }),
+    getActiveBloodAlerts: builder.query<ApiResponse<BloodEmergencyAlert[]>, void>({
+      query: () => '/users/blood-alerts/active',
+      providesTags: ['BloodAlerts'],
+    }),
+    respondToBloodAlert: builder.mutation<
+      ApiResponse<BloodEmergencyAlert>,
+      { id: string; status: 'on_my_way' | 'cannot_donate' }
+    >({
+      query: ({ id, status }) => ({
+        url: `/users/blood-alerts/${id}/respond`,
+        method: 'POST',
+        body: { status },
+      }),
+      invalidatesTags: ['BloodAlerts', 'Notifications'],
+    }),
+    getHospitalProfile: builder.query<ApiResponse<HospitalAdminProfile>, void>({
+      query: () => '/hospital/profile',
+      providesTags: ['User', 'BloodAlerts'],
+    }),
+    acknowledgeHospitalLegal: builder.mutation<
+      ApiResponse<{ legalComplete: boolean }>,
+      {
+        acknowledgedBy: string;
+        bloodBankLicenseNumber: string;
+        hospitalAuthorizationId?: string;
+        acceptTerms: true;
+        confirmAuthorized: true;
+        confirmGenuineNeed: true;
+        confirmDonorScreening: true;
+        confirmDataProtection: true;
+      }
+    >({
+      query: (body) => ({ url: '/hospital/legal-acknowledgment', method: 'POST', body }),
+      invalidatesTags: ['User', 'BloodAlerts'],
+    }),
+    getHospitalBloodAlerts: builder.query<ApiResponse<BloodEmergencyAlert[]>, void>({
+      query: () => '/hospital/blood-alerts',
+      providesTags: ['BloodAlerts'],
+    }),
+    getHospitalBloodAlert: builder.query<ApiResponse<BloodEmergencyAlert>, string>({
+      query: (id) => `/hospital/blood-alerts/${id}`,
+      providesTags: (_r, _e, id) => [{ type: 'BloodAlerts', id }],
+    }),
+    createBloodAlert: builder.mutation<
+      ApiResponse<BloodEmergencyAlert>,
+      { bloodGroup: string; unitsNeeded?: number; urgency?: string; notes?: string }
+    >({
+      query: (body) => ({ url: '/hospital/blood-alerts', method: 'POST', body }),
+      invalidatesTags: ['BloodAlerts'],
+    }),
+    updateBloodAlert: builder.mutation<
+      ApiResponse<BloodEmergencyAlert>,
+      { id: string; status: 'fulfilled' | 'cancelled' }
+    >({
+      query: ({ id, status }) => ({
+        url: `/hospital/blood-alerts/${id}`,
+        method: 'PATCH',
+        body: { status },
+      }),
+      invalidatesTags: ['BloodAlerts'],
+    }),
+    createHospitalAdmin: builder.mutation<
+      ApiResponse<HospitalAdminAccount>,
+      {
+        email: string;
+        phone: string;
+        password: string;
+        firstName: string;
+        lastName: string;
+        hospitalId: string;
+        designation?: string;
+        bloodBankLicenseNumber: string;
+        hospitalAuthorizationId?: string;
+      }
+    >({
+      query: (body) => ({ url: '/admin/hospital-admins', method: 'POST', body }),
+      invalidatesTags: ['Admin'],
+    }),
+    getHospitalAdmins: builder.query<ApiResponse<HospitalAdminAccount[]>, void>({
+      query: () => '/admin/hospital-admins',
+      providesTags: ['Admin'],
+    }),
+    getAdminBloodAlerts: builder.query<ApiResponse<BloodEmergencyAlert[]>, void>({
+      query: () => '/admin/blood-alerts',
+      providesTags: ['BloodAlerts', 'Admin'],
+    }),
     deleteVital: builder.mutation<ApiResponse<unknown>, string>({
       query: (id) => ({ url: `/users/vitals/${id}`, method: 'DELETE' }),
       invalidatesTags: ['Vitals'],
@@ -955,4 +1042,15 @@ export const {
   useGetPharmacyStaffOrdersQuery,
   useUpdatePharmacyStaffOrderStatusMutation,
   useGetPharmacyStaffInventoryQuery,
+  useGetActiveBloodAlertsQuery,
+  useRespondToBloodAlertMutation,
+  useGetHospitalProfileQuery,
+  useAcknowledgeHospitalLegalMutation,
+  useGetHospitalBloodAlertsQuery,
+  useGetHospitalBloodAlertQuery,
+  useCreateBloodAlertMutation,
+  useUpdateBloodAlertMutation,
+  useCreateHospitalAdminMutation,
+  useGetHospitalAdminsQuery,
+  useGetAdminBloodAlertsQuery,
 } = api;

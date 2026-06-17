@@ -18,6 +18,8 @@ import emergencyRoutes from './emergencyRoutes.js';
 import scanRoutes from './scanRoutes.js';
 import doctorPortalRoutes from './doctorPortalRoutes.js';
 
+import hospitalAdminRoutes from './hospitalAdminRoutes.js';
+
 import reminderRoutes from './reminderRoutes.js';
 import ambulanceSyncRoutes from './ambulanceSyncRoutes.js';
 import rapidcareRoutes from './rapidcareRoutes.js';
@@ -29,6 +31,7 @@ router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/utils', utilsRoutes);
 router.use('/hospitals', hospitalRoutes);
+router.use('/hospital', hospitalAdminRoutes);
 router.use('/emergency', emergencyRoutes);
 router.use('/doctors', doctorRoutes);
 router.use('/doctors/care', doctorPortalRoutes);

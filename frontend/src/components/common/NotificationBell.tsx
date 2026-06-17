@@ -30,7 +30,12 @@ export function NotificationBell() {
   useSocket(
     useCallback(
       (notification: Notification) => {
-        toast.info(notification.title, { autoClose: 4000 });
+        const isBlood = notification.type === 'blood_emergency';
+        if (isBlood) {
+          toast.error(notification.title, { autoClose: 8000 });
+        } else {
+          toast.info(notification.title, { autoClose: 4000 });
+        }
         dispatch(
           api.util.updateQueryData('getNotifications', { limit: '15' }, (draft) => {
             if (!draft?.data) return;
@@ -58,6 +63,8 @@ export function NotificationBell() {
     else if (n.type === 'wallet') navigate('/wallet');
     else if (n.type === 'ambulance' || n.type === 'RAPIDCARE_UPDATE' || n.type === 'emergency_sync') {
       navigate('/dashboard/emergency-history');
+    } else if (n.type === 'blood_emergency') {
+      navigate('/dashboard/blood-alerts');
     }
   };
 

@@ -73,7 +73,7 @@ function NearestHospitalCard({
   return (
     <div className="p-4 rounded-xl bg-white/10 border border-cyan-400/30">
       <p className="text-xs font-semibold uppercase tracking-wide text-cyan-300 mb-1">
-        Nearest hospital (auto-matched)
+        Nearest hospital with ambulance service
       </p>
       <p className="font-bold text-white text-lg leading-tight break-words">{hospital.name}</p>
       <p className="text-sm text-white/70 mt-1 flex items-start gap-1.5 min-w-0">

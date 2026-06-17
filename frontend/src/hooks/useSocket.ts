@@ -23,9 +23,11 @@ export function useSocket(onNotification?: (notification: Notification) => void)
 
     socket.on('notification', onNotif);
     socket.on('notification:new', onNotif);
+    socket.on('blood:alert', onNotif);
     return () => {
       socket.off('notification', onNotif);
       socket.off('notification:new', onNotif);
+      socket.off('blood:alert', onNotif);
     };
   }, [isAuthenticated, user?._id]);
 

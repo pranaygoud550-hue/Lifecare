@@ -777,5 +777,61 @@ export const doctorScansQuerySchema = z.object({
   }),
 });
 
+const bloodGroupEnum = z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']);
+
+export const createBloodAlertSchema = z.object({
+  body: z.object({
+    bloodGroup: bloodGroupEnum,
+    unitsNeeded: z.coerce.number().int().min(1).max(20).optional(),
+    urgency: z.enum(['critical', 'urgent', 'normal']).optional(),
+    notes: safeStrOpt(500),
+  }),
+});
+
+export const bloodAlertIdParamSchema = z.object({
+  params: z.object({ id: objectIdParam }),
+});
+
+export const updateBloodAlertStatusSchema = z.object({
+  params: z.object({ id: objectIdParam }),
+  body: z.object({
+    status: z.enum(['fulfilled', 'cancelled']),
+  }),
+});
+
+export const bloodAlertRespondSchema = z.object({
+  params: z.object({ id: objectIdParam }),
+  body: z.object({
+    status: z.enum(['on_my_way', 'cannot_donate']),
+  }),
+});
+
+export const createHospitalAdminSchema = z.object({
+  body: z.object({
+    email: z.string().email(),
+    phone: z.string().min(10),
+    password: passwordSchema,
+    firstName: z.string().min(1),
+    lastName: z.string().min(1),
+    hospitalId: objectId,
+    designation: safeStrOpt(120),
+    bloodBankLicenseNumber: z.string().min(3).max(80),
+    hospitalAuthorizationId: safeStrOpt(80),
+  }),
+});
+
+export const hospitalLegalAckSchema = z.object({
+  body: z.object({
+    acknowledgedBy: z.string().min(2).max(120),
+    bloodBankLicenseNumber: z.string().min(3).max(80),
+    hospitalAuthorizationId: safeStrOpt(80),
+    acceptTerms: z.literal(true),
+    confirmAuthorized: z.literal(true),
+    confirmGenuineNeed: z.literal(true),
+    confirmDonorScreening: z.literal(true),
+    confirmDataProtection: z.literal(true),
+  }),
+});
+
 // Legacy re-exports
 export const registerSchema = registerWithOtpSchema;

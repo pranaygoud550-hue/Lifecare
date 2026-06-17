@@ -190,6 +190,9 @@ export function AdminDashboardPage() {
             <Link to="/admin/users">
               <Button variant="outline" size="sm">User management</Button>
             </Link>
+            <Link to="/admin/hospital-staff">
+              <Button variant="outline" size="sm">Hospital staff</Button>
+            </Link>
             <Badge variant="secondary" className="gap-1 py-1.5 animate-pulse">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               Live · 15s refresh

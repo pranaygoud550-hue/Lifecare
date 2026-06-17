@@ -10,9 +10,17 @@ import {
   isGooglePlacesConfigured,
   searchNearbyPlaces,
   enrichPlacesWithPhones,
+  searchHospitalsTextNearby,
+  type GooglePlaceResult,
 } from './googlePlacesService.js';
 import { searchOsmHospitals } from './osmHospitalService.js';
 import { isWithinHyderabadServiceArea } from '../data/hyderabadAreas.js';
+import {
+  filterEmergencyCapableHospitals,
+  isEmergencyCapableDbHospital,
+  isEmergencyCapableGooglePlace,
+  isRecognizedHospitalName,
+} from '../utils/emergencyHospitalFilter.js';
 
 export interface AmbulanceWithDistance {
   unit: IAmbulanceUnit;
@@ -192,11 +200,13 @@ export async function findNearestHospitalGlobally(
   const hospitals = await Hospital.find({
     isActive: true,
     emergencyAvailable: true,
+    type: { $ne: 'clinic' },
   }).limit(200);
 
   let best: HospitalWithDistance | null = null;
 
   for (const hospital of hospitals) {
+    if (!isEmergencyCapableDbHospital(hospital)) continue;
     const coords = hospitalCoords(hospital);
     if (!coords) continue;
     const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
@@ -388,14 +398,21 @@ export async function findNearbyHospitals(
           distanceField: 'distanceMeters',
           maxDistance: radiusKm * 1000,
           spherical: true,
-          query: { isActive: true, emergencyAvailable: true, location: { $exists: true } },
+          query: {
+            isActive: true,
+            emergencyAvailable: true,
+            type: { $ne: 'clinic' },
+            location: { $exists: true },
+          },
         },
       },
       { $limit: 50 },
     ]);
 
     if (hospitals.length > 0) {
-      return hospitals.map((row) => ({
+      return hospitals
+        .filter((row) => isEmergencyCapableDbHospital(row as unknown as IHospital))
+        .map((row) => ({
         hospital: row as unknown as IHospital,
         distanceKm: row.distanceMeters / 1000,
         distanceMeters: Math.round(row.distanceMeters),
@@ -405,6 +422,7 @@ export async function findNearbyHospitals(
     const fallback = await Hospital.find({
       isActive: true,
       emergencyAvailable: true,
+      type: { $ne: 'clinic' },
       'coordinates.lat': { $exists: true },
       'coordinates.lng': { $exists: true },
     }).limit(50);
@@ -412,6 +430,7 @@ export async function findNearbyHospitals(
     const withDistance: HospitalWithDistance[] = [];
 
     for (const h of fallback) {
+      if (!isEmergencyCapableDbHospital(h)) continue;
       const coords = hospitalCoords(h);
       if (!coords) continue;
       const distanceKm = calculateDistance(lat, lng, coords.lat, coords.lng);
@@ -455,17 +474,27 @@ export async function findNearbyHospitalsUnified(
 
   if (isGooglePlacesConfigured()) {
     try {
-      let places = await searchNearbyPlaces(lat, lng, radiusKm * 1000, 'hospital');
+      const radiusMeters = radiusKm * 1000;
+      const [nearbyRaw, textRaw] = await Promise.all([
+        searchNearbyPlaces(lat, lng, radiusMeters, 'hospital'),
+        searchHospitalsTextNearby(lat, lng, radiusMeters).catch(() => [] as GooglePlaceResult[]),
+      ]);
+      const byPlaceId = new Map<string, GooglePlaceResult>();
+      for (const place of [...nearbyRaw, ...textRaw]) {
+        byPlaceId.set(place.place_id, place);
+      }
+      let places = [...byPlaceId.values()].sort((a, b) => a.distanceMeters - b.distanceMeters);
       places = await enrichPlacesWithPhones(places, 8);
       usedGoogle = true;
       for (const place of places) {
+        if (!isEmergencyCapableGooglePlace(place)) continue;
         merged.set(`g:${place.place_id}`, {
           _id: place.place_id,
           name: place.name,
           address: place.address,
           phone: place.phone,
           specialties: place.specialtyTags,
-          emergencyAvailable: place.isEmergency,
+          emergencyAvailable: place.isEmergency || isRecognizedHospitalName(place.name),
           coordinates: place.coordinates,
           distanceMeters: place.distanceMeters,
           source: 'google_places',
@@ -482,6 +511,7 @@ export async function findNearbyHospitalsUnified(
       const osmRows = await searchOsmHospitals(lat, lng, radiusKm * 1000);
       if (osmRows.length > 0) usedOsm = true;
       for (const row of osmRows) {
+        if (!isRecognizedHospitalName(row.name)) continue;
         merged.set(`o:${row._id}`, { ...row });
       }
     } catch (err) {
@@ -496,6 +526,7 @@ export async function findNearbyHospitalsUnified(
   if (dbRows.length > 0) usedDb = true;
 
   for (const row of dbRows) {
+    if (!isEmergencyCapableDbHospital(row.hospital)) continue;
     const formatted = formatHospitalResponse(row.hospital, row.distanceMeters);
     const id = String(row.hospital._id);
     const nearDup = [...merged.values()].some(
@@ -528,13 +559,15 @@ export async function findNearbyHospitalsUnified(
 
   const partnerBoostMeters = isWithinHyderabadServiceArea(lat, lng) ? 1200 : 500;
 
-  const hospitals = [...merged.values()].sort((a, b) => {
+  const hospitals = filterEmergencyCapableHospitals(
+    [...merged.values()].sort((a, b) => {
     const scoreA =
       a.distanceMeters - (a.source === 'database' ? partnerBoostMeters : 0);
     const scoreB =
       b.distanceMeters - (b.source === 'database' ? partnerBoostMeters : 0);
     return scoreA - scoreB || a.distanceMeters - b.distanceMeters;
-  });
+  })
+  );
   const source: 'google_places' | 'database' | 'mixed' | 'openstreetmap' =
     usedGoogle && usedDb ? 'mixed' : usedGoogle ? 'google_places' : usedOsm && usedDb ? 'mixed' : usedOsm ? 'openstreetmap' : 'database';
 

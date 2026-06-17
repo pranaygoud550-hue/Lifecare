@@ -12,6 +12,7 @@ const ROLE_LABELS: Record<UserType, string> = {
   pharmacy: 'pharmacy staff',
   ambulance: 'ambulance operator',
   admin: 'administrator',
+  hospital_admin: 'hospital management',
 };
 
 function extractAccessToken(req: Request): string | null {

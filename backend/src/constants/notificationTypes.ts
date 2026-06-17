@@ -8,6 +8,7 @@ export const NOTIFICATION_TYPES = {
   SYSTEM: 'system',
   SCAN: 'scan',
   PROMOTIONAL: 'promotional',
+  BLOOD_EMERGENCY: 'blood_emergency',
 } as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
@@ -26,4 +27,5 @@ export const SOCKET_EVENTS = {
   SCAN_REVIEWED: 'scan:reviewed',
   SCAN_URGENT: 'scan:urgent',
   SCAN_BOOK_SUGGESTED: 'scan:book_suggested',
+  BLOOD_ALERT: 'blood:alert',
 } as const;

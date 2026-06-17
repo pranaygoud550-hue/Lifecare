@@ -5,6 +5,8 @@ import { CareLayout } from '@/components/common/CareLayout';
 import { DoctorShell } from '@/components/doctor/DoctorShell';
 import { AmbulanceShell } from '@/components/ambulance/AmbulanceShell';
 import { PharmacyShell } from '@/components/pharmacy/PharmacyShell';
+import { HospitalShell } from '@/components/hospital/HospitalShell';
+import { HospitalLegalGate } from '@/components/hospital/HospitalLegalGate';
 import { ProtectedRoute } from '@/components/common/ProtectedRoute';
 import { PageSkeleton } from '@/components/common/PageSkeleton';
 
@@ -40,6 +42,26 @@ const AdminDashboardPage = lazy(() =>
   import('@/pages/admin/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage }))
 );
 const AdminUsersPage = lazy(() => import('@/pages/admin/AdminUsersPage').then((m) => ({ default: m.AdminUsersPage })));
+const AdminHospitalStaffPage = lazy(() =>
+  import('@/pages/admin/AdminHospitalStaffPage').then((m) => ({ default: m.AdminHospitalStaffPage }))
+);
+const HospitalDashboardPage = lazy(() =>
+  import('@/pages/hospital/HospitalDashboardPage').then((m) => ({ default: m.HospitalDashboardPage }))
+);
+const HospitalBloodRequestPage = lazy(() =>
+  import('@/pages/hospital/HospitalBloodRequestPage').then((m) => ({ default: m.HospitalBloodRequestPage }))
+);
+const HospitalAlertDetailPage = lazy(() =>
+  import('@/pages/hospital/HospitalAlertDetailPage').then((m) => ({ default: m.HospitalAlertDetailPage }))
+);
+const HospitalLegalAcknowledgmentPage = lazy(() =>
+  import('@/pages/hospital/HospitalLegalAcknowledgmentPage').then((m) => ({
+    default: m.HospitalLegalAcknowledgmentPage,
+  }))
+);
+const BloodAlertsPage = lazy(() =>
+  import('@/pages/patient/BloodAlertsPage').then((m) => ({ default: m.BloodAlertsPage }))
+);
 const DoctorVerificationPage = lazy(() =>
   import('@/pages/doctor/DoctorVerificationPage').then((m) => ({ default: m.DoctorVerificationPage }))
 );
@@ -130,6 +152,17 @@ export function AppRoutes() {
           </Route>
         </Route>
 
+        <Route element={<ProtectedRoute allowedRoles={['hospital_admin']} />}>
+          <Route element={<HospitalShell />}>
+            <Route path="hospital/legal" element={<HospitalLegalAcknowledgmentPage />} />
+            <Route element={<HospitalLegalGate />}>
+              <Route path="hospital" element={<HospitalDashboardPage />} />
+              <Route path="hospital/blood-request" element={<HospitalBloodRequestPage />} />
+              <Route path="hospital/alerts/:id" element={<HospitalAlertDetailPage />} />
+            </Route>
+          </Route>
+        </Route>
+
         <Route element={<Layout />}>
           <Route index element={<HomePage />} />
           <Route path="login" element={<LoginPage />} />
@@ -167,6 +200,14 @@ export function AppRoutes() {
               element={
                 <Suspense fallback={<PageLoad variant="dashboard" />}>
                   <EmergencyHistoryPage />
+                </Suspense>
+              }
+            />
+            <Route
+              path="dashboard/blood-alerts"
+              element={
+                <Suspense fallback={<PageLoad variant="dashboard" />}>
+                  <BloodAlertsPage />
                 </Suspense>
               }
             />
@@ -226,6 +267,7 @@ export function AppRoutes() {
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
             <Route path="admin" element={<AdminDashboardPage />} />
             <Route path="admin/users" element={<AdminUsersPage />} />
+            <Route path="admin/hospital-staff" element={<AdminHospitalStaffPage />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

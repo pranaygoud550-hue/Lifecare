@@ -1,4 +1,7 @@
 import type { DietAdherenceStatus, MealSlot } from '../models/DietLog.js';
+import { MEAL_ORDER, mealsAfter } from './dietMealPlanner.js';
+
+export type { MealSlot };
 
 export type OffPlanCategory =
   | 'fried'
@@ -26,7 +29,7 @@ const MEAL_LABELS: Record<MealSlot, string> = {
 };
 
 const NEXT_MEAL: Record<MealSlot, MealSlot> = {
-  breakfast: 'snack',
+  breakfast: 'lunch',
   lunch: 'snack',
   snack: 'dinner',
   dinner: 'breakfast',
@@ -143,33 +146,60 @@ export function buildNextMealBalances(
     actualFood?: string;
     offPlanDescription?: string;
     offPlanCategory?: OffPlanCategory;
+    loggedAt?: Date | string;
   }>,
   flags: { highBp: boolean; highSugar: boolean; diabetic: boolean }
 ): NextMealBalance[] {
-  const issues = todayLogs.filter((l) => l.status === 'off_plan' || l.status === 'missed');
+  const issues = todayLogs
+    .filter((l) => l.status === 'off_plan' || l.status === 'missed')
+    .sort((a, b) => {
+      const ta = a.loggedAt ? new Date(a.loggedAt).getTime() : slotOrder(a.mealSlot);
+      const tb = b.loggedAt ? new Date(b.loggedAt).getTime() : slotOrder(b.mealSlot);
+      return tb - ta;
+    });
+
   if (issues.length === 0) return [];
 
+  const latest = issues[0]!;
+  const foodText =
+    latest.actualFood ||
+    latest.offPlanDescription ||
+    (latest.status === 'missed' ? `Skipped ${latest.mealSlot}` : 'Off-plan food');
+  const category =
+    latest.offPlanCategory ||
+    detectCategory(foodText, latest.status);
+
   const balances: NextMealBalance[] = [];
-  const seen = new Set<MealSlot>();
+  const upcoming = mealsAfter(latest.mealSlot);
 
-  for (const log of issues.sort((a, b) => slotOrder(a.mealSlot) - slotOrder(b.mealSlot))) {
-    const nextMeal = NEXT_MEAL[log.mealSlot];
-    if (seen.has(nextMeal)) continue;
-    seen.add(nextMeal);
-
-    const foodText = log.actualFood || log.offPlanDescription || (log.status === 'missed' ? 'Skipped meal' : 'Off-plan food');
-    const category =
-      log.offPlanCategory ||
-      detectCategory(foodText, log.status);
-
-    balances.push(balanceForCategory(category, nextMeal, flags, foodText));
+  for (const slot of upcoming.slice(0, 2)) {
+    balances.push(
+      balanceForCategory(
+        latest.status === 'missed' ? 'skipped_meal' : category,
+        slot,
+        flags,
+        latest.status === 'missed' ? `Skipped ${latest.mealSlot}` : foodText
+      )
+    );
   }
 
-  return balances.slice(0, 2);
+  if (balances.length === 0) {
+    const nextMeal = NEXT_MEAL[latest.mealSlot];
+    balances.push(
+      balanceForCategory(
+        latest.status === 'missed' ? 'skipped_meal' : category,
+        nextMeal,
+        flags,
+        foodText
+      )
+    );
+  }
+
+  return balances;
 }
 
 function slotOrder(slot: MealSlot): number {
   return { breakfast: 0, lunch: 1, snack: 2, dinner: 3 }[slot];
 }
 
-export { detectCategory, MEAL_LABELS, NEXT_MEAL };
+export { detectCategory, MEAL_LABELS, NEXT_MEAL, MEAL_ORDER };

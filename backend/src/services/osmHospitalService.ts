@@ -1,5 +1,6 @@
 import { calculateDistance } from '../utils/helpers.js';
 import { cacheGet, cacheSet, cacheKey } from './cacheService.js';
+import { isRecognizedHospitalName, isExcludedSmallClinicName } from '../utils/emergencyHospitalFilter.js';
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 const USER_AGENT = 'LifeCarePlus/1.0 (emergency hospital search)';
@@ -90,6 +91,11 @@ export async function searchOsmHospitals(
 
     const name = el.tags?.name;
     if (!name) continue;
+    if (isExcludedSmallClinicName(name)) continue;
+    if (el.tags?.healthcare === 'clinic' || el.tags?.amenity === 'clinic') continue;
+    if (!isRecognizedHospitalName(name) && el.tags?.emergency !== 'yes' && el.tags?.ambulance !== 'yes') {
+      continue;
+    }
 
     const dedupeKey = `${name.toLowerCase()}@${coords.lat.toFixed(3)},${coords.lng.toFixed(3)}`;
     if (seen.has(dedupeKey)) continue;

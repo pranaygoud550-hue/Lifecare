@@ -314,6 +314,18 @@ export const HYDERABAD_PARTNER_HOSPITALS: HyderabadHospitalSeed[] = [
     beds: 100,
     rating: 3.9,
   },
+  {
+    slug: 'cmr-hospital-kandlakoya',
+    name: 'CMR Hospital',
+    address: 'Kandlakoya, Medchal (M & D), Hyderabad',
+    phone: '+91 40 2790 3333',
+    lat: 17.5975988,
+    lng: 78.4889908,
+    type: 'multi-specialty',
+    specialties: ['Emergency', 'General Physician', 'Orthopedics'],
+    beds: 120,
+    rating: 4.0,
+  },
 ];
 
 /** Ambulance staging points across Hyderabad for faster dispatch demos */

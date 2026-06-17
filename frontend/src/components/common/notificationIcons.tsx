@@ -8,6 +8,7 @@ import {
   Car,
   AlertCircle,
   Scan,
+  Droplets,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ const iconMap: Record<string, typeof Bell> = {
   scan_urgent: Scan,
   RAPIDCARE_UPDATE: Ambulance,
   emergency_sync: Ambulance,
+  blood_emergency: Droplets,
 };
 
 export function NotificationIcon({
@@ -58,4 +60,5 @@ export const NOTIFICATION_FILTER_TYPES = [
   { id: 'system', label: 'System' },
   { id: 'scan', label: 'MediScan' },
   { id: 'scan_urgent', label: 'Urgent scans' },
+  { id: 'blood_emergency', label: 'Blood alerts' },
 ] as const;

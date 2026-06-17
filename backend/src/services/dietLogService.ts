@@ -7,6 +7,12 @@ import {
   type OffPlanCategory,
 } from '../models/DietLog.js';
 import { buildNextMealBalances, detectCategory, type NextMealBalance } from '../lib/dietBalanceAdvisor.js';
+import {
+  buildRecoveryMealsForUpcoming,
+  mealSlotKey,
+  type DailyDietSlots,
+  type PatientDietFlags,
+} from '../lib/dietMealPlanner.js';
 
 export interface DietAdherenceSummary {
   todayScore: number;
@@ -17,9 +23,15 @@ export interface DietAdherenceSummary {
   recentAlerts: string[];
   doctorNote: string;
   suggestedNextMeal?: string;
-  /** Specific add/avoid list for the next meal based on what they ate */
   nextMealBalances: NextMealBalance[];
   onTrack: boolean;
+  /** Meals auto-updated after skip/off-plan */
+  adjustedMeals: MealSlot[];
+  lastTrigger?: {
+    mealSlot: MealSlot;
+    status: DietAdherenceStatus;
+    food?: string;
+  };
 }
 
 function todayKey(d = new Date()): string {
@@ -85,6 +97,21 @@ export async function getTodayDietLogs(patientId: string) {
     .lean();
 }
 
+function findLatestIssue(
+  todayLogs: Array<{
+    mealSlot: MealSlot;
+    status: DietAdherenceStatus;
+    actualFood?: string;
+    offPlanDescription?: string;
+    offPlanCategory?: OffPlanCategory;
+    loggedAt?: Date | string;
+  }>
+) {
+  return todayLogs
+    .filter((l) => l.status === 'off_plan' || l.status === 'missed')
+    .sort((a, b) => new Date(b.loggedAt ?? 0).getTime() - new Date(a.loggedAt ?? 0).getTime())[0];
+}
+
 export function buildAdherenceSummary(
   logs: Array<{
     status: DietAdherenceStatus;
@@ -93,12 +120,12 @@ export function buildAdherenceSummary(
     actualFood?: string;
     offPlanDescription?: string;
     offPlanCategory?: OffPlanCategory;
+    loggedAt?: Date | string;
   }>,
   flags: { highBp: boolean; highSugar: boolean; diabetic: boolean }
 ): DietAdherenceSummary {
   const today = todayKey();
   const todayLogs = logs.filter((l) => l.dayKey === today);
-  const recent = logs.filter((l) => l.dayKey >= todayKey(new Date(Date.now() - 2 * 86400000)));
 
   const followedCount = todayLogs.filter((l) => l.status === 'followed').length;
   const missedCount = todayLogs.filter((l) => l.status === 'missed').length;
@@ -108,45 +135,48 @@ export function buildAdherenceSummary(
     mealsLoggedToday === 0 ? 100 : Math.round((followedCount / Math.max(mealsLoggedToday, 1)) * 100);
 
   const nextMealBalances = buildNextMealBalances(todayLogs, flags);
+  const latestIssue = findLatestIssue(todayLogs);
 
   const recentAlerts: string[] = [];
   let doctorNote =
-    'Log each meal so we know if you followed your plan or what you ate — we will balance your next meal.';
+    'Log each meal so we can tune your plan from your BP, sugar, and what you actually ate.';
   let suggestedNextMeal: string | undefined;
+  const adjustedMeals: MealSlot[] = [];
 
-  const recentOffPlan = recent.filter((l) => l.status === 'off_plan');
-  const recentMissed = recent.filter((l) => l.status === 'missed');
+  if (latestIssue) {
+    const ate =
+      latestIssue.actualFood ||
+      latestIssue.offPlanDescription ||
+      (latestIssue.status === 'missed' ? `skipped ${latestIssue.mealSlot}` : 'off-plan food');
 
-  for (const log of recentOffPlan.slice(0, 2)) {
-    const ate = log.actualFood || log.offPlanDescription || 'off-plan food';
-    recentAlerts.push(`You logged: "${ate}" — see what to add at your next meal below.`);
-  }
-
-  if (recentOffPlan.length > 0) {
-    doctorNote =
-      'You ate off-plan recently. Follow the “Balance your next meal” guide — it tells you exactly what to add and avoid.';
-    if (nextMealBalances[0]) {
-      suggestedNextMeal = `For ${nextMealBalances[0].forMealLabel}: add ${nextMealBalances[0].addThese.slice(0, 2).join(', ')}.`;
+    if (latestIssue.status === 'missed') {
+      recentAlerts.push(
+        `You skipped ${latestIssue.mealSlot} — your remaining meals today are updated (lighter, balanced portions).`
+      );
+      doctorNote =
+        'Skipping meals can spike sugar later. Do not skip the next slot — eat a smaller balanced plate.';
+    } else {
+      recentAlerts.push(`Last log: “${ate}” — upcoming meals adjusted to rebalance your day.`);
+      doctorNote =
+        'Your plan changed based on your last meal. Follow the updated lunch/snack/dinner below.';
     }
-  }
 
-  if (recentMissed.some((l) => l.mealSlot === 'breakfast')) {
-    recentAlerts.push('You skipped breakfast — do not overeat at lunch; eat a moderate balanced portion.');
-  }
-
-  if (recentMissed.length >= 2) {
-    doctorNote =
-      'Multiple missed meals today. Eat on time at the next slot with a smaller balanced plate.';
-  }
-
-  if (todayScore >= 80 && offPlanCount === 0 && missedCount === 0 && mealsLoggedToday >= 2) {
-    doctorNote = 'You are on track today. Keep following your plan and log vitals twice weekly.';
+    if (nextMealBalances[0]) {
+      suggestedNextMeal = `Next (${nextMealBalances[0].forMealLabel}): ${nextMealBalances[0].addThese.slice(0, 2).join(', ')}.`;
+    }
   }
 
   if (flags.highSugar || flags.diabetic) {
     if (offPlanCount > 0) {
       recentAlerts.push('Tip: log a post-meal sugar reading 1–2 hours after off-plan food.');
     }
+    if (missedCount > 0) {
+      recentAlerts.push('Missing meals can cause sugar swings — eat on time at the next slot.');
+    }
+  }
+
+  if (todayScore >= 80 && offPlanCount === 0 && missedCount === 0 && mealsLoggedToday >= 2) {
+    doctorNote = 'You are on track today. Keep following your plan and log vitals twice weekly.';
   }
 
   return {
@@ -160,31 +190,83 @@ export function buildAdherenceSummary(
     suggestedNextMeal,
     nextMealBalances,
     onTrack: offPlanCount === 0 && missedCount === 0 && mealsLoggedToday >= 1,
+    adjustedMeals,
+    lastTrigger: latestIssue
+      ? {
+          mealSlot: latestIssue.mealSlot,
+          status: latestIssue.status,
+          food: latestIssue.actualFood || latestIssue.offPlanDescription,
+        }
+      : undefined,
   };
 }
 
 export function applyAdherenceToDiet(
-  dailyDiet: { breakfast: string[]; lunch: string[]; dinner: string[]; snacks: string[] },
+  dailyDiet: DailyDietSlots,
   summary: DietAdherenceSummary,
-  _flags: { highBp: boolean; highSugar: boolean }
-): typeof dailyDiet {
-  if (summary.nextMealBalances.length === 0) return dailyDiet;
+  flags: PatientDietFlags,
+  todayLogs: Array<{
+    mealSlot: MealSlot;
+    status: DietAdherenceStatus;
+    actualFood?: string;
+    offPlanDescription?: string;
+    offPlanCategory?: OffPlanCategory;
+    loggedAt?: Date | string;
+  }>
+): DailyDietSlots {
+  const next: DailyDietSlots = {
+    breakfast: [...dailyDiet.breakfast],
+    lunch: [...dailyDiet.lunch],
+    dinner: [...dailyDiet.dinner],
+    snacks: [...dailyDiet.snacks],
+  };
 
+  const latest = findLatestIssue(todayLogs);
+  if (!latest) {
+    return applyBalanceHints(next, summary.nextMealBalances);
+  }
+
+  const category = latest.offPlanCategory || detectCategory(
+    latest.actualFood || latest.offPlanDescription || '',
+    latest.status
+  );
+
+  const recovery = buildRecoveryMealsForUpcoming(
+    latest.mealSlot,
+    latest.status === 'missed' ? 'missed' : 'off_plan',
+    category,
+    flags,
+    latest.actualFood || latest.offPlanDescription
+  );
+
+  for (const [slot, items] of Object.entries(recovery) as [MealSlot, string[]][]) {
+    const key = mealSlotKey(slot);
+    next[key] = items;
+    if (!summary.adjustedMeals.includes(slot)) {
+      summary.adjustedMeals.push(slot);
+    }
+  }
+
+  return applyBalanceHints(next, summary.nextMealBalances);
+}
+
+function applyBalanceHints(
+  dailyDiet: DailyDietSlots,
+  balances: NextMealBalance[]
+): DailyDietSlots {
   const next = { ...dailyDiet };
 
-  for (const balance of summary.nextMealBalances) {
-    const key = balance.forMeal === 'snack' ? 'snacks' : balance.forMeal;
-    const mealList = [...next[key]];
-
-    mealList.unshift(
-      `Adjusted for “${balance.becauseYouAte}”: add ${balance.addThese.slice(0, 2).join(', ')}`
-    );
-    mealList.push(`Skip at ${balance.forMealLabel.toLowerCase()}: ${balance.avoidThese.slice(0, 2).join('; ')}`);
-    if (balance.portionTip) {
-      mealList.push(balance.portionTip);
+  for (const balance of balances) {
+    const key = mealSlotKey(balance.forMeal);
+    const existing = [...next[key]];
+    const header = `Balance tip (${balance.forMealLabel}): add ${balance.addThese.slice(0, 2).join(', ')}`;
+    if (!existing.some((line) => line.startsWith('Balance tip'))) {
+      existing.unshift(header);
     }
-
-    next[key] = mealList.slice(0, 8);
+    if (balance.portionTip && !existing.includes(balance.portionTip)) {
+      existing.push(balance.portionTip);
+    }
+    next[key] = existing.slice(0, 8);
   }
 
   return next;

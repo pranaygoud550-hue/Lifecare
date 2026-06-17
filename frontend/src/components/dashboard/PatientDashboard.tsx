@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Loader2, Droplets } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -21,6 +22,8 @@ import { DashboardCareSection } from '@/components/dashboard/DashboardCareSectio
 import { DashboardProfileSection } from '@/components/dashboard/DashboardProfileSection';
 import { LifeCareAmbulanceCard } from '@/components/dashboard/LifeCareAmbulanceCard';
 import { EmergencyHistory } from '@/components/patient/EmergencyHistory';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import type { ScanReport } from '@/types/mediscan';
 import type { Appointment, Prescription, VitalReading } from '@/types';
 import type { DashboardTab } from '@/components/dashboard/DashboardSectionNav';
@@ -111,6 +114,26 @@ export function PatientDashboard() {
         {activeTab === 'overview' && (
           <>
             <LifeCareAmbulanceCard />
+            <Card className="border-red-200/70 bg-gradient-to-r from-red-50/80 to-rose-50/40">
+              <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-red-100">
+                    <Droplets className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Blood needed in Hyderabad</p>
+                    <p className="text-sm text-muted">
+                      If your blood group matches an emergency request, hospitals will notify you here.
+                    </p>
+                  </div>
+                </div>
+                <Link to="/dashboard/blood-alerts">
+                  <Button size="sm" className="bg-red-600 hover:bg-red-700">
+                    View alerts
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
             <DashboardOverviewSection
               latestVitals={latestVitals}
               scans={scans}

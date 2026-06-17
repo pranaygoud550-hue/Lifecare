@@ -25,6 +25,7 @@ const typeToSocketEvent: Record<string, string> = {
   scan_complete: SOCKET_EVENTS.SCAN_COMPLETE,
   scan_urgent: SOCKET_EVENTS.SCAN_URGENT,
   scan_book_suggested: SOCKET_EVENTS.SCAN_BOOK_SUGGESTED,
+  [NOTIFICATION_TYPES.BLOOD_EMERGENCY]: SOCKET_EVENTS.BLOOD_ALERT,
 };
 
 export const createNotification = async (params: CreateNotificationParams) => {

@@ -23,6 +23,7 @@ export const ALL_DEMO_PHONES = [
   '9876543211',
   '9876543215',
   '9876543216',
+  '9876543299',
   '9999999999',
 ] as const;
 
@@ -32,6 +33,7 @@ export function getPostLoginPath(user: User): string {
   if (user.userType === 'doctor') return '/doctor/patients';
   if (user.userType === 'ambulance') return '/driver';
   if (user.userType === 'pharmacy') return '/pharmacy/portal';
+  if (user.userType === 'hospital_admin') return '/hospital';
   return '/dashboard';
 }
 

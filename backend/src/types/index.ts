@@ -1,4 +1,4 @@
-export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin';
+export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin' | 'hospital_admin';
 
 export type AmbulanceUnitStatus = 'idle' | 'dispatched' | 'returning';
 

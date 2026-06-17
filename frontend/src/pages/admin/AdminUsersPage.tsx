@@ -48,7 +48,7 @@ export function AdminUsersPage() {
       <p className="text-muted mb-8">Verify, manage, and monitor platform users</p>
 
       <div className="flex gap-2 mb-6 flex-wrap">
-        {['', 'patient', 'doctor', 'pharmacy', 'ambulance'].map((type) => (
+        {['', 'patient', 'doctor', 'pharmacy', 'ambulance', 'hospital_admin'].map((type) => (
           <Button
             key={type || 'all'}
             variant={userType === type ? 'default' : 'outline'}

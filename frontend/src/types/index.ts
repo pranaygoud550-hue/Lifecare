@@ -1,6 +1,6 @@
 import type { ScanReport } from './mediscan';
 
-export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin';
+export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin' | 'hospital_admin';
 
 export interface User {
   _id: string;
@@ -87,6 +87,11 @@ export interface User {
     licenseNumber?: string;
     deliveryRadius?: number;
     rating?: number;
+  };
+  hospitalAdminDetails?: {
+    hospitalId?: string | { _id: string; name: string; city?: string; address?: string };
+    designation?: string;
+    verified?: boolean;
   };
   ambulanceDetails?: {
     driverName?: string;

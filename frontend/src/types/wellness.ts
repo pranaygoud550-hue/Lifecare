@@ -31,6 +31,20 @@ export interface DietAdherenceSummary {
   suggestedNextMeal?: string;
   nextMealBalances: NextMealBalance[];
   onTrack: boolean;
+  adjustedMeals?: MealSlot[];
+  lastTrigger?: {
+    mealSlot: MealSlot;
+    status: DietAdherenceStatus;
+    food?: string;
+  };
+}
+
+export type VitalTrend = 'rising' | 'stable' | 'improving' | 'falling';
+
+export interface VitalTrends {
+  bpTrend?: VitalTrend;
+  sugarTrend?: VitalTrend;
+  weightTrend?: 'rising' | 'stable' | 'falling';
 }
 
 export interface TodayMealLog {
@@ -84,6 +98,7 @@ export interface WellnessPlan {
   disclaimers: string[];
   adherence?: DietAdherenceSummary;
   todayMeals?: TodayMealLog[];
+  vitalTrends?: VitalTrends;
 }
 
 export interface DietLogEntry {

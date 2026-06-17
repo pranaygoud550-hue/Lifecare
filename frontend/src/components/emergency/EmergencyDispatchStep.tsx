@@ -197,7 +197,8 @@ export function EmergencyDispatchStep() {
             <Ambulance className="h-4 w-4" /> What happens
           </p>
           <ul className="text-sm text-white/90 space-y-2 list-disc list-inside">
-            <li>We find the nearest hospital in Hyderabad</li>
+            <li>We match the nearest hospital with ambulance service (e.g. CMR, Konark, local hospitals)</li>
+            <li>Small clinics, dental & diagnostic centres are not used for SOS routing</li>
             <li>Nearest available ambulance is dispatched to you</li>
             <li>Live map with route appears automatically</li>
           </ul>

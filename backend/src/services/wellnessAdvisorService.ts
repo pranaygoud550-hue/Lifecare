@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { User, VitalReading, ScanReport } from '../models/index.js';
+import { User, VitalReading, ScanReport, DoctorCarePlan } from '../models/index.js';
 import type { IUser } from '../models/User.js';
 import type { IVitalReading } from '../models/VitalReading.js';
 import type { IScanReport } from '../models/ScanReport.js';
@@ -12,6 +12,13 @@ import {
   applyAdherenceToDiet,
   type DietAdherenceSummary,
 } from './dietLogService.js';
+import {
+  buildPersonalizedDailyMeals,
+  computeVitalTrends,
+  enrichVitalTipsWithTrends,
+  type PatientDietFlags,
+  type VitalTrends,
+} from '../lib/dietMealPlanner.js';
 
 export type WellnessStatus = 'good' | 'needs_attention' | 'consult_doctor';
 
@@ -56,7 +63,14 @@ export interface WellnessPlan {
   weeklyGoals: string[];
   disclaimers: string[];
   adherence?: DietAdherenceSummary;
-  todayMeals?: Array<{ mealSlot: string; status: string; offPlanDescription?: string }>;
+  todayMeals?: Array<{
+    mealSlot: string;
+    status: string;
+    actualFood?: string;
+    offPlanDescription?: string;
+    offPlanCategory?: string;
+  }>;
+  vitalTrends?: VitalTrends;
 }
 
 type VitalEval = 'normal' | 'elevated' | 'concerning';
@@ -171,11 +185,71 @@ export async function buildWellnessPlanForPatient(patientId: string): Promise<We
   const dietLogs = await getDietLogsForPatient(patientId, 7);
   const todayMeals = await getTodayDietLogs(patientId);
 
-  const basePlan = composeWellnessPlan(user, latestVitals, scans, recentPrescriptions);
+  const [carePlans, bpHistory, sugarHistory, weightHistory] = await Promise.all([
+    DoctorCarePlan.find({
+      patientId: new Types.ObjectId(patientId),
+      publishedToPatient: true,
+    })
+      .sort({ createdAt: -1 })
+      .limit(2)
+      .select('dietInstructions dos donts title createdAt')
+      .lean(),
+    VitalReading.find({ patientId: new Types.ObjectId(patientId), type: 'blood_pressure' })
+      .sort({ recordedAt: -1 })
+      .limit(2)
+      .select('systolic diastolic recordedAt')
+      .lean(),
+    VitalReading.find({ patientId: new Types.ObjectId(patientId), type: 'blood_sugar' })
+      .sort({ recordedAt: -1 })
+      .limit(2)
+      .select('glucose recordedAt')
+      .lean(),
+    VitalReading.find({ patientId: new Types.ObjectId(patientId), type: 'weight' })
+      .sort({ recordedAt: -1 })
+      .limit(2)
+      .select('value recordedAt')
+      .lean(),
+  ]);
+
+  const doctorDietNotes = carePlans
+    .flatMap((p) => [
+      p.dietInstructions?.trim(),
+      ...(p.dos ?? []).map((d) => `Do: ${d}`),
+      ...(p.donts ?? []).map((d) => `Avoid: ${d}`),
+    ])
+    .filter(Boolean) as string[];
+
+  const vitalTrends = computeVitalTrends(bpHistory, sugarHistory, weightHistory);
+
+  const basePlan = composeWellnessPlan(
+    user,
+    latestVitals,
+    scans,
+    recentPrescriptions,
+    doctorDietNotes,
+    vitalTrends
+  );
 
   const highBp = basePlan.vitalInsights.some((v) => v.type === 'blood_pressure' && v.status !== 'good');
   const highSugar = basePlan.vitalInsights.some((v) => v.type === 'blood_sugar' && v.status !== 'good');
-  const diabetic = hasCondition(user.medicalHistory?.chronicConditions ?? [], [/diabet/i, /sugar/i]);
+  const conditions = [
+    ...(user.medicalHistory?.chronicConditions ?? []),
+    ...(user.medicalHistory?.familyHistory ?? []),
+  ];
+  const diabetic = hasCondition(conditions, [/diabet/i, /sugar/i, /glucose/i]);
+  const hypertensive = hasCondition(conditions, [/hypertens/i, /high blood pressure/i, /bp/i]);
+  const kidney = hasCondition(conditions, [/kidney/i, /renal/i, /ckd/i]);
+  const bmi = basePlan.bmi;
+
+  const dietFlags: PatientDietFlags = {
+    diabetic,
+    hypertensive,
+    highBp,
+    highSugar,
+    overweight: bmi?.category === 'Overweight' || bmi?.category === 'Obesity',
+    underweight: bmi?.category === 'Underweight',
+    kidney,
+  };
 
   const adherence = buildAdherenceSummary(dietLogs, {
     highBp,
@@ -183,16 +257,28 @@ export async function buildWellnessPlanForPatient(patientId: string): Promise<We
     diabetic,
   });
 
-  const dailyDiet = applyAdherenceToDiet(basePlan.dailyDiet, adherence, { highBp, highSugar });
+  const dailyDiet = applyAdherenceToDiet(
+    basePlan.dailyDiet,
+    adherence,
+    dietFlags,
+    todayMeals
+  );
 
   if (adherence.mealsLoggedToday > 0) {
     basePlan.dataUsed.push('Today’s meal adherence log');
+  }
+  if (carePlans.length) {
+    basePlan.dataUsed.push('Doctor care plan diet instructions');
+  }
+  if (vitalTrends.bpTrend || vitalTrends.sugarTrend || vitalTrends.weightTrend) {
+    basePlan.dataUsed.push('Vital trends (last 2 readings)');
   }
 
   return {
     ...basePlan,
     dailyDiet,
     adherence,
+    vitalTrends,
     todayMeals: todayMeals.map((m) => ({
       mealSlot: m.mealSlot,
       status: m.status,
@@ -221,7 +307,9 @@ function composeWellnessPlan(
   user: IUser,
   latestVitals: IVitalReading[],
   scans: IScanReport[],
-  prescriptions: Array<{ diagnosis?: string; advice?: string; medications?: Array<{ medicineName: string; beforeAfterFood?: string }>; date?: Date }>
+  prescriptions: Array<{ diagnosis?: string; advice?: string; medications?: Array<{ medicineName: string; beforeAfterFood?: string }>; date?: Date }>,
+  doctorDietNotes: string[] = [],
+  vitalTrends: VitalTrends = {}
 ): WellnessPlan {
   const mh = user.medicalHistory;
   const dataUsed: string[] = [];
@@ -442,16 +530,46 @@ function composeWellnessPlan(
     });
   }
 
-  // Indian vegetarian-friendly daily template — tuned to latest vitals (not a fixed menu)
-  const dailyDiet = buildDailyMealPlan(
+  const bpInsight = vitalInsights.find((v) => v.type === 'blood_pressure');
+  const sugarInsight = vitalInsights.find((v) => v.type === 'blood_sugar');
+  const hrInsight = vitalInsights.find((v) => v.type === 'heart_rate');
+
+  const vitalTips = enrichVitalTipsWithTrends(
+    {
+      bp: bpInsight && bpInsight.status !== 'good' ? `${bpInsight.value}: ${bpInsight.dietTip}` : undefined,
+      sugar:
+        sugarInsight && sugarInsight.status !== 'good'
+          ? `${sugarInsight.value}: ${sugarInsight.dietTip}`
+          : undefined,
+      hr:
+        hrInsight && hrInsight.status !== 'good'
+          ? `${hrInsight.value}: lighter meals, limit caffeine`
+          : undefined,
+    },
+    vitalTrends,
     {
       diabetic,
       hypertensive: hypertensive || heart,
       highBp: vitalInsights.some((v) => v.type === 'blood_pressure' && v.status !== 'good'),
       highSugar: vitalInsights.some((v) => v.type === 'blood_sugar' && v.status !== 'good'),
       overweight: bmi?.category === 'Overweight' || bmi?.category === 'Obesity',
+      underweight: bmi?.category === 'Underweight',
+      kidney,
+    }
+  );
+
+  const dailyDiet = buildPersonalizedDailyMeals(
+    {
+      diabetic,
+      hypertensive: hypertensive || heart,
+      highBp: vitalInsights.some((v) => v.type === 'blood_pressure' && v.status !== 'good'),
+      highSugar: vitalInsights.some((v) => v.type === 'blood_sugar' && v.status !== 'good'),
+      overweight: bmi?.category === 'Overweight' || bmi?.category === 'Obesity',
+      underweight: bmi?.category === 'Underweight',
+      kidney,
     },
-    vitalInsights
+    vitalTips,
+    doctorDietNotes
   );
 
   if (foodsToFavor.length === 0) {
@@ -509,75 +627,6 @@ function composeWellnessPlan(
       'If you feel chest pain, severe breathlessness, or very high sugar/BP, seek care immediately.',
     ],
   };
-}
-
-function buildDailyMealPlan(
-  flags: {
-    diabetic: boolean;
-    hypertensive: boolean;
-    highBp: boolean;
-    highSugar: boolean;
-    overweight: boolean;
-  },
-  vitalInsights: WellnessVitalInsight[] = []
-): WellnessPlan['dailyDiet'] {
-  const lowSalt = flags.hypertensive || flags.highBp;
-  const lowGi = flags.diabetic || flags.highSugar;
-
-  const bp = vitalInsights.find((v) => v.type === 'blood_pressure');
-  const sugar = vitalInsights.find((v) => v.type === 'blood_sugar');
-  const hr = vitalInsights.find((v) => v.type === 'heart_rate');
-
-  const breakfast: string[] = lowGi
-    ? [
-        'Vegetable upma or oats with minimal sugar',
-        'Boiled egg or paneer slice (if you eat dairy)',
-        'Tea/coffee with little or no sugar',
-      ]
-    : [
-        'Idli/dosa with sambar (less salt) or poha with peas',
-        'Fruit: apple or papaya',
-        'Protein: curd or sprouts',
-      ];
-
-  if (bp && bp.status !== 'good') {
-    breakfast.unshift(`Your BP ${bp.value}: low-salt start — ${bp.dietTip}`);
-  }
-  if (sugar && sugar.status !== 'good') {
-    breakfast.push(`Your sugar ${sugar.value}: ${sugar.dietTip}`);
-  }
-  if (hr && hr.status !== 'good') {
-    breakfast.push(`Heart rate ${hr.value}: lighter breakfast, limit caffeine today.`);
-  }
-
-  const lunch: string[] = [
-    lowSalt ? 'Salad first (cucumber, carrot, tomato)' : 'Fresh salad',
-    lowGi ? '2 phulka or brown rice + dal + sabzi' : 'Roti + dal + seasonal vegetable',
-    'Curd or buttermilk (low salt)',
-  ];
-  if (flags.highBp) {
-    lunch.push('No pickle/papad — your latest BP needs less sodium at lunch.');
-  }
-  if (flags.highSugar) {
-    lunch.push('Skip white rice seconds; walk 10 min after lunch if you can.');
-  }
-
-  const dinner: string[] = [
-    lowGi ? 'Light dinner before 8:30 pm: soup + dal + vegetables' : 'Khichdi or roti with vegetables',
-    'Avoid heavy fried food at night',
-    flags.overweight ? 'Smaller portion than lunch' : 'Moderate portion',
-  ];
-  if (lowGi && sugar && sugar.status !== 'good') {
-    dinner.unshift(`Evening rule (sugar ${sugar.value}): no sweets or fruit juice after dinner.`);
-  }
-
-  const snacks: string[] = [
-    flags.diabetic ? 'Handful roasted chana or peanuts (if no allergy)' : 'Fruit or roasted makhana',
-    'Green tea or buttermilk',
-    'Avoid biscuits, soda, and sweets between meals',
-  ];
-
-  return { breakfast: breakfast.slice(0, 6), lunch: lunch.slice(0, 6), dinner: dinner.slice(0, 6), snacks };
 }
 
 function buildSummary(

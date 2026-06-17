@@ -20,7 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import type { WellnessStatus } from '@/types/wellness';
+import type { WellnessStatus, MealSlot } from '@/types/wellness';
 import type { LucideIcon } from 'lucide-react';
 
 function statusBadge(status: WellnessStatus) {
@@ -59,7 +59,15 @@ const MEAL_CONFIG: Record<
   },
 };
 
-function MealBlock({ title, items }: { title: string; items: string[] }) {
+function MealBlock({
+  title,
+  items,
+  adjusted,
+}: {
+  title: string;
+  items: string[];
+  adjusted?: boolean;
+}) {
   const config = MEAL_CONFIG[title] ?? MEAL_CONFIG.Lunch;
   const Icon = config.icon;
 
@@ -67,15 +75,23 @@ function MealBlock({ title, items }: { title: string; items: string[] }) {
     <div
       className={cn(
         'rounded-2xl border-2 p-5 transition-all hover:shadow-lg hover:-translate-y-0.5 wellness-card-shine lc-hover-lift lc-card-pop',
-        config.className
+        config.className,
+        adjusted && 'ring-2 ring-amber-400/80 ring-offset-2'
       )}
     >
       <div className="flex items-center gap-2.5 mb-3">
         <div className="p-2 rounded-xl bg-white/70 shadow-sm">
           <Icon className={cn('h-5 w-5', config.iconColor)} />
         </div>
-        <div>
-          <p className="text-sm font-bold text-foreground">{title}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-sm font-bold text-foreground">{title}</p>
+            {adjusted && (
+              <Badge variant="warning" className="text-[10px]">
+                Updated for you
+              </Badge>
+            )}
+          </div>
           <p className="text-[10px] text-muted uppercase tracking-wider">{config.emoji}</p>
         </div>
       </div>
@@ -176,6 +192,8 @@ export function WellnessDietPanel({ compact }: { compact?: boolean }) {
 
   const overall = statusBadge(plan.overallStatus);
   const todayScore = plan.adherence?.todayScore ?? 0;
+  const adjustedMeals = plan.adherence?.adjustedMeals ?? [];
+  const isAdjusted = (slot: MealSlot) => adjustedMeals.includes(slot);
 
   if (compact) {
     const slot = currentMealSlot();
@@ -450,11 +468,28 @@ export function WellnessDietPanel({ compact }: { compact?: boolean }) {
             </p>
           </div>
         </div>
+
+        {plan.adherence?.lastTrigger && (
+          <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+            <p className="font-semibold mb-1">Plan updated after your last meal log</p>
+            <p className="text-amber-900/90">
+              {plan.adherence.lastTrigger.status === 'missed'
+                ? `You skipped ${plan.adherence.lastTrigger.mealSlot}. Remaining meals are lighter and balanced.`
+                : `After “${plan.adherence.lastTrigger.food || 'off-plan food'}”, upcoming meals were adjusted.`}
+            </p>
+            {plan.adherence.recentAlerts.map((a) => (
+              <p key={a} className="text-xs mt-2 text-amber-800">
+                {a}
+              </p>
+            ))}
+          </div>
+        )}
+
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
-          <MealBlock title="Breakfast" items={plan.dailyDiet.breakfast} />
-          <MealBlock title="Lunch" items={plan.dailyDiet.lunch} />
-          <MealBlock title="Dinner" items={plan.dailyDiet.dinner} />
-          <MealBlock title="Snacks" items={plan.dailyDiet.snacks} />
+          <MealBlock title="Breakfast" items={plan.dailyDiet.breakfast} adjusted={isAdjusted('breakfast')} />
+          <MealBlock title="Lunch" items={plan.dailyDiet.lunch} adjusted={isAdjusted('lunch')} />
+          <MealBlock title="Dinner" items={plan.dailyDiet.dinner} adjusted={isAdjusted('dinner')} />
+          <MealBlock title="Snacks" items={plan.dailyDiet.snacks} adjusted={isAdjusted('snack')} />
         </div>
       </div>
 

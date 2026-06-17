@@ -2,7 +2,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Menu, X, User, LogOut, Calendar, ShoppingCart,
-  FileText, Video, LayoutDashboard, ScanLine, Sparkles, Pill,
+  FileText, Video, LayoutDashboard, ScanLine, Sparkles, Pill, Droplets,
 } from 'lucide-react';
 import { LifeCareLogo } from '@/components/brand/LifeCareLogo';
 import { useState, useMemo } from 'react';
@@ -28,7 +28,7 @@ export function Header() {
     location.pathname.startsWith(p)
   );
 
-  const showCareNav = isAuthenticated && user && !['admin', 'pharmacy', 'ambulance'].includes(user.userType);
+  const showCareNav = isAuthenticated && user && !['admin', 'pharmacy', 'ambulance', 'hospital_admin'].includes(user.userType);
 
   const { data: liveCountData } = useGetLiveConsultationCountQuery(undefined, {
     skip: !showCareNav,
@@ -58,6 +58,7 @@ export function Header() {
     () => [
       { to: '/dashboard', label: t('nav.dashboard'), icon: LayoutDashboard },
       { to: '/dashboard?tab=care', label: t('nav.myCare'), icon: Calendar },
+      { to: '/dashboard/blood-alerts', label: 'Blood alerts', icon: Droplets },
     ],
     [t]
   );

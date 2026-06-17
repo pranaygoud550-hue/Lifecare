@@ -19,6 +19,7 @@ const ROLE_KEYS: Record<string, string> = {
   doctor: 'dashboard.roleDoctor',
   admin: 'dashboard.roleAdmin',
   ambulance: 'dashboard.roleAmbulance',
+  hospital_admin: 'Hospital management',
 };
 
 /** Non-patient dashboards (doctor, admin, ambulance) */
@@ -202,6 +203,10 @@ export function DashboardPage() {
 
   if (user?.userType === 'admin') {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (user?.userType === 'hospital_admin') {
+    return <Navigate to="/hospital" replace />;
   }
 
   if (user?.userType === 'patient') {

@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
-export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin';
+export type UserType = 'patient' | 'doctor' | 'pharmacy' | 'ambulance' | 'admin' | 'hospital_admin';
 
 export interface IUser extends Document {
   userType: UserType;
@@ -104,6 +104,16 @@ export interface IUser extends Document {
     verified?: boolean;
     rating?: number;
   };
+  hospitalAdminDetails?: {
+    hospitalId?: mongoose.Types.ObjectId;
+    designation?: string;
+    verified?: boolean;
+    bloodBankLicenseNumber?: string;
+    hospitalAuthorizationId?: string;
+    legalAcknowledgedAt?: Date;
+    legalAcknowledgedBy?: string;
+    legalTermsVersion?: string;
+  };
   ambulanceDetails?: {
     driverName?: string;
     licenseNumber?: string;
@@ -153,7 +163,7 @@ const userSchema = new Schema<IUser>(
   {
     userType: {
       type: String,
-      enum: ['patient', 'doctor', 'pharmacy', 'ambulance', 'admin'],
+      enum: ['patient', 'doctor', 'pharmacy', 'ambulance', 'admin', 'hospital_admin'],
       required: true,
     },
     email: { type: String, required: true, unique: true, lowercase: true, index: true },
@@ -261,6 +271,16 @@ const userSchema = new Schema<IUser>(
       deliveryRadius: Number,
       verified: { type: Boolean, default: false },
       rating: { type: Number, default: 0 },
+    },
+    hospitalAdminDetails: {
+      hospitalId: { type: Schema.Types.ObjectId, ref: 'Hospital' },
+      designation: String,
+      verified: { type: Boolean, default: false },
+      bloodBankLicenseNumber: String,
+      hospitalAuthorizationId: String,
+      legalAcknowledgedAt: Date,
+      legalAcknowledgedBy: String,
+      legalTermsVersion: String,
     },
     ambulanceDetails: {
       driverName: String,

@@ -18,6 +18,10 @@ import {
   getMyPublishedCarePlans,
 } from '../controllers/healthSharingController.js';
 import { postDietLog, getDietLogs, getTodayDietLog } from '../controllers/dietLogController.js';
+import {
+  getActiveBloodAlerts,
+  postBloodAlertResponse,
+} from '../controllers/bloodEmergencyController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -33,6 +37,8 @@ import {
   vitalIdParamSchema,
   dietLogSchema,
   dietLogsQuerySchema,
+  bloodAlertIdParamSchema,
+  bloodAlertRespondSchema,
 } from '../utils/schemas.js';
 
 const router = Router();
@@ -72,5 +78,13 @@ router.get('/care-plans', authorize('patient'), getMyPublishedCarePlans);
 router.post('/diet-log', authorize('patient'), validate(dietLogSchema), postDietLog);
 router.get('/diet-log/today', authorize('patient'), getTodayDietLog);
 router.get('/diet-log', authorize('patient'), validate(dietLogsQuerySchema), getDietLogs);
+
+router.get('/blood-alerts/active', authorize('patient'), getActiveBloodAlerts);
+router.post(
+  '/blood-alerts/:id/respond',
+  authorize('patient'),
+  validate(bloodAlertRespondSchema),
+  postBloodAlertResponse
+);
 
 export default router;

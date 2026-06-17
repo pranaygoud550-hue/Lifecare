@@ -149,7 +149,7 @@ export function HospitalSearchPicker({
 
       {!trimmed && nearbyHospitals.length > 0 && !open && (
         <p className="text-xs text-white/50 mt-2">
-          {nearbyHospitals.length} hospitals near you — tap the field to see all names
+          {nearbyHospitals.length} emergency hospitals (ambulance service) near you — tap to see all
         </p>
       )}
     </div>

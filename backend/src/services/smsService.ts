@@ -53,3 +53,12 @@ export async function sendEmergencyDispatchSms(params: {
     `Driver: ${params.driverName}. Vehicle: ${params.vehicleNumber}. Track: ${params.trackLink}`;
   return sendSms(params.to, body);
 }
+
+export async function sendBloodAlertSms(params: {
+  to: string;
+  bloodGroup: string;
+  hospitalName: string;
+}) {
+  const body = `URGENT: ${params.bloodGroup} blood needed at ${params.hospitalName}. Open LifeCare+ for directions.`;
+  return sendSms(params.to, body);
+}

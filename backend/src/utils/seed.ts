@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import connectDB from '../config/database.js';
-import { User, Medicine, Coupon, Review, HealthRecord, Notification, Hospital, AmbulanceUnit } from '../models/index.js';
+import { User, Medicine, Coupon, Review, HealthRecord, Notification, Hospital, AmbulanceUnit, BloodEmergencyAlert } from '../models/index.js';
 import { ensureInterviewDemoAppointment } from '../services/interviewDemoService.js';
 import { slugify } from '../utils/cities.js';
 
@@ -567,6 +567,68 @@ export const runSeed = async () => {
     ]);
   }
 
+  // Blood emergency — hospital admin + Hyderabad donors
+  const apolloHyd = await Hospital.findOne({ name: 'Apollo Hospitals Hyderabad' });
+  if (apolloHyd) {
+    const hospitalAdmin = await User.findOneAndUpdate(
+      { email: 'hospital@lifecare.com' },
+      {
+        userType: 'hospital_admin',
+        email: 'hospital@lifecare.com',
+        phone: '9876543299',
+        password: hashedPassword,
+        isEmailVerified: true,
+        isPhoneVerified: true,
+        profile: { firstName: 'Priya', lastName: 'Coordinator' },
+        hospitalAdminDetails: {
+          hospitalId: apolloHyd._id,
+          designation: 'Blood bank coordinator',
+          verified: true,
+          bloodBankLicenseNumber: 'TS-BB-APOLLO-HYD-DEMO',
+          hospitalAuthorizationId: 'NABH-DEMO-001',
+          legalAcknowledgedAt: new Date(),
+          legalAcknowledgedBy: 'Priya Coordinator',
+          legalTermsVersion: '2026-06-16',
+        },
+      },
+      { upsert: true, new: true }
+    );
+
+    const hyderabadDonors = [
+      { email: 'donor.oplus@demo.com', phone: '9876501001', firstName: 'Arjun', lastName: 'Rao', bloodGroup: 'O+' },
+      { email: 'donor.aminus@demo.com', phone: '9876501002', firstName: 'Sneha', lastName: 'Iyer', bloodGroup: 'A-' },
+      { email: 'donor.bplus@demo.com', phone: '9876501003', firstName: 'Kiran', lastName: 'Das', bloodGroup: 'B+' },
+      { email: 'donor.abplus@demo.com', phone: '9876501004', firstName: 'Meera', lastName: 'Naidu', bloodGroup: 'AB+' },
+    ];
+
+    for (const d of hyderabadDonors) {
+      await User.findOneAndUpdate(
+        { email: d.email },
+        {
+          userType: 'patient',
+          email: d.email,
+          phone: d.phone,
+          password: hashedPassword,
+          isEmailVerified: true,
+          profile: {
+            firstName: d.firstName,
+            lastName: d.lastName,
+            address: { city: 'Hyderabad', state: 'Telangana', country: 'India' },
+          },
+          medicalHistory: {
+            bloodGroup: d.bloodGroup,
+            profileCompleted: true,
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
+
+    if (hospitalAdmin) {
+      await BloodEmergencyAlert.deleteMany({ hospitalId: apolloHyd._id, notes: 'Demo accident — need donors at blood bank' });
+    }
+  }
+
   await ensureInterviewDemoAppointment();
 
   console.log('Database seeded successfully!');
@@ -576,6 +638,8 @@ export const runSeed = async () => {
   console.log('  Doctor:   dr.sharma@lifecare.com');
   console.log('  Pharmacy: pharmacy@lifecare.com');
   console.log('  Ambulance: ambulance@lifecare.com');
+  console.log('  Hospital: hospital@lifecare.com (Apollo Hyderabad blood alerts)');
+  console.log('  Donors:   donor.oplus@demo.com (+ A-, B+, AB+ Hyderabad patients)');
 };
 
 type SeedMedicine = {

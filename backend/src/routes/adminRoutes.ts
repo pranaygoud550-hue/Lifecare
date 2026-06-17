@@ -17,6 +17,11 @@ import {
   approveDoctorVerification,
   rejectDoctorVerification,
 } from '../controllers/doctorVerificationController.js';
+import {
+  createHospitalAdmin,
+  getHospitalAdmins,
+  getAdminBloodAlerts,
+} from '../controllers/hospitalAdminController.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import {
@@ -25,6 +30,7 @@ import {
   doctorIdParamSchema,
   adminRejectDoctorSchema,
   adminModerateReviewSchema,
+  createHospitalAdminSchema,
 } from '../utils/schemas.js';
 
 const router = Router();
@@ -46,5 +52,8 @@ router.get('/reviews/pending', getPendingReviews);
 router.put('/reviews/:id/moderate', validate(adminModerateReviewSchema), moderateReview);
 router.put('/users/:id/verify', validate(doctorIdParamSchema), verifyUser);
 router.put('/users/:id/block', validate(adminBlockUserSchema), blockUser);
+router.post('/hospital-admins', validate(createHospitalAdminSchema), createHospitalAdmin);
+router.get('/hospital-admins', getHospitalAdmins);
+router.get('/blood-alerts', getAdminBloodAlerts);
 
 export default router;
