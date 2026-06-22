@@ -85,7 +85,7 @@ const startServer = async () => {
     if (config.nodeEnv === 'production') {
       process.exit(1);
     }
-    console.warn('API is up in degraded mode — use demo sign-in (9876543210) until DB connects.');
+    console.warn('API cannot serve real data until MongoDB connects — fix Atlas (npm run db:verify).');
   }
 };
 

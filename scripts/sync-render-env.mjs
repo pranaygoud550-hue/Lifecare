@@ -28,6 +28,7 @@ const SYNC_KEYS = [
   'TWILIO_AUTH_TOKEN',
   'TWILIO_PHONE_NUMBER',
   'ALLOW_DEMO_LOGIN',
+  'USE_MEMORY_DB',
   'MEDISCAN_API_URL',
   'RAPIDCARE_WEBHOOK_SECRET',
 ];
@@ -121,6 +122,7 @@ async function main() {
     FRONTEND_URL: 'https://lifecare-frontend-navy.vercel.app',
     BACKEND_URL: 'https://lifecare-l42k.onrender.com',
     ALLOW_DEMO_LOGIN: 'true',
+    USE_MEMORY_DB: 'false',
   };
 
   const toSet = {};

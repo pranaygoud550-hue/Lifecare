@@ -30,10 +30,31 @@ export function markDatabaseConnected(connected: boolean): void {
 
 let memoryServer: { stop: () => Promise<boolean>; getUri: (db?: string) => string } | null = null;
 
-const MAX_RETRIES = 8;
-const ATLAS_DEV_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 10;
+const RETRY_DELAY_MS = 3000;
+const ATLAS_TIMEOUT_MS = 20_000;
+const LOCAL_TIMEOUT_MS = 8_000;
 const LOCAL_FALLBACK_URI = 'mongodb://127.0.0.1:27017/lifecare-plus';
+
+function printConnectionHelp(uri: string): void {
+  const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
+  const isAtlas = isAtlasUri(uri);
+  console.error('\n❌ Could not connect to MongoDB — data will NOT persist until this is fixed.');
+  console.error(`   URI: ${safeUri}\n`);
+  if (isAtlas) {
+    console.error('One-time Atlas setup (keeps data for months/years):');
+    console.error('   1. https://cloud.mongodb.com → Network Access → Add IP → 0.0.0.0/0');
+    console.error('   2. Database → Clusters → Resume if paused (free M0 sleeps after ~60d idle)');
+    console.error('   3. npm run db:verify');
+    console.error('   See docs/DEPLOY_ATLAS.md\n');
+  } else {
+    console.error('Options:');
+    console.error('   npm run db:up          # Docker MongoDB');
+    console.error('   npm run db:verify      # test connection');
+    console.error('   Set MONGODB_URI to Atlas in backend/.env — see docs/DEPLOY_ATLAS.md');
+    console.error('   USE_MEMORY_DB=true     # temporary only — data resets every restart\n');
+  }
+}
 
 function logAtlasHints(error: unknown): void {
   const message = error instanceof Error ? error.message : String(error);
@@ -121,7 +142,9 @@ async function tryConnectWithRetries(
 }
 
 export const connectDB = async (): Promise<void> => {
+  /** In-memory wipes all data on restart — opt-in only via USE_MEMORY_DB=true */
   if (process.env.USE_MEMORY_DB === 'true') {
+    console.warn('⚠️  USE_MEMORY_DB=true — data will NOT survive restarts.');
     await connectInMemoryDatabase();
     return;
   }
@@ -130,51 +153,25 @@ export const connectDB = async (): Promise<void> => {
   mongoose.set('strictQuery', true);
 
   const isAtlas = isAtlasUri(uri);
-  const isDev = config.nodeEnv === 'development';
-  const primaryRetries = isDev && isAtlas ? ATLAS_DEV_RETRIES : MAX_RETRIES;
-  const primaryTimeoutMs = isDev && isAtlas ? 12000 : 15000;
+  const timeoutMs = isAtlas ? ATLAS_TIMEOUT_MS : LOCAL_TIMEOUT_MS;
 
-  if (await tryConnectWithRetries(uri, primaryRetries, primaryTimeoutMs)) {
+  if (await tryConnectWithRetries(uri, MAX_RETRIES, timeoutMs)) {
+    if (isAtlas) {
+      console.log('💾 Persistent Atlas database — data survives restarts and deploys.');
+    }
     return;
   }
 
-  if (isDev) {
-    if (uri !== LOCAL_FALLBACK_URI) {
-      console.warn('\n⚠️  Primary MongoDB unreachable. Trying local MongoDB at 127.0.0.1:27017...');
-      if (await tryConnectWithRetries(LOCAL_FALLBACK_URI, 1, 3000)) {
-        return;
-      }
-    }
-
-    console.warn('\n⚠️  Could not reach MongoDB (Atlas IP whitelist, Docker, or local mongod).');
-    console.warn('   Falling back to in-memory database for development...\n');
-    try {
-      await connectInMemoryDatabase();
+  /** Dev-only: optional local Docker/mongo after Atlas/local URI fails */
+  if (config.nodeEnv === 'development' && uri !== LOCAL_FALLBACK_URI) {
+    console.warn('\n⚠️  Primary MongoDB unreachable. Trying local MongoDB at 127.0.0.1:27017...');
+    if (await tryConnectWithRetries(LOCAL_FALLBACK_URI, 3, LOCAL_TIMEOUT_MS)) {
+      console.warn('   Using local MongoDB — for cloud persistence set Atlas in backend/.env');
       return;
-    } catch (memErr) {
-      console.error('In-memory MongoDB failed:', memErr);
     }
   }
 
-  /** Demo/production deploy without Atlas — keep interview flows working (data resets on cold start). */
-  if (process.env.ALLOW_DEMO_LOGIN === 'true' && process.env.USE_MEMORY_DB !== 'false') {
-    console.warn('\n⚠️  MongoDB unreachable — using in-memory DB for demo deploy (ALLOW_DEMO_LOGIN)...\n');
-    try {
-      await connectInMemoryDatabase();
-      return;
-    } catch (memErr) {
-      console.error('In-memory MongoDB failed:', memErr);
-    }
-  }
-
-  const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
-  console.error('\n❌ Could not connect to MongoDB');
-  console.error(`   URI: ${safeUri}\n`);
-  console.error('Options:');
-  console.error('   npm run db:up       # Docker MongoDB');
-  console.error('   npm run db:seed     # demo users & data');
-  console.error('   USE_MEMORY_DB=true npm run dev -w backend   # temporary in-memory DB');
-  console.error('   Or set MONGODB_URI in backend/.env (MongoDB Atlas)\n');
+  printConnectionHelp(uri);
   process.exit(1);
 };
 

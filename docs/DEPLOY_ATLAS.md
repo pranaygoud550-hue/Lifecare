@@ -1,6 +1,22 @@
 # Persistent MongoDB (Atlas) for production demo
 
-Without Atlas, Render may fall back to **in-memory MongoDB** — data resets when the server sleeps. Follow these steps once so patient history, scans, and bookings persist.
+Without Atlas, the API **will not start** (in-memory fallback was removed — data used to reset on every deploy). Follow these steps **once** so patient history, scans, and bookings persist for months or years.
+
+## 0. Why data disappeared before
+
+| Cause | Fix |
+|-------|-----|
+| `USE_MEMORY_DB=true` | Set `USE_MEMORY_DB=false` in `backend/.env` and Render |
+| No `MONGODB_URI` on Render | Add Atlas URI in Render → Environment |
+| Atlas IP not whitelisted | Network Access → `0.0.0.0/0` |
+| Free M0 cluster **paused** after ~60 days idle | Atlas → Clusters → **Resume** (data is still there) |
+
+Verify anytime:
+
+```bash
+npm run db:verify
+curl -s http://localhost:5001/health   # expect "inMemory": false
+```
 
 ## 1. Create Atlas cluster (free tier)
 
@@ -26,6 +42,7 @@ In [Render Dashboard](https://dashboard.render.com) → your API service → **E
 | Key | Value |
 |-----|--------|
 | `MONGODB_URI` | Your Atlas URI |
+| `USE_MEMORY_DB` | `false` (never `true` on production) |
 | `NODE_ENV` | `production` |
 | `ALLOW_DEMO_LOGIN` | `true` (interviews only; set `false` for real users) |
 | `FRONTEND_URL` | `https://lifecare-frontend-navy.vercel.app` |

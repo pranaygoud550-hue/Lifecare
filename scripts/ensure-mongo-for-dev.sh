@@ -17,9 +17,18 @@ fi
 
 case "$MONGODB_URI" in
   mongodb+srv://*)
-    echo "ℹ️  Using MongoDB Atlas — skipping local Docker/Mongo wait."
-    echo "   Ensure Network Access allows your IP (or 0.0.0.0/0 for dev)."
-    echo "   If Atlas is unreachable, the backend falls back to in-memory MongoDB in development."
+    echo "ℹ️  Using MongoDB Atlas (persistent cloud DB)."
+    if npm run db:verify 2>/dev/null; then
+      echo "✅ Atlas connection verified."
+    else
+      echo ""
+      echo "⚠️  Atlas is not reachable yet. One-time fix (keeps data for months):"
+      echo "   1. https://cloud.mongodb.com → Network Access → Add IP → 0.0.0.0/0"
+      echo "   2. Clusters → Resume if paused"
+      echo "   3. npm run db:verify"
+      echo "   See docs/DEPLOY_ATLAS.md"
+      echo ""
+    fi
     exit 0
     ;;
 esac

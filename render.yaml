@@ -36,3 +36,6 @@ services:
         sync: false
       - key: ALLOW_DEMO_LOGIN
         value: "true"
+      # Required — set your Atlas URI in Render dashboard (data persists across deploys)
+      - key: USE_MEMORY_DB
+        value: "false"
