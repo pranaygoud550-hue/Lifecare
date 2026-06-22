@@ -83,6 +83,7 @@ const startServer = async () => {
   } catch (err) {
     console.error('Database setup failed:', err instanceof Error ? err.message : err);
     if (config.nodeEnv === 'production') {
+      console.error('Render deploy needs MONGODB_URI (Atlas) in Environment. See docs/DEPLOY_ATLAS.md');
       process.exit(1);
     }
     console.warn('API cannot serve real data until MongoDB connects — fix Atlas (npm run db:verify).');

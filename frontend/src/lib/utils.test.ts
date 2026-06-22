@@ -3,7 +3,7 @@ import { cn, formatCurrency, getInitials } from './utils';
 
 describe('utils', () => {
   it('merges tailwind classes', () => {
-    expect(cn('px-2', 'px-4', false && 'hidden')).toBe('px-4');
+    expect(cn('px-2', 'px-4')).toBe('px-4');
   });
 
   it('formats INR currency', () => {

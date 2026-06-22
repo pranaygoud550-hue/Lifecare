@@ -31,10 +31,34 @@ export function markDatabaseConnected(connected: boolean): void {
 let memoryServer: { stop: () => Promise<boolean>; getUri: (db?: string) => string } | null = null;
 
 const MAX_RETRIES = 10;
+const PRODUCTION_RETRIES = 5;
 const RETRY_DELAY_MS = 3000;
-const ATLAS_TIMEOUT_MS = 20_000;
+const ATLAS_TIMEOUT_MS = 15_000;
 const LOCAL_TIMEOUT_MS = 8_000;
 const LOCAL_FALLBACK_URI = 'mongodb://127.0.0.1:27017/lifecare-plus';
+
+export class DatabaseConnectionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'DatabaseConnectionError';
+  }
+}
+
+function assertProductionMongoConfigured(uri: string): void {
+  if (config.nodeEnv !== 'production') return;
+
+  if (!process.env.MONGODB_URI?.trim()) {
+    throw new DatabaseConnectionError(
+      'MONGODB_URI is not set. Add your Atlas connection string in Render → Environment.'
+    );
+  }
+
+  if (!isAtlasUri(uri) && uri.includes('127.0.0.1')) {
+    throw new DatabaseConnectionError(
+      'Production requires MongoDB Atlas. Set MONGODB_URI to your mongodb+srv://… URI on Render.'
+    );
+  }
+}
 
 function printConnectionHelp(uri: string): void {
   const safeUri = uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:***@');
@@ -152,10 +176,14 @@ export const connectDB = async (): Promise<void> => {
   const uri = encodeMongoUri(normalizeMongoUri(config.mongodbUri));
   mongoose.set('strictQuery', true);
 
+  assertProductionMongoConfigured(uri);
+
   const isAtlas = isAtlasUri(uri);
+  const isProduction = config.nodeEnv === 'production';
+  const maxRetries = isProduction ? PRODUCTION_RETRIES : MAX_RETRIES;
   const timeoutMs = isAtlas ? ATLAS_TIMEOUT_MS : LOCAL_TIMEOUT_MS;
 
-  if (await tryConnectWithRetries(uri, MAX_RETRIES, timeoutMs)) {
+  if (await tryConnectWithRetries(uri, maxRetries, timeoutMs)) {
     if (isAtlas) {
       console.log('💾 Persistent Atlas database — data survives restarts and deploys.');
     }
@@ -172,7 +200,7 @@ export const connectDB = async (): Promise<void> => {
   }
 
   printConnectionHelp(uri);
-  process.exit(1);
+  throw new DatabaseConnectionError('Could not connect to MongoDB after retries.');
 };
 
 export const disconnectDB = async (): Promise<void> => {
