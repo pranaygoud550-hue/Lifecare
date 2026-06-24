@@ -30,10 +30,6 @@ export function CitySearchInput({
   const cities = data?.data || [];
 
   useEffect(() => {
-    setQuery(value);
-  }, [value]);
-
-  useEffect(() => {
     const timer = setTimeout(() => {
       if (open) searchCities({ q: query });
     }, 250);

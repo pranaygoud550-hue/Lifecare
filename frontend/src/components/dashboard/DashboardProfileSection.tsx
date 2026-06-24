@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
@@ -68,6 +68,7 @@ export function DashboardProfileSection() {
     handleSubmit,
     setValue,
     watch,
+    control,
     reset,
     formState: { errors },
   } = useForm<PatientMedicalFormValues>({
@@ -105,8 +106,8 @@ export function DashboardProfileSection() {
     }
   };
 
-  const height = watch('heightCm');
-  const weight = watch('weightKg');
+  const height = useWatch({ control, name: 'heightCm' });
+  const weight = useWatch({ control, name: 'weightKg' });
   const bmi =
     height && weight && Number.isFinite(height) && Number.isFinite(weight)
       ? (weight / ((height / 100) ** 2)).toFixed(1)

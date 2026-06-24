@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useVisiblePollingInterval } from '@/hooks/usePageVisible';
+import { ArrivalCountdown } from '@/components/emergency/ArrivalCountdown';
+import { formatCountdown } from '@/lib/formatCountdown';
 import {
   Ambulance, Building2, Brain, Clock, Loader2, Phone, Sparkles,
 } from 'lucide-react';
@@ -32,12 +34,6 @@ const STATUS_STEPS: { key: EmergencyRequestStatus | 'onTheWay'; label: string }[
   { key: 'onTheWay', label: 'On the way' },
   { key: 'arrived', label: 'Arrived' },
 ];
-
-function formatCountdown(totalSeconds: number): string {
-  const mins = Math.floor(totalSeconds / 60);
-  const secs = totalSeconds % 60;
-  return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
 
 function statusToStepIndex(status: EmergencyRequestStatus): number {
   switch (status) {
@@ -88,7 +84,6 @@ export function EmergencyActiveView() {
   usePatientEmergencyLocationStream();
 
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
-  const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
   const etaPollMs = useVisiblePollingInterval(10000);
   const { data: etaData, isFetching: etaFetching } = useGetLiveETAQuery(requestId ?? '', {
@@ -136,29 +131,13 @@ export function EmergencyActiveView() {
     );
   }, [navEta, dispatch]);
 
-  useEffect(() => {
-    if (!estimatedArrival) {
-      setSecondsRemaining(calculatedMinutes != null ? calculatedMinutes * 60 : null);
-      return;
-    }
-
-    const tick = () => {
-      const diff = Math.max(0, Math.floor((new Date(estimatedArrival).getTime() - Date.now()) / 1000));
-      setSecondsRemaining(diff);
-    };
-
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, [estimatedArrival, calculatedMinutes]);
+  const staticSecondsRemaining =
+    !estimatedArrival && calculatedMinutes != null ? calculatedMinutes * 60 : null;
 
   const activeStep = useMemo(() => {
     const idx = statusToStepIndex(currentStatus);
-    if (currentStatus === 'dispatched' && secondsRemaining != null && secondsRemaining > 0) {
-      return Math.max(idx, 2);
-    }
     return idx;
-  }, [currentStatus, secondsRemaining]);
+  }, [currentStatus]);
 
   const handleCancel = async () => {
     if (!requestId) return;
@@ -203,7 +182,13 @@ export function EmergencyActiveView() {
               {etaFetching && <Loader2 className="h-4 w-4 animate-spin" />}
             </div>
             <p className="text-6xl font-black tabular-nums tracking-tight">
-              {secondsRemaining != null ? formatCountdown(secondsRemaining) : '—:—'}
+              {estimatedArrival ? (
+                <ArrivalCountdown key={estimatedArrival} estimatedArrival={estimatedArrival} />
+              ) : staticSecondsRemaining != null ? (
+                formatCountdown(staticSecondsRemaining)
+              ) : (
+                '—:—'
+              )}
             </p>
             {calculatedMinutes != null && (
               <p className="text-red-200 text-sm mt-2">Updated ETA ~{calculatedMinutes} min</p>

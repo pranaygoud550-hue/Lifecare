@@ -8,7 +8,10 @@ import type { Notification } from '@/types';
 export function useSocket(onNotification?: (notification: Notification) => void): Socket | null {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
   const handlerRef = useRef(onNotification);
-  handlerRef.current = onNotification;
+
+  useEffect(() => {
+    handlerRef.current = onNotification;
+  }, [onNotification]);
 
   useEffect(() => {
     if (!isAuthenticated || !user?._id) return;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -137,15 +137,14 @@ export function RideLiveMap({
   className,
   showOpenMaps = true,
 }: RideLiveMapProps) {
-  const [hospitalMarkerIcon, setHospitalMarkerIcon] = useState<L.DivIcon | null>(null);
+  const hospitalMarkerIcon = useMemo(
+    () => (hospital ? hospitalIcon(hospital.name) : null),
+    [hospital]
+  );
   const driverMarkerIcon = useMemo(
     () => vehicleIcon(VEHICLE_EMOJI[vehicleType || ''] || '🚗'),
     [vehicleType]
   );
-
-  useEffect(() => {
-    if (hospital) setHospitalMarkerIcon(hospitalIcon(hospital.name));
-  }, [hospital?.name, hospital?.lat, hospital?.lng]);
 
   const goingToHospital = ['patient-picked-up', 'en-route-to-hospital', 'completed'].includes(
     rideStatus || ''
@@ -220,11 +219,4 @@ export function RideLiveMap({
       )}
     </div>
   );
-}
-
-export function openRideInMaps(pickup: MapPoint, hospital?: HospitalMapPoint | null) {
-  const url = hospital
-    ? `https://www.google.com/maps/dir/?api=1&origin=${pickup.lat},${pickup.lng}&destination=${hospital.lat},${hospital.lng}&travelmode=driving`
-    : `https://www.google.com/maps/search/?api=1&query=${pickup.lat},${pickup.lng}`;
-  window.open(url, '_blank', 'noopener,noreferrer');
 }

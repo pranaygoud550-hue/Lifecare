@@ -139,7 +139,7 @@ export function EmergencyDispatchStep() {
         setPhase('ready');
       }
     },
-    [dispatch, loadNearestHospital, navigate, triggerSOS, user?._id]
+    [dispatch, loadNearestHospital, navigate, triggerSOS, user]
   );
 
   const dispatchFromSaved = useCallback(async () => {

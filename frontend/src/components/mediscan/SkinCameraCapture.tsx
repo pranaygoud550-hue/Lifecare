@@ -173,9 +173,11 @@ export function SkinCameraCapture({ onCapture, onCancel, onUseUpload }: SkinCame
   useEffect(() => {
     if (countdown == null) return;
     if (countdown === 0) {
-      setCountdown(null);
-      captureFrame();
-      return;
+      const doneTimer = window.setTimeout(() => {
+        setCountdown(null);
+        captureFrame();
+      }, 0);
+      return () => window.clearTimeout(doneTimer);
     }
     const t = window.setTimeout(() => setCountdown(countdown - 1), 700);
     return () => window.clearTimeout(t);

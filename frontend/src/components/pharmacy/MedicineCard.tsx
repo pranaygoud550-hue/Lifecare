@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, cn } from '@/lib/utils';
+import { getStockStatus } from '@/lib/medicineStock';
 import type { Medicine } from '@/types';
 
 function getFormEmoji(form?: string) {
@@ -20,12 +21,6 @@ function getFormEmoji(form?: string) {
     default:
       return '💊';
   }
-}
-
-export function getStockStatus(stock: number) {
-  if (stock <= 0) return { label: 'Out of stock', variant: 'danger' as const, canAdd: false };
-  if (stock <= 10) return { label: `Only ${stock} left`, variant: 'warning' as const, canAdd: true };
-  return { label: 'In stock', variant: 'success' as const, canAdd: true };
 }
 
 interface MedicineCardProps {

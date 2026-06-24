@@ -24,5 +24,3 @@ export function LazyRideLiveMap(props: RideLiveMapProps) {
     </Suspense>
   );
 }
-
-export { openRideInMaps } from './RideLiveMap';

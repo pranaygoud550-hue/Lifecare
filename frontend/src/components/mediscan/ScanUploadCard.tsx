@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Upload, FileImage, AlertCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { useUploadScanMutation } from '@/features/api/apiSlice';
@@ -37,13 +37,6 @@ export function ScanUploadCard({
   const selectedOption = SCAN_TYPE_OPTIONS.find((o) => o.id === scanType);
   const isSkinMode = scanType === 'skin_lesion';
   const showCamera = isSkinMode && skinCameraOpen && !useFileInstead && !file;
-
-  useEffect(() => {
-    if (initialSkinCamera) {
-      setScanType('skin_lesion');
-      setSkinCameraOpen(true);
-    }
-  }, [initialSkinCamera]);
 
   const applyFile = useCallback((f: File) => {
     const err = validateScanFile(f);

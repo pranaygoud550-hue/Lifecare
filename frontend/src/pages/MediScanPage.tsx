@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useSearchParams } from 'react-router-dom';
 import { History, RotateCcw } from 'lucide-react';
@@ -28,12 +28,8 @@ export function MediScanPage() {
     skip: !scanFromQuery,
   });
 
-  useEffect(() => {
-    if (deepLinkData?.data) {
-      setActiveResult(deepLinkData.data);
-      setProcessingScanId(null);
-    }
-  }, [deepLinkData?.data]);
+  const deepLinkResult = deepLinkData?.data ?? null;
+  const displayResult = activeResult ?? deepLinkResult;
 
   const handleUploadAccepted = useCallback((scanId: string) => {
     setProcessingScanId(scanId);
@@ -46,8 +42,8 @@ export function MediScanPage() {
     setProcessingScanId(null);
   }, []);
 
-  const showProcessing = processingScanId && !activeResult;
-  const showResult = activeResult && !processingScanId;
+  const showProcessing = processingScanId && !displayResult;
+  const showResult = displayResult && !processingScanId;
 
   const activeStep: FlowStep = showResult ? 'results' : showProcessing ? 'analyze' : 'discover';
 
@@ -104,7 +100,7 @@ export function MediScanPage() {
               />
             )}
 
-            {showResult && activeResult && (
+            {showResult && displayResult && (
               <div className="space-y-4">
                 <div className="mediscan-glass rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-cyan-200/90 font-medium">Analysis complete</p>
@@ -118,7 +114,7 @@ export function MediScanPage() {
                   </button>
                 </div>
                 <div className="rounded-2xl overflow-hidden ring-1 ring-white/10">
-                  <ScanResultCard report={activeResult} />
+                  <ScanResultCard report={displayResult} />
                 </div>
               </div>
             )}

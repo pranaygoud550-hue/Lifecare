@@ -20,14 +20,25 @@ const STEPS: { id: Step; label: string; icon: typeof Upload }[] = [
   { id: 'complete', label: 'Complete', icon: Check },
 ];
 
-export function ScanProcessingCard({ scanId, onComplete, immersive }: ScanProcessingCardProps) {
-  const [activeStep, setActiveStep] = useState<Step>('processing');
+const COMPLETE_STATUSES = new Set(['ai_analyzed', 'ai_unavailable', 'doctor_reviewed', 'final']);
 
-  const { data, refetch } = useGetScanReportByIdQuery(scanId, {
+function ScanProcessingSteps({
+  scanId,
+  report,
+  onComplete,
+  immersive,
+}: {
+  scanId: string;
+  report: ScanReport | undefined;
+  onComplete: (report: ScanReport) => void;
+  immersive?: boolean;
+}) {
+  const [activeStep, setActiveStep] = useState<Step>('uploading');
+  const [completedReportId, setCompletedReportId] = useState<string | null>(null);
+
+  const { refetch } = useGetScanReportByIdQuery(scanId, {
     pollingInterval: activeStep !== 'complete' ? 3000 : 0,
   });
-
-  const report = data?.data;
 
   useMediScanSocket({
     onComplete: (payload) => {
@@ -49,26 +60,24 @@ export function ScanProcessingCard({ scanId, onComplete, immersive }: ScanProces
   });
 
   useEffect(() => {
-    setActiveStep('uploading');
     const t = window.setTimeout(() => setActiveStep('processing'), 600);
     return () => clearTimeout(t);
-  }, [scanId]);
+  }, []);
+
+  const isReportComplete = report && COMPLETE_STATUSES.has(report.status);
 
   useEffect(() => {
-    if (!report) return;
-    if (
-      report.status === 'ai_analyzed' ||
-      report.status === 'ai_unavailable' ||
-      report.status === 'doctor_reviewed' ||
-      report.status === 'final'
-    ) {
+    if (!isReportComplete || !report || completedReportId === report._id) return;
+    const t = window.setTimeout(() => {
       setActiveStep('complete');
+      setCompletedReportId(report._id);
       onComplete(report);
-    }
+    }, 0);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- onComplete is stable from parent useCallback
-  }, [report?.status, report?._id]);
+  }, [isReportComplete, report?._id, completedReportId]);
 
-  const stepIndex = STEPS.findIndex((s) => s.id === activeStep);
+  const stepIndex = STEPS.findIndex((s) => s.id === (isReportComplete ? 'complete' : activeStep));
 
   return (
     <Card
@@ -164,5 +173,20 @@ export function ScanProcessingCard({ scanId, onComplete, immersive }: ScanProces
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+export function ScanProcessingCard({ scanId, onComplete, immersive }: ScanProcessingCardProps) {
+  const { data } = useGetScanReportByIdQuery(scanId);
+  const report = data?.data;
+
+  return (
+    <ScanProcessingSteps
+      key={scanId}
+      scanId={scanId}
+      report={report}
+      onComplete={onComplete}
+      immersive={immersive}
+    />
   );
 }

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useVisiblePollingInterval } from '@/hooks/usePageVisible';
+import { EtaCountdown } from '@/components/emergency/EtaCountdown';
 import { Phone, Share2, X, Shield, Star, MapPin, Navigation, Building2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,8 @@ import {
   useCancelTransportMutation,
   useRegenerateTrackingLinkMutation,
 } from '@/features/api/apiSlice';
-import { LazyRideLiveMap, openRideInMaps } from '@/components/emergency/LazyRideLiveMap';
+import { LazyRideLiveMap } from '@/components/emergency/LazyRideLiveMap';
+import { openRideInMaps } from '@/lib/rideMapUtils';
 import { getInitials } from '@/lib/utils';
 import { joinTransportTracking } from '@/lib/socket';
 import { cn } from '@/lib/utils';
@@ -37,7 +39,6 @@ export function HelpComingView() {
   const dispatch = useAppDispatch();
   const { activeBookingId, location, trackingToken } = useAppSelector((s) => s.emergency);
   const { isAuthenticated } = useAppSelector((s) => s.auth);
-  const [etaSeconds, setEtaSeconds] = useState(12 * 60);
   const [cancelTransport] = useCancelTransportMutation();
   const [regenerateLink] = useRegenerateTrackingLinkMutation();
 
@@ -62,16 +63,9 @@ export function HelpComingView() {
     if (activeBookingId) joinTransportTracking(activeBookingId);
   }, [activeBookingId]);
 
-  useEffect(() => {
-    if (track?.etaMinutes == null) return;
-    setEtaSeconds(track.etaMinutes * 60);
-    const t = setInterval(() => setEtaSeconds((s) => Math.max(0, s - 1)), 1000);
-    return () => clearInterval(t);
-  }, [track?.etaMinutes]);
-
-  const formatEta = () => {
-    const m = Math.floor(etaSeconds / 60);
-    const s = etaSeconds % 60;
+  const formatEta = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -120,7 +114,13 @@ export function HelpComingView() {
             </h2>
           </div>
           <Badge className="bg-blue-600 text-white border-0 text-lg px-3 py-1 tabular-nums">
-            {formatEta()}
+            {track?.etaMinutes != null ? (
+              <EtaCountdown key={track.etaMinutes} etaMinutes={track.etaMinutes}>
+                {(seconds) => formatEta(seconds)}
+              </EtaCountdown>
+            ) : (
+              '—:—'
+            )}
           </Badge>
         </div>
         <p className="text-sm text-slate-400 mt-1">

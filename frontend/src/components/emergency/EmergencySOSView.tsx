@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { MapPin, Phone, Share2, Loader2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
@@ -24,15 +24,18 @@ import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
 
 type Phase = 'pick-area' | 'dispatching' | 'searching' | 'tracking';
 
+type Location = { lat: number; lng: number; address: string };
+
 export function EmergencySOSView() {
   const dispatch = useAppDispatch();
   const { guest, triage, location, activeBookingId, nearestHospital } = useAppSelector((s) => s.emergency);
   const savedLocation = location;
   const { user } = useAppSelector((s) => s.auth);
 
-  const [phase, setPhase] = useState<Phase>(() =>
-    savedLocation?.lat != null && savedLocation?.lng != null ? 'dispatching' : 'pick-area'
-  );
+  const shouldAutoDispatch =
+    savedLocation?.lat != null && savedLocation?.lng != null && !!savedLocation.address;
+
+  const [phase, setPhase] = useState<Phase>(() => (shouldAutoDispatch ? 'dispatching' : 'pick-area'));
   const [bookingId, setBookingId] = useState<string | null>(activeBookingId);
   const [trackingToken, setTrackingToken] = useState<string | null>(null);
   const [driverInfo, setDriverInfo] = useState<{
@@ -44,6 +47,7 @@ export function EmergencySOSView() {
   const [etaMinutes, setEtaMinutes] = useState<number | null>(null);
   const [otp, setOtp] = useState<string | null>(null);
   const [expandedSearch, setExpandedSearch] = useState(false);
+  const autoDispatchedRef = useRef(false);
 
   const [requestSos] = useRequestEmergencySosMutation();
   const [fetchTrack] = useLazyGetTransportTrackQuery();
@@ -55,74 +59,96 @@ export function EmergencySOSView() {
     (user?.profile ? `${user.profile.firstName} ${user.profile.lastName}` : 'Patient');
   const patientPhone = guest?.phone || user?.phone || '';
 
-  const dispatchSos = useCallback(async (loc: { lat: number; lng: number; address: string }) => {
-    setPhase('searching');
-    try {
-      const result = await requestSos({
-        pickupLocation: {
-          address: loc.address,
-          coordinates: { lat: loc.lat, lng: loc.lng },
-        },
-        triage,
-        guestContact: guest || undefined,
-        patientDetails: {
-          name: patientName,
-          contactNumber: patientPhone,
-          condition: 'Emergency SOS',
-        },
-        vehicleType: 'BLS',
-      }).unwrap();
-
-      const data = result.data;
-      const id = data.booking._id;
-      setBookingId(id);
-      setTrackingToken(data.booking.trackingToken || null);
-      setExpandedSearch(!!data.expandedSearch);
-      setOtp(data.booking.otp || null);
-      dispatch(setActiveBooking({ bookingId: id, trackingToken: data.booking.trackingToken }));
-
-      if (data.match) {
-        setDriverInfo({
-          name: data.match.driverName,
-          phone: data.match.phone,
-          vehicleNumber: data.match.vehicleNumber,
-        });
-        setPhase('tracking');
-      } else {
-        setPhase('searching');
+  const refreshTrack = useCallback(
+    async (id: string) => {
+      try {
+        const res = trackingToken
+          ? await fetchTrackByToken(trackingToken).unwrap()
+          : await fetchTrack(id).unwrap();
+        const t = res.data;
+        if (t.driver) {
+          setDriverInfo({
+            name: t.driver.name,
+            phone: t.driver.phone,
+            vehicleNumber: t.driver.vehicleNumber,
+            location: t.driver.location,
+          });
+          setPhase('tracking');
+        }
+        setEtaMinutes(t.etaMinutes ?? null);
+      } catch {
+        /* polling fallback */
       }
+    },
+    [fetchTrack, fetchTrackByToken, trackingToken]
+  );
 
-      joinTransportTracking(id);
-      const socket = getSocket();
-      socket.on('transport:accepted', () => {
-        toast.success('A driver has accepted your request!');
-        void refreshTrack(id);
-      });
-      socket.on('transport:location', (payload: { location: { lat: number; lng: number } }) => {
-        setDriverInfo((prev) => ({
-          name: prev?.name || 'Attendant',
-          phone: prev?.phone,
-          vehicleNumber: prev?.vehicleNumber,
-          location: payload.location,
-        }));
-      });
-    } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Could not send SOS');
-      setPhase('pick-area');
-    }
-  }, [requestSos, triage, guest, patientName, patientPhone, dispatch]);
+  const dispatchSos = useCallback(
+    async (loc: Location) => {
+      setPhase('searching');
+      try {
+        const result = await requestSos({
+          pickupLocation: {
+            address: loc.address,
+            coordinates: { lat: loc.lat, lng: loc.lng },
+          },
+          triage,
+          guestContact: guest || undefined,
+          patientDetails: {
+            name: patientName,
+            contactNumber: patientPhone,
+            condition: 'Emergency SOS',
+          },
+          vehicleType: 'BLS',
+        }).unwrap();
+
+        const data = result.data;
+        const id = data.booking._id;
+        setBookingId(id);
+        setTrackingToken(data.booking.trackingToken || null);
+        setExpandedSearch(!!data.expandedSearch);
+        setOtp(data.booking.otp || null);
+        dispatch(setActiveBooking({ bookingId: id, trackingToken: data.booking.trackingToken }));
+
+        if (data.match) {
+          setDriverInfo({
+            name: data.match.driverName,
+            phone: data.match.phone,
+            vehicleNumber: data.match.vehicleNumber,
+          });
+          setPhase('tracking');
+        } else {
+          setPhase('searching');
+        }
+
+        joinTransportTracking(id);
+        const socket = getSocket();
+        socket.on('transport:accepted', () => {
+          toast.success('A driver has accepted your request!');
+          void refreshTrack(id);
+        });
+        socket.on('transport:location', (payload: { location: { lat: number; lng: number } }) => {
+          setDriverInfo((prev) => ({
+            name: prev?.name || 'Attendant',
+            phone: prev?.phone,
+            vehicleNumber: prev?.vehicleNumber,
+            location: payload.location,
+          }));
+        });
+      } catch (err: unknown) {
+        const error = err as { data?: { message?: string } };
+        toast.error(error.data?.message || 'Could not send SOS');
+        setPhase('pick-area');
+      }
+    },
+    [requestSos, triage, guest, patientName, patientPhone, dispatch, refreshTrack]
+  );
 
   useEffect(() => {
-    if (
-      phase === 'dispatching' &&
-      savedLocation?.lat != null &&
-      savedLocation?.lng != null &&
-      savedLocation.address
-    ) {
-      void dispatchSos(savedLocation);
-    }
-  }, [phase, savedLocation, dispatchSos]);
+    if (!shouldAutoDispatch || autoDispatchedRef.current || !savedLocation?.address) return;
+    autoDispatchedRef.current = true;
+    void dispatchSos(savedLocation);
+  }, [shouldAutoDispatch, savedLocation, dispatchSos]);
 
   const handleAreaSelect = (selection: HyderabadAreaSelection) => {
     const loc = {
@@ -134,38 +160,11 @@ export function EmergencySOSView() {
     void dispatchSos(loc);
   };
 
-  const refreshTrack = async (id: string) => {
-    try {
-      const res = trackingToken
-        ? await fetchTrackByToken(trackingToken).unwrap()
-        : await fetchTrack(id).unwrap();
-      const t = res.data;
-      if (t.driver) {
-        setDriverInfo({
-          name: t.driver.name,
-          phone: t.driver.phone,
-          vehicleNumber: t.driver.vehicleNumber,
-          location: t.driver.location,
-        });
-        setPhase('tracking');
-      }
-      setEtaMinutes(t.etaMinutes ?? null);
-    } catch {
-      /* polling fallback */
-    }
-  };
-
   useEffect(() => {
-    if (!bookingId || phase !== 'searching') return;
+    if (!bookingId || (phase !== 'searching' && phase !== 'tracking')) return;
     const interval = setInterval(() => void refreshTrack(bookingId), 8000);
     return () => clearInterval(interval);
-  }, [bookingId, phase]);
-
-  useEffect(() => {
-    if (!bookingId || phase !== 'tracking') return;
-    const interval = setInterval(() => void refreshTrack(bookingId), 8000);
-    return () => clearInterval(interval);
-  }, [bookingId, phase]);
+  }, [bookingId, phase, refreshTrack]);
 
   const handleShare = async () => {
     if (!bookingId) return;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, Building2, Loader2, MapPin, X } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -17,6 +17,7 @@ import {
   type HyderabadAreaSelection,
 } from '@/components/emergency/HyderabadAreaSearch';
 import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
+import { SosCountdown } from '@/components/emergency/SosCountdown';
 import type { EmergencyHospitalInfo } from '@/types';
 
 const COUNTDOWN_SECONDS = 5;
@@ -36,7 +37,7 @@ export function ProfileEmergencySosCard() {
   const { isActive } = useAppSelector((s) => s.emergency);
 
   const [phase, setPhase] = useState<Phase>('idle');
-  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
+  const [countdownKey, setCountdownKey] = useState(0);
   const [nearestHospital, setNearestHospital] = useState<EmergencyHospitalInfo | null>(null);
   const [pickupAddress, setPickupAddress] = useState('');
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
@@ -46,7 +47,6 @@ export function ProfileEmergencySosCard() {
 
   const cancel = useCallback(() => {
     setPhase('idle');
-    setSecondsLeft(COUNTDOWN_SECONDS);
     setNearestHospital(null);
     coordsRef.current = null;
   }, []);
@@ -57,17 +57,15 @@ export function ProfileEmergencySosCard() {
       setPickupAddress(address);
       setPhase('hospital');
 
-      let nearest: EmergencyHospitalInfo | null = null;
       try {
         const res = await fetchHospitals({ lat, lng, radius: 8 }).unwrap();
-        nearest = res.data?.hospitals?.[0] ?? null;
-        setNearestHospital(nearest);
+        setNearestHospital(res.data?.hospitals?.[0] ?? null);
       } catch {
         toast.info('Could not load nearby hospitals — ambulance will still be dispatched.');
       }
 
       await new Promise((r) => setTimeout(r, 1500));
-      setSecondsLeft(COUNTDOWN_SECONDS);
+      setCountdownKey((k) => k + 1);
       setPhase('countdown');
     },
     [fetchHospitals]
@@ -110,7 +108,11 @@ export function ProfileEmergencySosCard() {
       toast.error(getApiErrorMessage(err, 'Could not dispatch ambulance. Call 108 immediately.'));
       cancel();
     }
-  }, [user?._id, triggerSOS, dispatch, navigate, cancel]);
+  }, [user, triggerSOS, dispatch, navigate, cancel]);
+
+  const handleCountdownComplete = useCallback(() => {
+    void dispatchSos();
+  }, [dispatchSos]);
 
   const startSosFlow = useCallback(() => {
     if (!user) {
@@ -134,24 +136,6 @@ export function ProfileEmergencySosCard() {
     },
     [proceedAfterLocation]
   );
-
-  useEffect(() => {
-    if (phase !== 'countdown') return;
-
-    let remaining = COUNTDOWN_SECONDS;
-    setSecondsLeft(remaining);
-
-    const id = setInterval(() => {
-      remaining -= 1;
-      setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(id);
-        void dispatchSos();
-      }
-    }, 1000);
-
-    return () => clearInterval(id);
-  }, [phase, dispatchSos]);
 
   const busy = phase !== 'idle' || isLoading;
 
@@ -260,12 +244,20 @@ export function ProfileEmergencySosCard() {
                 )}
 
                 {phase === 'countdown' ? (
-                  <>
-                    <p className="text-sm uppercase tracking-widest text-red-200">
-                      {t('dashboard.sosCountdown', 'Dispatching ambulance in')}
-                    </p>
-                    <p className="text-7xl font-black tabular-nums my-2">{secondsLeft}</p>
-                  </>
+                  <SosCountdown
+                    key={countdownKey}
+                    seconds={COUNTDOWN_SECONDS}
+                    onComplete={handleCountdownComplete}
+                  >
+                    {(secondsLeft) => (
+                      <>
+                        <p className="text-sm uppercase tracking-widest text-red-200">
+                          {t('dashboard.sosCountdown', 'Dispatching ambulance in')}
+                        </p>
+                        <p className="text-7xl font-black tabular-nums my-2">{secondsLeft}</p>
+                      </>
+                    )}
+                  </SosCountdown>
                 ) : (
                   <>
                     <Loader2 className="mx-auto h-12 w-12 animate-spin mb-3" />

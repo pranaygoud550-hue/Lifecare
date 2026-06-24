@@ -17,10 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, formatDate, getInitials } from '@/lib/utils';
-import {
-  AppointmentScanPreview,
-  scanFromAppointment,
-} from '@/components/appointments/AppointmentScanPreview';
+import { AppointmentScanPreview } from '@/components/appointments/AppointmentScanPreview';
+import { scanFromAppointment } from '@/lib/appointmentScanUtils';
 import type { User, Appointment } from '@/types';
 
 const statusColors: Record<string, 'default' | 'secondary' | 'success' | 'warning' | 'danger'> = {
@@ -53,7 +51,10 @@ export function AppointmentsPage() {
   const [cancelAppointment] = useCancelAppointmentMutation();
   const [completeAppointment] = useCompleteAppointmentMutation();
 
-  const allAppointments = (data?.data?.appointments || []) as Appointment[];
+  const allAppointments = useMemo(
+    () => (data?.data?.appointments || []) as Appointment[],
+    [data?.data?.appointments]
+  );
   const isDoctor = user?.userType === 'doctor';
 
   const counts = useMemo(() => ({

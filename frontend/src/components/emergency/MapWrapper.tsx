@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, type ReactNode } from 'react';
+import { useIsClient } from '@/hooks/useIsClient';
 import type { HospitalMapLocation, MapCoordinate } from '@/features/emergency/emergencySlice';
 
 const LiveTrackingMap = lazy(() =>
@@ -24,13 +25,9 @@ function MapFallback({ className }: { className?: string }) {
 }
 
 export function MapWrapper(props: MapWrapperProps) {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useIsClient();
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted || typeof window === 'undefined') {
+  if (!mounted) {
     return <MapFallback className={props.className} />;
   }
 
@@ -42,8 +39,7 @@ export function MapWrapper(props: MapWrapperProps) {
 }
 
 export function ClientOnly({ children, fallback }: { children: ReactNode; fallback?: ReactNode }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const mounted = useIsClient();
   if (!mounted) return fallback ?? null;
   return children;
 }

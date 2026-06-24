@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { X, CheckCircle2, RotateCcw, FlaskConical, Flag } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -31,41 +31,29 @@ export interface ScanReviewModalProps {
   onReviewSubmitted: (nextScan: ScanReport | null) => void;
 }
 
-export function ScanReviewModal({
-  scan,
+function ScanReviewForm({
+  report,
   pendingQueue,
   onClose,
   onReviewSubmitted,
-}: ScanReviewModalProps) {
-  const [doctorNote, setDoctorNote] = useState('');
-  const [overrideValue, setOverrideValue] = useState('');
-  const [showOverride, setShowOverride] = useState(false);
-  const [startedAt] = useState(() => Date.now());
-
-  const scanId = scan?._id ?? '';
-  const { data: detailData } = useGetScanReportByIdQuery(scanId, { skip: !scanId });
-  const report = detailData?.data ?? scan;
+}: {
+  report: ScanReport;
+  pendingQueue: ScanReport[];
+  onClose: () => void;
+  onReviewSubmitted: (nextScan: ScanReport | null) => void;
+}) {
+  const [doctorNote, setDoctorNote] = useState(report.doctorNote ?? '');
+  const [overrideValue, setOverrideValue] = useState(report.doctorOverride ?? '');
+  const [showOverride, setShowOverride] = useState(!!report.doctorOverride);
+  const startedAtRef = useRef<number | null>(null);
 
   const [reviewScan, { isLoading: submitting }] = useReviewDoctorScanMutation();
 
-  useEffect(() => {
-    setDoctorNote(report?.doctorNote ?? '');
-    setOverrideValue(report?.doctorOverride ?? '');
-    setShowOverride(!!report?.doctorOverride);
-  }, [report?._id, report?.doctorNote, report?.doctorOverride]);
+  const overrideOptions = useMemo(() => diagnosisOptionsForScan(report), [report]);
 
-  const overrideOptions = useMemo(
-    () => (report ? diagnosisOptionsForScan(report) : []),
-    [report]
-  );
-
-  const probs = report?.probabilities ? Object.entries(report.probabilities) : [];
+  const probs = report.probabilities ? Object.entries(report.probabilities) : [];
   const maxProb = Math.max(...probs.map(([, v]) => (v <= 1 ? v * 100 : v)), 1);
-  const tier = getPredictionTier(report?.prediction, report?.confidence);
-
-  if (!scan || !report) return null;
-
-  const reviewDurationSeconds = Math.round((Date.now() - startedAt) / 1000);
+  const tier = getPredictionTier(report.prediction, report.confidence);
 
   const submitReview = async (payload: {
     aiConfirmed?: boolean;
@@ -73,6 +61,10 @@ export function ScanReviewModal({
     requestMoreTests?: boolean;
     markFinal?: boolean;
   }) => {
+    const startedAt = startedAtRef.current ?? Date.now();
+    if (startedAtRef.current == null) startedAtRef.current = startedAt;
+    const reviewDurationSeconds = Math.round((Date.now() - startedAt) / 1000);
+
     try {
       await reviewScan({
         id: report._id,
@@ -115,7 +107,6 @@ export function ScanReviewModal({
       </header>
 
       <div className="flex-1 overflow-hidden grid lg:grid-cols-2">
-        {/* Left: images */}
         <div className="overflow-y-auto p-4 space-y-4 border-b lg:border-b-0 lg:border-r border-border bg-muted/20">
           <div className="grid sm:grid-cols-2 gap-4">
             <figure className="rounded-xl border border-border overflow-hidden bg-card">
@@ -147,7 +138,6 @@ export function ScanReviewModal({
           </div>
         </div>
 
-        {/* Right: review panel */}
         <div className="overflow-y-auto p-4 space-y-6">
           <div className="flex flex-wrap items-center gap-4">
             <ConfidenceRing value={report.confidence ?? 0} size={100} />
@@ -282,5 +272,28 @@ export function ScanReviewModal({
         </div>
       </div>
     </div>
+  );
+}
+
+export function ScanReviewModal({
+  scan,
+  pendingQueue,
+  onClose,
+  onReviewSubmitted,
+}: ScanReviewModalProps) {
+  const scanId = scan?._id ?? '';
+  const { data: detailData } = useGetScanReportByIdQuery(scanId, { skip: !scanId });
+  const report = detailData?.data ?? scan;
+
+  if (!scan || !report) return null;
+
+  return (
+    <ScanReviewForm
+      key={report._id}
+      report={report}
+      pendingQueue={pendingQueue}
+      onClose={onClose}
+      onReviewSubmitted={onReviewSubmitted}
+    />
   );
 }

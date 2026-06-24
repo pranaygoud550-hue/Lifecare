@@ -11,7 +11,10 @@ interface MediScanSocketHandlers {
 export function useMediScanSocket(handlers: MediScanSocketHandlers) {
   const userId = useAppSelector((s) => s.auth.user?._id);
   const handlersRef = useRef(handlers);
-  handlersRef.current = handlers;
+
+  useEffect(() => {
+    handlersRef.current = handlers;
+  }, [handlers]);
 
   useEffect(() => {
     if (!userId) return;

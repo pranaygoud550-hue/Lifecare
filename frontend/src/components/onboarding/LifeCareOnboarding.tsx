@@ -4,26 +4,7 @@ import { ArrowRight, ChevronLeft, LogIn, UserPlus, Compass } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { DemoLoginButtons } from '@/components/landing/DemoLoginButtons';
 import { ONBOARDING_SLIDE_MS, ONBOARDING_SLIDES } from './onboardingSlides';
-
-const COMPLETE_KEY = 'lifecare-onboarding-complete';
-
-export function markOnboardingComplete() {
-  localStorage.setItem(COMPLETE_KEY, '1');
-}
-
-export function isOnboardingComplete() {
-  return localStorage.getItem(COMPLETE_KEY) === '1';
-}
-
-/** @deprecated use isOnboardingComplete */
-export function isWelcomeSkipped() {
-  return isOnboardingComplete();
-}
-
-/** @deprecated use markOnboardingComplete */
-export function markWelcomeSkipped() {
-  markOnboardingComplete();
-}
+import { markOnboardingComplete } from '@/lib/onboardingStorage';
 
 export function LifeCareOnboarding({ onDone }: { onDone: () => void }) {
   const navigate = useNavigate();

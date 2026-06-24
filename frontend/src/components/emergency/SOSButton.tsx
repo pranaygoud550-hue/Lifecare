@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Button } from '@/components/ui/button';
+import { SosCountdown } from '@/components/emergency/SosCountdown';
 import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 import { useTriggerSOSMutation } from '@/features/api/apiSlice';
 import { activateOneTapEmergency } from '@/features/emergency/emergencySlice';
@@ -28,7 +29,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
   const { isActive, location: savedLocation } = useAppSelector((s) => s.emergency);
 
   const [phase, setPhase] = useState<'idle' | 'locating' | 'pick-area' | 'countdown' | 'dispatching'>('idle');
-  const [secondsLeft, setSecondsLeft] = useState(COUNTDOWN_SECONDS);
+  const [countdownKey, setCountdownKey] = useState(0);
   const coordsRef = useRef<{ lat: number; lng: number } | null>(null);
 
   const [triggerSOS, { isLoading: sosLoading }] = useTriggerSOSMutation();
@@ -36,7 +37,6 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
 
   const cancelFlow = useCallback(() => {
     setPhase('idle');
-    setSecondsLeft(COUNTDOWN_SECONDS);
     coordsRef.current = null;
   }, []);
 
@@ -78,32 +78,18 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
         setPhase('pick-area');
       }
     },
-    [user?._id, triggerSOS, dispatch, emergencyType, cancelFlow]
+    [user, triggerSOS, dispatch, emergencyType, cancelFlow]
   );
 
-  useEffect(() => {
-    if (phase !== 'countdown') return;
-
-    let remaining = COUNTDOWN_SECONDS;
-    setSecondsLeft(remaining);
-
-    const id = setInterval(() => {
-      remaining -= 1;
-      setSecondsLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(id);
-        const coords = coordsRef.current;
-        if (coords) void dispatchSos(coords);
-        else setPhase('pick-area');
-      }
-    }, 1000);
-
-    return () => clearInterval(id);
-  }, [phase, dispatchSos]);
+  const handleCountdownComplete = useCallback(() => {
+    const coords = coordsRef.current;
+    if (coords) void dispatchSos(coords);
+    else setPhase('pick-area');
+  }, [dispatchSos]);
 
   const handleAreaSelect = (selection: HyderabadAreaSelection) => {
     coordsRef.current = { lat: selection.lat, lng: selection.lng };
-    setSecondsLeft(COUNTDOWN_SECONDS);
+    setCountdownKey((k) => k + 1);
     setPhase('countdown');
   };
 
@@ -121,10 +107,10 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
     if (isActive) return;
 
     coordsRef.current = null;
-    setSecondsLeft(COUNTDOWN_SECONDS);
 
     if (savedLocation?.lat != null && savedLocation?.lng != null) {
       coordsRef.current = { lat: savedLocation.lat, lng: savedLocation.lng };
+      setCountdownKey((k) => k + 1);
       setPhase('countdown');
       return;
     }
@@ -152,6 +138,7 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
           dispatch(setEmergencyLocation({ lat, lng, address: gps.address }));
         }
         coordsRef.current = { lat, lng };
+        setCountdownKey((k) => k + 1);
         setPhase('countdown');
       } catch (err) {
         const msg =
@@ -209,15 +196,23 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
         >
           <div className="w-full max-w-sm rounded-2xl bg-red-900 border border-red-500/50 p-8 text-white shadow-2xl">
             {phase === 'countdown' ? (
-              <>
-                <p id="sos-countdown-title" className="text-sm uppercase tracking-widest text-red-200 mb-2">
-                  Emergency dispatch in
-                </p>
-                <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
-                <p className="text-red-100 text-sm mb-6">
-                  Location detected — sending ambulance to nearest hospital
-                </p>
-              </>
+              <SosCountdown
+                key={countdownKey}
+                seconds={COUNTDOWN_SECONDS}
+                onComplete={handleCountdownComplete}
+              >
+                {(secondsLeft) => (
+                  <>
+                    <p id="sos-countdown-title" className="text-sm uppercase tracking-widest text-red-200 mb-2">
+                      Emergency dispatch in
+                    </p>
+                    <p className="text-7xl font-black tabular-nums text-white mb-2">{secondsLeft}</p>
+                    <p className="text-red-100 text-sm mb-6">
+                      Location detected — sending ambulance to nearest hospital
+                    </p>
+                  </>
+                )}
+              </SosCountdown>
             ) : phase === 'locating' ? (
               <>
                 <p id="sos-countdown-title" className="text-lg font-bold mb-2">

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Shield, Activity, Apple } from 'lucide-react';
 import { toast } from 'react-toastify';
 import {
@@ -58,15 +58,18 @@ export function HealthDataSharingCard() {
   const [updateSharing, { isLoading: saving }] = useUpdateHealthSharingMutation();
 
   const server = data?.data;
-  const [shareVitals, setShareVitals] = useState(false);
-  const [shareWellness, setShareWellness] = useState(false);
+  const serverVitals = server?.shareVitalsWithDoctors ?? false;
+  const serverWellness = server?.shareWellnessWithDoctors ?? false;
 
-  useEffect(() => {
-    if (server) {
-      setShareVitals(server.shareVitalsWithDoctors);
-      setShareWellness(server.shareWellnessWithDoctors);
-    }
-  }, [server]);
+  const [shareVitals, setShareVitals] = useState(serverVitals);
+  const [shareWellness, setShareWellness] = useState(serverWellness);
+  const [syncedServer, setSyncedServer] = useState(server);
+
+  if (server && server !== syncedServer) {
+    setSyncedServer(server);
+    setShareVitals(server.shareVitalsWithDoctors);
+    setShareWellness(server.shareWellnessWithDoctors);
+  }
 
   const handleSave = async () => {
     try {

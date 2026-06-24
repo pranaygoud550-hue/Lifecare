@@ -1,7 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { useAppSelector } from '@/hooks/redux';
 import { SplashScreen } from './SplashScreen';
-import { WelcomeAuthScreen, isOnboardingComplete } from './WelcomeAuthScreen';
+import { WelcomeAuthScreen } from './WelcomeAuthScreen';
+import { isOnboardingComplete } from '@/lib/onboardingStorage';
 
 export function AppLaunchFlow({ children }: { children: ReactNode }) {
   const authStatus = useAppSelector((s) => s.auth.authStatus);

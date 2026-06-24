@@ -35,7 +35,8 @@ export function HospitalNearbySummary() {
   }, []);
 
   useEffect(() => {
-    resolveLocation();
+    const timer = setTimeout(() => resolveLocation(), 0);
+    return () => clearTimeout(timer);
   }, [resolveLocation]);
 
   const { data, isLoading } = useGetEmergencyNearbyHospitalsQuery(

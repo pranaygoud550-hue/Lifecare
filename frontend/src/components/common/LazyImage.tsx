@@ -5,6 +5,8 @@ interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
   fallbackClassName?: string;
 }
 
+const supportsNativeLazy = 'loading' in HTMLImageElement.prototype;
+
 export function LazyImage({
   src,
   alt = '',
@@ -14,17 +16,12 @@ export function LazyImage({
 }: LazyImageProps) {
   const ref = useRef<HTMLImageElement>(null);
   const [loaded, setLoaded] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const [visible, setVisible] = useState(supportsNativeLazy);
 
   useEffect(() => {
+    if (supportsNativeLazy) return;
     const el = ref.current;
     if (!el) return;
-
-    if ('loading' in HTMLImageElement.prototype) {
-      setVisible(true);
-      return;
-    }
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {

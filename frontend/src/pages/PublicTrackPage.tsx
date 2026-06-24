@@ -1,7 +1,8 @@
 import { useParams } from 'react-router-dom';
 import { useGetTransportByTokenQuery } from '@/features/api/apiSlice';
 import { useVisiblePollingInterval } from '@/hooks/usePageVisible';
-import { LazyRideLiveMap, openRideInMaps } from '@/components/emergency/LazyRideLiveMap';
+import { LazyRideLiveMap } from '@/components/emergency/LazyRideLiveMap';
+import { openRideInMaps } from '@/lib/rideMapUtils';
 import { Loader2, MapPin, Phone, Building2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 

@@ -34,10 +34,11 @@ export function DoctorsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const scanBooking = (location.state as { scanBooking?: { specialty?: string } } | null)
     ?.scanBooking;
-  const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [city, setCity] = useState(searchParams.get('city') || '');
+  const [search, setSearch] = useState(() => searchParams.get('search') || '');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
+
+  const city = searchParams.get('city') || '';
 
   const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
   const feeRange: [number, number] = [
@@ -45,11 +46,6 @@ export function DoctorsPage() {
     Number(filters.maxFee) || 3000,
   ];
   const experienceRange = Number(filters.minExperience) || 0;
-
-  useEffect(() => {
-    setCity(searchParams.get('city') || '');
-    setSearch(searchParams.get('search') || '');
-  }, [searchParams]);
 
   useEffect(() => {
     if (scanBooking?.specialty && !searchParams.get('specialty')) {
@@ -101,7 +97,6 @@ export function DoctorsPage() {
   };
 
   const handleCityChange = (newCity: string) => {
-    setCity(newCity);
     updateParams((params) => {
       if (newCity) params.set('city', newCity);
       else params.delete('city');
@@ -171,7 +166,7 @@ export function DoctorsPage() {
       {/* Top search bar — Practo style */}
       <div className="bg-white border-b border-border shadow-sm sticky top-16 z-40">
         <div className="container-custom py-4">
-          <form onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-3">
+          <form key={searchParams.toString()} onSubmit={handleSearch} className="flex flex-col lg:flex-row gap-3">
             <div className="relative flex-[2]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted z-10" />
               <Input
@@ -182,6 +177,7 @@ export function DoctorsPage() {
               />
             </div>
             <CitySearchInput
+              key={city}
               value={city}
               onChange={handleCityChange}
               placeholder={t('doctors.cityPlaceholder')}

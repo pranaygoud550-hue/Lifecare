@@ -88,6 +88,11 @@ export function HyderabadAreaSearch({
   showGpsButton = true,
 }: HyderabadAreaSearchProps) {
   const [query, setQuery] = useState(value);
+  const [lastExternalValue, setLastExternalValue] = useState(value);
+  if (value !== lastExternalValue) {
+    setLastExternalValue(value);
+    setQuery(value);
+  }
   const [landmark, setLandmark] = useState('');
   const [selectedArea, setSelectedArea] = useState<HyderabadArea | null>(null);
   const [pendingPickup, setPendingPickup] = useState<{
@@ -104,10 +109,6 @@ export function HyderabadAreaSearch({
   const [fetchSuggestions] = useLazySearchEmergencyAddressesQuery();
   const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
   const [reverseGeocode] = useLazyReverseGeocodeEmergencyQuery();
-
-  useEffect(() => {
-    setQuery(value);
-  }, [value]);
 
   const localResults = useMemo(() => searchHyderabadAreas(query, 12), [query]);
 
@@ -129,8 +130,8 @@ export function HyderabadAreaSearch({
   useEffect(() => {
     const q = query.trim();
     if (!open || q.length < 2) {
-      setStreetSuggestions([]);
-      return;
+      const clearTimer = setTimeout(() => setStreetSuggestions([]), 0);
+      return () => clearTimeout(clearTimer);
     }
 
     const timer = setTimeout(() => {
@@ -282,7 +283,7 @@ export function HyderabadAreaSearch({
     }
   };
 
-  const useCurrentLocation = async () => {
+  const handleCurrentLocation = async () => {
     setGeocoding(true);
     setOpen(false);
     try {
@@ -351,7 +352,7 @@ export function HyderabadAreaSearch({
           variant="outline"
           size="sm"
           disabled={geocoding}
-          onClick={() => void useCurrentLocation()}
+          onClick={() => void handleCurrentLocation()}
           className="h-9 gap-2 border-white/25 bg-white/10 text-white hover:bg-white/20 text-xs sm:text-sm"
         >
           <Crosshair className="h-4 w-4 shrink-0" />
@@ -510,17 +511,4 @@ export function HyderabadAreaSearch({
       )}
     </div>
   );
-}
-
-export function selectionFromHyderabadArea(
-  area: HyderabadArea,
-  landmark?: string
-): HyderabadAreaSelection {
-  return {
-    area,
-    lat: area.lat,
-    lng: area.lng,
-    address: areaToDisplayName(area, landmark),
-    landmark,
-  };
 }

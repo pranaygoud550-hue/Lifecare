@@ -116,7 +116,8 @@ export function HospitalNearbyMap({ compact }: { compact?: boolean }) {
   }, []);
 
   useEffect(() => {
-    resolveLocation();
+    const timer = setTimeout(() => resolveLocation(), 0);
+    return () => clearTimeout(timer);
   }, [resolveLocation]);
 
   const { data, isLoading } = useGetEmergencyNearbyHospitalsQuery(

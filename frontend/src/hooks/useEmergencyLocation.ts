@@ -61,29 +61,32 @@ export function useEmergencyLocation(enabled = true, watch = false): UseEmergenc
   useEffect(() => {
     if (!enabled) return;
 
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported on this device.');
-      setIsLoading(false);
-      return;
-    }
+    const timer = setTimeout(() => {
+      if (!navigator.geolocation) {
+        setError('Geolocation is not supported on this device.');
+        setIsLoading(false);
+        return;
+      }
 
-    setIsLoading(true);
+      setIsLoading(true);
 
-    navigator.geolocation.getCurrentPosition(applyPosition, handleGeoError, {
-      enableHighAccuracy: watch,
-      timeout: 15000,
-      maximumAge: watch ? 5000 : 30000,
-    });
-
-    if (watch) {
-      watchIdRef.current = navigator.geolocation.watchPosition(applyPosition, handleGeoError, {
-        enableHighAccuracy: true,
-        timeout: 20000,
-        maximumAge: 10000,
+      navigator.geolocation.getCurrentPosition(applyPosition, handleGeoError, {
+        enableHighAccuracy: watch,
+        timeout: 15000,
+        maximumAge: watch ? 5000 : 30000,
       });
-    }
+
+      if (watch) {
+        watchIdRef.current = navigator.geolocation.watchPosition(applyPosition, handleGeoError, {
+          enableHighAccuracy: true,
+          timeout: 20000,
+          maximumAge: 10000,
+        });
+      }
+    }, 0);
 
     return () => {
+      clearTimeout(timer);
       if (watchIdRef.current != null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
         watchIdRef.current = null;

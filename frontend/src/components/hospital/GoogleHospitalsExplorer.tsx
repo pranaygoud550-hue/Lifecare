@@ -164,7 +164,8 @@ export function GoogleHospitalsExplorer() {
   }, []);
 
   useEffect(() => {
-    locate();
+    const timer = setTimeout(() => locate(), 0);
+    return () => clearTimeout(timer);
   }, [locate]);
 
   const { data, isLoading, isFetching, refetch } = useGetNearbyGoogleHospitalsQuery(

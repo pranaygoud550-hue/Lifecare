@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
@@ -77,7 +77,7 @@ export function RegisterPage() {
     defaultValues: { organDonor: false },
   });
 
-  const userType = accountForm.watch('userType');
+  const userType = useWatch({ control: accountForm.control, name: 'userType' });
   const isPatient = userType === 'patient';
   const isDoctor = userType === 'doctor';
 

@@ -19,6 +19,15 @@ export function DoctorPatientsPage() {
     querySearch ? { search: querySearch } : undefined
   );
 
+  const sharingHint = useMemo(
+    () =>
+      (data?.data?.patients ?? []).filter(
+        (p: DoctorPatientListItem) =>
+          p.healthDataSharing?.shareVitalsWithDoctors || p.healthDataSharing?.shareWellnessWithDoctors
+      ).length,
+    [data?.data?.patients]
+  );
+
   const patients = (data?.data?.patients ?? []) as DoctorPatientListItem[];
 
   const onSearchChange = (value: string) => {
@@ -27,15 +36,6 @@ export function DoctorPatientsPage() {
     const t = setTimeout(() => setDebounced(value), 350);
     setTimer(t);
   };
-
-  const sharingHint = useMemo(
-    () =>
-      patients.filter(
-        (p) =>
-          p.healthDataSharing?.shareVitalsWithDoctors || p.healthDataSharing?.shareWellnessWithDoctors
-      ).length,
-    [patients]
-  );
 
   return (
     <div className="space-y-6">

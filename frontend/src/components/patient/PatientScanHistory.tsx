@@ -74,12 +74,11 @@ export function PatientScanHistory({
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const items = data?.data ?? [];
-
   const filtered = useMemo(() => {
+    const items = data?.data ?? [];
     if (filter === 'all') return items;
     return items.filter((i) => i.scanType === filter);
-  }, [items, filter]);
+  }, [data?.data, filter]);
 
   const limit = maxItems ?? (compact ? 5 : PAGE_SIZE);
   const totalPages = Math.max(1, Math.ceil(filtered.length / limit));

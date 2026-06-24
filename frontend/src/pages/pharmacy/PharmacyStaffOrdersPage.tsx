@@ -35,12 +35,11 @@ export function PharmacyStaffOrdersPage() {
   const { data, isLoading, refetch } = useGetPharmacyStaffOrdersQuery();
   const [updateStatus, { isLoading: updating }] = useUpdatePharmacyStaffOrderStatusMutation();
 
-  const orders = (data?.data ?? []) as PharmacyOrder[];
-
   const filtered = useMemo(() => {
+    const orders = (data?.data ?? []) as PharmacyOrder[];
     if (filter === 'all') return orders;
     return orders.filter((o) => !['delivered', 'cancelled'].includes(o.delivery.currentStatus));
-  }, [orders, filter]);
+  }, [data?.data, filter]);
 
   const handleAdvance = async (orderId: string, next: string) => {
     try {

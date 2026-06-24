@@ -88,28 +88,33 @@ export function HospitalRideStep() {
     if (!pickup) return;
 
     let cancelled = false;
-    setHospitalsLoading(true);
 
-    void fetchHospitals({ lat: pickup.lat, lng: pickup.lng, radius: 50 })
-      .unwrap()
-      .then((res) => {
-        if (cancelled) return;
-        const list = res.data?.hospitals ?? [];
-        const nearest = list[0] ?? null;
-        dispatch(setNearbyHospitals({ hospitals: list, nearest }));
-        setSelectedHospital((prev) => prev ?? nearest);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        dispatch(setNearbyHospitals({ hospitals: [], nearest: null }));
-        toast.error('Could not find hospitals near this area.');
-      })
-      .finally(() => {
-        if (!cancelled) setHospitalsLoading(false);
-      });
+    const startFetch = () => {
+      setHospitalsLoading(true);
+      void fetchHospitals({ lat: pickup.lat, lng: pickup.lng, radius: 50 })
+        .unwrap()
+        .then((res) => {
+          if (cancelled) return;
+          const list = res.data?.hospitals ?? [];
+          const nearest = list[0] ?? null;
+          dispatch(setNearbyHospitals({ hospitals: list, nearest }));
+          setSelectedHospital((prev) => prev ?? nearest);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          dispatch(setNearbyHospitals({ hospitals: [], nearest: null }));
+          toast.error('Could not find hospitals near this area.');
+        })
+        .finally(() => {
+          if (!cancelled) setHospitalsLoading(false);
+        });
+    };
+
+    const timer = setTimeout(startFetch, 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [pickup, fetchHospitals, dispatch]);
 

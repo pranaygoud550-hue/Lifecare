@@ -106,7 +106,7 @@ export function DriverNavigationPanel({
       destLng: patientLocation.lng,
       mode: 'ambulance',
     });
-  }, [fetchRoute, origin?.lat, origin?.lng, patientLocation.lat, patientLocation.lng]);
+  }, [fetchRoute, origin, patientLocation.lat, patientLocation.lng]);
 
   useEffect(() => {
     if (!voiceEnabled || !nextStep || nextStep === lastSpoken.current) return;

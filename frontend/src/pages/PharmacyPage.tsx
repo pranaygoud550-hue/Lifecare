@@ -1,5 +1,5 @@
 import { Search, ShoppingCart, SlidersHorizontal, Package } from 'lucide-react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import type { CSSProperties } from 'react';
 import { toast } from 'react-toastify';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
@@ -46,12 +46,7 @@ function parseSort(value: SortValue): { sort: string; order?: string } {
 export function PharmacyPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get('search') ?? '');
-
-  useEffect(() => {
-    const q = searchParams.get('search');
-    if (q) setSearch(q);
-  }, [searchParams]);
+  const [search, setSearch] = useState(() => searchParams.get('search') ?? '');
   const [formFilter, setFormFilter] = useState('');
   const [sortBy, setSortBy] = useState<SortValue>('name');
   const dispatch = useAppDispatch();
@@ -71,13 +66,13 @@ export function PharmacyPage() {
     limit: '48',
   });
 
-  const medicines = data?.data?.medicines || [];
-  const total = (data?.data?.pagination as { total?: number })?.total ?? medicines.length;
-
   const rxCount = useMemo(
-    () => medicines.filter((m) => m.prescriptionRequired).length,
-    [medicines]
+    () => (data?.data?.medicines ?? []).filter((m) => m.prescriptionRequired).length,
+    [data?.data?.medicines]
   );
+
+  const medicines = data?.data?.medicines ?? [];
+  const total = (data?.data?.pagination as { total?: number })?.total ?? medicines.length;
 
   const handleAddToCart = (medicine: Medicine) => {
     if (medicine.stock <= 0) {

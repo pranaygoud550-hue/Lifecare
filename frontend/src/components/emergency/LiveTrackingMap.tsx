@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -64,7 +64,7 @@ function FitAllMarkers({
     }
 
     map.fitBounds(L.latLngBounds(points), { padding: [56, 56], maxZoom: 16 });
-  }, [map, patient.lat, patient.lng, ambulance?.lat, ambulance?.lng, hospital?.lat, hospital?.lng]);
+  }, [map, patient.lat, patient.lng, ambulance, hospital]);
 
   return null;
 }
@@ -129,13 +129,10 @@ export function LiveTrackingMap({
   routePath,
   className,
 }: LiveTrackingMapProps) {
-  const [hospitalMarkerIcon, setHospitalMarkerIcon] = useState<L.DivIcon | null>(null);
-
-  useEffect(() => {
-    if (hospitalLocation) {
-      setHospitalMarkerIcon(hospitalIcon(hospitalLocation.name));
-    }
-  }, [hospitalLocation?.name, hospitalLocation?.lat, hospitalLocation?.lng]);
+  const hospitalMarkerIcon = useMemo(
+    () => (hospitalLocation ? hospitalIcon(hospitalLocation.name) : null),
+    [hospitalLocation]
+  );
 
   const ambulanceToPatient = useDrivingRoute(ambulanceLocation ?? null, patientLocation);
   const patientToHospital = useDrivingRoute(patientLocation, hospitalLocation ?? null);

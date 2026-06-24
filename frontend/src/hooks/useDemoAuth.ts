@@ -7,7 +7,7 @@ import { setUser } from '@/features/auth/authSlice';
 import { getApiErrorMessage } from '@/lib/apiError';
 import { storeAuthTokens } from '@/lib/authTokens';
 import { DEMO_ACCOUNTS, getPostLoginPath } from '@/lib/demoAuth';
-import { markOnboardingComplete } from '@/components/onboarding/LifeCareOnboarding';
+import { markOnboardingComplete } from '@/lib/onboardingStorage';
 import type { User } from '@/types';
 
 export function useDemoAuth() {

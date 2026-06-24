@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import { Calendar, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,41 +23,44 @@ function defaultWeek(): DaySlot[] {
 export function DoctorScheduleEditor() {
   const { data, isLoading } = useGetMyDoctorAvailabilityQuery();
   const [updateAvailability, { isLoading: saving }] = useUpdateMyDoctorAvailabilityMutation();
-  const [schedule, setSchedule] = useState<DaySlot[]>(defaultWeek());
 
-  useEffect(() => {
+  const serverSchedule = useMemo(() => {
     const avail = data?.data as DaySlot[] | undefined;
-    if (avail?.length) {
-      const merged = WEEKDAYS.map((day) => {
-        const found = avail.find((a) => a.day === day);
-        return found ?? { day, slots: [] };
-      });
-      setSchedule(merged);
-    }
+    if (!avail?.length) return null;
+    return WEEKDAYS.map((day) => {
+      const found = avail.find((a) => a.day === day);
+      return found ?? { day, slots: [] };
+    });
   }, [data]);
 
+  const [draft, setDraft] = useState<DaySlot[] | null>(null);
+  const schedule = draft ?? serverSchedule ?? defaultWeek();
+
   const toggleDay = (day: string, enabled: boolean) => {
-    setSchedule((prev) =>
-      prev.map((d) =>
+    setDraft((prev) => {
+      const base = prev ?? schedule;
+      return base.map((d) =>
         d.day === day
           ? { ...d, slots: enabled ? [{ startTime: '09:00', endTime: '18:00' }] : [] }
           : d
-      )
-    );
+      );
+    });
   };
 
   const updateSlot = (day: string, field: 'startTime' | 'endTime', value: string) => {
-    setSchedule((prev) =>
-      prev.map((d) => {
+    setDraft((prev) => {
+      const base = prev ?? schedule;
+      return base.map((d) => {
         if (d.day !== day || !d.slots[0]) return d;
         return { ...d, slots: [{ ...d.slots[0], [field]: value }] };
-      })
-    );
+      });
+    });
   };
 
   const handleSave = async () => {
     try {
       await updateAvailability({ availability: schedule }).unwrap();
+      setDraft(null);
       toast.success('Weekly schedule saved — patients see real slots');
     } catch {
       toast.error('Could not save schedule');
