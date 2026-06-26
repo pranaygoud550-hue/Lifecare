@@ -16,20 +16,11 @@ import {
   type HyderabadAreaSelection,
 } from '@/components/emergency/HyderabadAreaSearch';
 import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
+import { getApiErrorMessage } from '@/lib/apiError';
 import type { EmergencyHospitalInfo } from '@/types';
 
 const AUTO_VEHICLE = 'medical_cab';
 const AUTO_VEHICLE_LABEL = 'Medical Cab';
-
-function formatApiError(err: unknown): string {
-  const e = err as {
-    data?: { message?: string; errors?: { field: string; message: string }[] };
-  };
-  if (e.data?.errors?.length) {
-    return e.data.errors.map((x) => x.message).join('. ');
-  }
-  return e.data?.message || 'Could not book ride. Please try again.';
-}
 
 function contactFromUser(phone?: string): string {
   const digits = (phone || '').replace(/\D/g, '');
@@ -184,7 +175,7 @@ export function HospitalRideStep() {
       toast.success(`${AUTO_VEHICLE_LABEL} confirmed — driver is being assigned`);
     } catch (err: unknown) {
       bookedRef.current = false;
-      const msg = formatApiError(err);
+      const msg = getApiErrorMessage(err, 'Could not book ride. Please try again.');
       setBookError(msg);
       toast.error(msg);
     } finally {

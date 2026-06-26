@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn, formatCurrency } from '@/lib/utils';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { setActiveBooking, setEmergencyLocation } from '@/features/emergency/emergencySlice';
 import { useEmergencyLocation } from '@/hooks/useEmergencyLocation';
 import { RideLiveMap } from '@/components/emergency/RideLiveMap';
@@ -216,7 +217,7 @@ export function TransportEscortPage() {
       navigate('/transport/status', { replace: true });
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Booking failed');
+      toast.error(getApiErrorMessage(error, 'Booking failed'));
     }
   };
 

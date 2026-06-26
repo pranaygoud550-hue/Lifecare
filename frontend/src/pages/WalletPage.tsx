@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency, cn } from '@/lib/utils';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { isStripeEnabled } from '@/lib/stripe';
 import type { WalletTransaction } from '@/types';
 
@@ -59,7 +60,7 @@ export function WalletPage() {
       if (error.data?.code === 'STRIPE_NOT_CONFIGURED') {
         await handleDemoTopUp(amount);
       } else {
-        toast.error(error.data?.message || 'Could not start payment');
+        toast.error(getApiErrorMessage(error, 'Could not start payment'));
       }
     }
   };
@@ -109,7 +110,7 @@ export function WalletPage() {
       refetch();
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Refund request failed');
+      toast.error(getApiErrorMessage(error, 'Refund request failed'));
     }
   };
 

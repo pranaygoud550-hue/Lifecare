@@ -21,6 +21,7 @@ import {
   type HyderabadAreaSelection,
 } from '@/components/emergency/HyderabadAreaSearch';
 import { HYDERABAD_SERVICE_LABEL } from '@/data/hyderabadAreas';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 type Phase = 'pick-area' | 'dispatching' | 'searching' | 'tracking';
 
@@ -136,8 +137,7 @@ export function EmergencySOSView() {
           }));
         });
       } catch (err: unknown) {
-        const error = err as { data?: { message?: string } };
-        toast.error(error.data?.message || 'Could not send SOS');
+        toast.error(getApiErrorMessage(err, 'Could not send SOS. Call 108 immediately.'));
         setPhase('pick-area');
       }
     },

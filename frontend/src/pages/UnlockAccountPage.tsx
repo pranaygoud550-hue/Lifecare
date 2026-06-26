@@ -5,6 +5,7 @@ import { ShieldCheck } from 'lucide-react';
 import { useUnlockAccountMutation } from '@/features/api/apiSlice';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { getApiErrorMessage } from '@/lib/apiError';
 
 export function UnlockAccountPage() {
   const [params] = useSearchParams();
@@ -22,8 +23,7 @@ export function UnlockAccountPage() {
       setDone(true);
       toast.success('Account unlocked. You can sign in now.');
     } catch (err: unknown) {
-      const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Unlock failed');
+      toast.error(getApiErrorMessage(err, 'Unlock failed'));
     }
   };
 

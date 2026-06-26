@@ -35,6 +35,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DoctorAvailabilityPicker } from '@/components/doctor/DoctorAvailabilityPicker';
 import { BookingProgressBar } from '@/components/booking/BookingProgressBar';
 import { formatCurrency, formatDate, cn, getInitials } from '@/lib/utils';
+import { getApiErrorMessage } from '@/lib/apiError';
 import { buildGoogleCalendarUrl } from '@/lib/calendar';
 import { scanTypeLabel } from '@/lib/mediscan';
 import type { Appointment } from '@/types';
@@ -173,7 +174,7 @@ export function BookingPage() {
       toast.success('Appointment reserved. Complete payment to confirm.');
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Booking failed');
+      toast.error(getApiErrorMessage(error, 'Booking failed'));
     }
   };
 
@@ -188,7 +189,7 @@ export function BookingPage() {
         setCardClientSecret(intent.data.clientSecret);
       } catch (err: unknown) {
         const error = err as { data?: { message?: string; code?: string } };
-        setPaymentError(error.data?.message || 'Could not initialize card payment');
+        setPaymentError(getApiErrorMessage(error, 'Could not initialize card payment'));
         if (error.data?.code === 'STRIPE_NOT_CONFIGURED') {
           toast.error('Stripe is not configured. Use wallet or pay at clinic.');
         }
@@ -213,7 +214,7 @@ export function BookingPage() {
       toast.success('Booking confirmed!');
     } catch (err: unknown) {
       const error = err as { data?: { message?: string } };
-      toast.error(error.data?.message || 'Payment failed');
+      toast.error(getApiErrorMessage(error, 'Payment failed'));
     }
   };
 
@@ -232,7 +233,7 @@ export function BookingPage() {
       toast.success('Booking confirmed! Confirmation email sent.');
     } catch (err: unknown) {
       const error = err as { data?: { message?: string; canRetry?: boolean } };
-      const msg = error.data?.message || 'Payment verification failed';
+      const msg = getApiErrorMessage(error, 'Payment verification failed');
       setPaymentError(msg);
       toast.error(msg);
     }

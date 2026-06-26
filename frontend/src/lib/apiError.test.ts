@@ -12,6 +12,11 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(err, 'Demo sign-in failed')).toBe('Demo sign-in failed');
   });
 
+  it('maps database offline code to a friendly message', () => {
+    const err = { data: { code: 'DATABASE_OFFLINE', message: 'Database is waking up...' } };
+    expect(getApiErrorMessage(err, 'Fallback')).toMatch(/waking up/i);
+  });
+
   it('keeps short safe messages', () => {
     const err = { data: { message: 'Invalid demo account' } };
     expect(getApiErrorMessage(err, 'Fallback')).toBe('Invalid demo account');
