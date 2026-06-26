@@ -7,7 +7,7 @@ import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
 import mongoose from 'mongoose';
 
-import { isDatabaseConnected, usingInMemoryDatabase } from './config/database.js';
+import { isDatabaseConnected, usingInMemoryDatabase, ensureDatabaseConnection } from './config/database.js';
 import { isAllowedFrontendOrigin } from './config/corsOrigins.js';
 import { config } from './config/index.js';
 import routes from './routes/index.js';
@@ -74,7 +74,11 @@ export function createApp(): Express {
   const __dirname = path.dirname(__filename);
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-  app.get('/health', (_req, res) => {
+  app.get('/health', async (_req, res) => {
+    if (!isDatabaseConnected && process.env.USE_MEMORY_DB !== 'true') {
+      await ensureDatabaseConnection();
+    }
+
     const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'][
       mongoose.connection.readyState
     ] || 'unknown';

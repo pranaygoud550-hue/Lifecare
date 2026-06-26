@@ -29,13 +29,54 @@ export function markDatabaseConnected(connected: boolean): void {
 }
 
 let memoryServer: { stop: () => Promise<boolean>; getUri: (db?: string) => string } | null = null;
+let connectionListenersAttached = false;
+let cachedAtlasUri: string | null = null;
 
-const MAX_RETRIES = 10;
-const PRODUCTION_RETRIES = 5;
+const MAX_RETRIES = 15;
+const PRODUCTION_RETRIES = 12;
 const RETRY_DELAY_MS = 3000;
-const ATLAS_TIMEOUT_MS = 15_000;
+const ATLAS_TIMEOUT_MS = 20_000;
 const LOCAL_TIMEOUT_MS = 8_000;
 const LOCAL_FALLBACK_URI = 'mongodb://127.0.0.1:27017/lifecare-plus';
+
+function attachConnectionListeners(): void {
+  if (connectionListenersAttached) return;
+  connectionListenersAttached = true;
+
+  mongoose.connection.on('connected', () => {
+    isDatabaseConnected = true;
+  });
+
+  mongoose.connection.on('disconnected', () => {
+    isDatabaseConnected = false;
+    console.warn('⚠️  MongoDB disconnected');
+  });
+
+  mongoose.connection.on('reconnected', () => {
+    isDatabaseConnected = true;
+    console.log('✅ MongoDB reconnected');
+  });
+
+  mongoose.connection.on('error', (err) => {
+    isDatabaseConnected = false;
+    console.error('MongoDB connection error:', err.message);
+  });
+}
+
+function mongooseConnectOptions(timeoutMs: number) {
+  return {
+    serverSelectionTimeoutMS: timeoutMs,
+    connectTimeoutMS: timeoutMs,
+    socketTimeoutMS: 45_000,
+    heartbeatFrequencyMS: 10_000,
+    maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE) || 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 60_000,
+    family: 4 as const,
+    autoSelectFamily: false,
+    retryWrites: true,
+  };
+}
 
 export class DatabaseConnectionError extends Error {
   constructor(message: string) {
@@ -94,38 +135,25 @@ async function connectWithUri(
   uri: string,
   options: { serverSelectionTimeoutMS?: number } = {}
 ): Promise<void> {
+  attachConnectionListeners();
+
+  const timeoutMs = options.serverSelectionTimeoutMS ?? ATLAS_TIMEOUT_MS;
+  const isAtlas = isAtlasUri(uri);
+  if (isAtlas) {
+    setDnsServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+    cachedAtlasUri = uri;
+  }
+
   if (mongoose.connection.readyState !== 0) {
     await mongoose.disconnect();
   }
 
-  const isAtlas = isAtlasUri(uri);
-  if (isAtlas) {
-    setDnsServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
-  }
+  await mongoose.connect(uri, mongooseConnectOptions(timeoutMs));
 
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
-    connectTimeoutMS: options.serverSelectionTimeoutMS ?? 15000,
-    maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE) || 10,
-    minPoolSize: 2,
-    maxIdleTimeMS: 30_000,
-    family: 4,
-    autoSelectFamily: false,
-  });
-
+  await mongoose.connection.db?.admin().ping();
   isDatabaseConnected = true;
   const { host, name, port } = mongoose.connection;
   console.log(`✅ MongoDB connected → ${name} on ${host}:${port ?? 'srv'}`);
-
-  mongoose.connection.on('disconnected', () => {
-    isDatabaseConnected = false;
-    console.warn('⚠️  MongoDB disconnected');
-  });
-
-  mongoose.connection.on('reconnected', () => {
-    isDatabaseConnected = true;
-    console.log('✅ MongoDB reconnected');
-  });
 }
 
 async function connectInMemoryDatabase(): Promise<void> {
@@ -166,6 +194,12 @@ async function tryConnectWithRetries(
 }
 
 export const connectDB = async (): Promise<void> => {
+  if (process.env.USE_MEMORY_DB === 'true' && config.nodeEnv === 'production') {
+    throw new DatabaseConnectionError(
+      'USE_MEMORY_DB=true is forbidden in production. Set USE_MEMORY_DB=false on Render.'
+    );
+  }
+
   /** In-memory wipes all data on restart — opt-in only via USE_MEMORY_DB=true */
   if (process.env.USE_MEMORY_DB === 'true') {
     console.warn('⚠️  USE_MEMORY_DB=true — data will NOT survive restarts.');
@@ -202,6 +236,40 @@ export const connectDB = async (): Promise<void> => {
   printConnectionHelp(uri);
   throw new DatabaseConnectionError('Could not connect to MongoDB after retries.');
 };
+
+/** Ping or reconnect — used by health checks and the background watchdog. */
+export async function ensureDatabaseConnection(): Promise<boolean> {
+  if (process.env.USE_MEMORY_DB === 'true') {
+    return mongoose.connection.readyState === 1;
+  }
+
+  if (mongoose.connection.readyState === 1) {
+    try {
+      await mongoose.connection.db?.admin().ping();
+      isDatabaseConnected = true;
+      return true;
+    } catch {
+      isDatabaseConnected = false;
+    }
+  }
+
+  const uri = cachedAtlasUri ?? encodeMongoUri(normalizeMongoUri(config.mongodbUri));
+  const timeoutMs = isAtlasUri(uri) ? ATLAS_TIMEOUT_MS : LOCAL_TIMEOUT_MS;
+
+  try {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+    await connectWithUri(uri, { serverSelectionTimeoutMS: timeoutMs });
+    usingInMemoryDatabase = false;
+    return true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`[DB] ensureDatabaseConnection failed: ${message}`);
+    isDatabaseConnected = false;
+    return false;
+  }
+}
 
 export const disconnectDB = async (): Promise<void> => {
   if (mongoose.connection.readyState !== 0) {

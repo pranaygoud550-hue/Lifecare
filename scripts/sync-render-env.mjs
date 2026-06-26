@@ -152,6 +152,14 @@ async function main() {
     console.error('MONGODB_URI missing in backend/.env — Atlas required for persistent hospitals.');
     process.exit(1);
   }
+  if (!toSet.MONGODB_URI.startsWith('mongodb+srv://')) {
+    console.error('MONGODB_URI must be a MongoDB Atlas (mongodb+srv://) URI for production persistence.');
+    process.exit(1);
+  }
+  if (toSet.USE_MEMORY_DB !== 'false') {
+    console.error('USE_MEMORY_DB must be false for production.');
+    process.exit(1);
+  }
 
   const current = await getEnvVars(service.id);
   const changed = Object.entries(toSet).filter(([key, value]) => current.get(key) !== value);

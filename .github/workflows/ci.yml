@@ -5,6 +5,9 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  schedule:
+    # Daily — alert if Atlas/Render DB goes offline
+    - cron: '0 6 * * *'
 
 jobs:
   build-and-test:
@@ -59,3 +62,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate smoke scripts exist
         run: test -x scripts/interview-smoke-test.sh && test -x scripts/test-video-mediscan.sh
+
+  production-db-health:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'schedule'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify production Atlas is online
+        run: npm run production:health

@@ -76,6 +76,9 @@ const startServer = async () => {
 
       startCronJobs();
       startNavigationEtaBroadcast();
+
+      const { startDatabaseWatchdog } = await import('./services/databaseWatchdog.js');
+      startDatabaseWatchdog();
     }
     if (!isDatabaseConnected) {
       console.warn('Warning: database not connected — demo OTP still works');
@@ -87,6 +90,9 @@ const startServer = async () => {
       process.exit(1);
     }
     console.warn('API cannot serve real data until MongoDB connects — fix Atlas (npm run db:verify).');
+
+    const { startDatabaseWatchdog } = await import('./services/databaseWatchdog.js');
+    startDatabaseWatchdog();
   }
 };
 

@@ -42,6 +42,7 @@ import {
   TELANGANA_SERVICE_LABEL,
 } from '../data/hyderabadAreas.js';
 import { isDbReady } from '../config/dbStatus.js';
+import { ensureDatabaseConnection } from '../config/database.js';
 import { notifyEmergencySosCreated } from '../services/emergencyNotificationService.js';
 
 function resolvePatientId(body: { patientId?: string; userId?: string }): string | null {
@@ -77,13 +78,16 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
   }
 
   if (!isDbReady()) {
-    res.status(503).json({
-      success: false,
-      code: 'DATABASE_OFFLINE',
-      message:
-        'Database is reconnecting. Wait 30 seconds and try again. For real emergencies call 108.',
-    });
-    return;
+    const restored = await ensureDatabaseConnection();
+    if (!restored) {
+      res.status(503).json({
+        success: false,
+        code: 'DATABASE_OFFLINE',
+        message:
+          'Database is reconnecting. Wait a few seconds and try again. For real emergencies call 108.',
+      });
+      return;
+    }
   }
 
   if (!isWithinTelanganaServiceArea(patientLat, patientLng)) {
