@@ -16,6 +16,7 @@ import { errorHandler, notFound } from './middleware/errorHandler.js';
 import { requestTimingMiddleware } from './middleware/requestMetrics.js';
 import { globalApiLimiter, authRouteLimiter } from './middleware/rateLimit.js';
 import { mongoSanitizeExceptWebhook } from './middleware/mongoSanitize.js';
+import { ensureDbMiddleware } from './middleware/ensureDb.js';
 import { buildOpenApiSpec, swaggerUiOptions } from './swagger/index.js';
 
 export function createApp(): Express {
@@ -106,6 +107,13 @@ export function createApp(): Express {
     });
   });
 
+  app.use('/api', (req, res, next) => {
+    if (req.path === '/auth/demo-login') {
+      next();
+      return;
+    }
+    void ensureDbMiddleware(req, res, next);
+  });
   app.use('/api', routes);
   app.use(notFound);
   app.use(errorHandler);

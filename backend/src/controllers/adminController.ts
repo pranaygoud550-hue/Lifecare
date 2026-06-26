@@ -11,7 +11,7 @@ import {
   sumWalletTopupsBetween,
   startOfWeekMonday,
 } from '../utils/adminAnalytics.js';
-import { isDatabaseConnected, usingInMemoryDatabase } from '../config/database.js';
+import { isDatabaseConnected, usingInMemoryDatabase, ensureDatabaseConnection } from '../config/database.js';
 import { getSocketConnectionCount } from '../services/socketService.js';
 import { getAverageResponseTimeMs } from '../middleware/requestMetrics.js';
 import { updateDoctorRating } from './reviewController.js';
@@ -130,6 +130,10 @@ export const getDashboardStats = asyncHandler(async (_req: Request, res: Respons
 });
 
 export const getPlatformHealth = asyncHandler(async (_req: Request, res: Response) => {
+  if (!isDatabaseConnected && process.env.USE_MEMORY_DB !== 'true') {
+    await ensureDatabaseConnection();
+  }
+
   const dbState = ['disconnected', 'connected', 'connecting', 'disconnecting'][
     mongoose.connection.readyState
   ] || 'unknown';

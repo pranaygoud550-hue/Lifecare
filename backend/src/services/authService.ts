@@ -7,6 +7,7 @@ import { issueTokenPair, type TokenPair } from './tokenService.js';
 import { sendAccountUnlockEmail } from './emailService.js';
 import type { UserType } from '../types/index.js';
 import { isDbReady } from '../config/dbStatus.js';
+import { ensureDatabaseConnection } from '../config/database.js';
 import { devLoginTokens, ensureDevDemoUserInDb, isDevDemoPhone } from './devAuthFallback.js';
 import { ensureInterviewDemoAppointment } from './interviewDemoService.js';
 import { ensureEmergencyAmbulanceNearPatient } from './emergencyService.js';
@@ -168,10 +169,18 @@ export const sendOtp = async (phone: string, purpose: OtpPurpose) => {
   }
 
   if (!isDbReady()) {
+    await ensureDatabaseConnection();
+  }
+
+  if (!isDbReady()) {
     if (purpose === 'login') {
       if (!isDevDemoPhone(normalizedPhone)) {
         throw Object.assign(
-          new Error('Database offline. Use demo number 9876543210 or start MongoDB (see README).'),
+          new Error(
+            process.env.ALLOW_DEMO_LOGIN === 'true'
+              ? 'Server is waking up. Wait 15 seconds, refresh, or use Try instantly on Login.'
+              : 'Database offline. Try again in a moment.'
+          ),
           { statusCode: 503 }
         );
       }
