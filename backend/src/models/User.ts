@@ -343,11 +343,42 @@ userSchema.index({ 'doctorDetails.specializations': 1 });
 userSchema.index({ 'doctorDetails.rating': -1 });
 userSchema.index({ 'ambulanceDetails.location': '2dsphere' });
 
-userSchema.pre('save', function stripInvalidAmbulanceGeo(next) {
-  const loc = this.ambulanceDetails?.location;
+function stripInvalidAmbulanceGeoFromDoc(doc: {
+  ambulanceDetails?: { location?: { coordinates?: number[] } };
+  set: (path: string, value: unknown) => void;
+}) {
+  const loc = doc.ambulanceDetails?.location;
   if (loc && (!loc.coordinates || loc.coordinates.length !== 2)) {
-    this.set('ambulanceDetails.location', undefined);
+    doc.set('ambulanceDetails.location', undefined);
   }
+}
+
+userSchema.pre('save', function stripInvalidAmbulanceGeoOnSave(next) {
+  stripInvalidAmbulanceGeoFromDoc(this);
+  next();
+});
+
+userSchema.pre(['findOneAndUpdate', 'updateOne'], function stripInvalidAmbulanceGeoOnUpdate(next) {
+  const update = this.getUpdate() as Record<string, unknown> | null;
+  if (!update) {
+    next();
+    return;
+  }
+
+  const setPayload = update.$set as Record<string, unknown> | undefined;
+  const ambulanceDetails = setPayload?.ambulanceDetails as
+    | { location?: { coordinates?: number[] } }
+    | undefined;
+  const loc = ambulanceDetails?.location;
+  if (loc && (!loc.coordinates || loc.coordinates.length !== 2)) {
+    if (setPayload) delete setPayload.ambulanceDetails;
+    update.$unset = {
+      ...(update.$unset as Record<string, string> | undefined),
+      'ambulanceDetails.location': '',
+    };
+    this.setUpdate(update);
+  }
+
   next();
 });
 

@@ -32,6 +32,21 @@ async function main() {
   }
 
   console.log('\n✅ Production database is online and persistent.');
+
+  const demoRes = await fetch(`${BACKEND}/api/auth/demo-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '9876543210' }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const demo = await demoRes.json();
+  const demoOk = demoRes.ok && demo?.success === true && demo?.data?.accessToken;
+  console.log(`  demo login (patient): ${demoOk ? '✓ working' : '✗ failed'}`);
+  if (!demoOk) {
+    const msg = String(demo?.message ?? demoRes.status).slice(0, 120);
+    console.error(`\n❌ Demo login broken — recruiter "Try as Patient" will fail. (${msg})`);
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {

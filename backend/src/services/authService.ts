@@ -443,9 +443,15 @@ export const verifyOTP = async (phone: string, otp: string) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const sanitizeUser = (user: any) => {
-  const obj = user.toObject ? user.toObject() : user;
+  const obj = user.toObject ? user.toObject() : { ...user };
   delete obj.password;
   delete obj.unlockToken;
   delete obj.unlockTokenExpires;
+
+  if (obj.userType !== 'ambulance') delete obj.ambulanceDetails;
+  if (obj.userType !== 'doctor') delete obj.doctorDetails;
+  if (obj.userType !== 'pharmacy') delete obj.pharmacyDetails;
+  if (obj.userType !== 'hospital_admin') delete obj.hospitalAdminDetails;
+
   return obj;
 };

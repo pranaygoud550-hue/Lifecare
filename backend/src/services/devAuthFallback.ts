@@ -116,13 +116,45 @@ export const isDevDemoUserId = (userId: string) => userId in DEV_ID_TO_PHONE;
 
 export const devUserIdToPhone = (userId: string) => DEV_ID_TO_PHONE[userId] ?? null;
 
+const ROLE_DETAIL_FIELDS = [
+  'ambulanceDetails',
+  'doctorDetails',
+  'pharmacyDetails',
+  'hospitalAdminDetails',
+] as const;
+
+/** Remove invalid ambulance geo subdocs that break the 2dsphere index on non-driver accounts. */
+export async function repairInvalidAmbulanceGeoOnUsers(): Promise<void> {
+  if (!isDbReady()) return;
+
+  await User.updateMany(
+    { userType: { $ne: 'ambulance' }, ambulanceDetails: { $exists: true } },
+    { $unset: { ambulanceDetails: '' } }
+  );
+
+  await User.updateMany(
+    {
+      userType: 'ambulance',
+      $or: [
+        { 'ambulanceDetails.location.coordinates': { $exists: false } },
+        { 'ambulanceDetails.location.coordinates': { $size: 0 } },
+        { 'ambulanceDetails.location.coordinates.1': { $exists: false } },
+      ],
+    },
+    { $unset: { 'ambulanceDetails.location': '' } }
+  );
+}
+
 /** Persist demo account in MongoDB so profile / medical-history APIs work after demo login. */
 export async function ensureDevDemoUserInDb(phone: string) {
   const template = getDevUser(phone);
   if (!template || !isDbReady()) return null;
 
+  await repairInvalidAmbulanceGeoOnUsers();
+
   const normalizedPhone = normalizePhone(phone);
   const hashedPassword = await bcrypt.hash('Password@123', 10);
+  const userType = template.userType as string;
 
   const setFields: Record<string, unknown> = {
     userType: template.userType,
@@ -136,14 +168,26 @@ export async function ensureDevDemoUserInDb(phone: string) {
   if (template.pharmacyDetails) setFields.pharmacyDetails = template.pharmacyDetails;
   if (template.ambulanceDetails) setFields.ambulanceDetails = template.ambulanceDetails;
 
-  return User.findOneAndUpdate(
-    { phone: normalizedPhone },
-    {
-      $set: setFields,
-      $setOnInsert: { password: hashedPassword, phone: normalizedPhone },
-    },
-    { upsert: true, new: true, runValidators: true }
-  );
+  const unsetFields: Record<string, string> = {};
+  for (const field of ROLE_DETAIL_FIELDS) {
+    if (!(field in template)) unsetFields[field] = '';
+  }
+  if (userType === 'ambulance' && !template.ambulanceDetails) {
+    unsetFields['ambulanceDetails.location'] = '';
+  }
+
+  const update: Record<string, unknown> = {
+    $set: setFields,
+    $setOnInsert: { password: hashedPassword, phone: normalizedPhone },
+  };
+  if (Object.keys(unsetFields).length > 0) update.$unset = unsetFields;
+
+  return User.findOneAndUpdate({ phone: normalizedPhone }, update, {
+    upsert: true,
+    new: true,
+    runValidators: true,
+    setDefaultsOnInsert: false,
+  });
 }
 
 export const devLoginTokens = (phone: string) => {

@@ -1,6 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { ZodError } from 'zod';
+import {
+  sanitizeErrorMessage,
+  shouldExposeErrorInternals,
+} from '../utils/sanitizeErrorMessage.js';
 
 export interface ApiErrorResponse {
   success: false;
@@ -78,27 +82,40 @@ export const errorHandler = (
     return;
   }
 
-  if (err.name === 'MongoServerError' && (err as { code?: number }).code === 11000) {
-    res.status(409).json(
-      buildErrorPayload(409, 'Duplicate entry — resource already exists', { code: 'DUPLICATE_KEY' })
-    );
-    return;
+  if (err.name === 'MongoServerError') {
+    const mongoCode = (err as { code?: number }).code;
+    if (mongoCode === 11000) {
+      res.status(409).json(
+        buildErrorPayload(409, 'Duplicate entry — resource already exists', { code: 'DUPLICATE_KEY' })
+      );
+      return;
+    }
+    if (mongoCode === 16755 || /Can't extract geo keys/i.test(err.message)) {
+      res.status(400).json(
+        buildErrorPayload(400, 'Location data is invalid. Please try again.', {
+          code: 'INVALID_GEOJSON',
+        })
+      );
+      return;
+    }
   }
 
   const statusCode = err.statusCode ?? 500;
   const isServerError = statusCode >= 500;
+  const exposeInternals = shouldExposeErrorInternals();
+  const rawMessage = err.message || 'Internal server error';
+  const clientMessage =
+    isServerError && !exposeInternals
+      ? 'Internal server error'
+      : exposeInternals
+        ? rawMessage
+        : sanitizeErrorMessage(rawMessage);
 
   res.status(statusCode).json(
-    buildErrorPayload(
-      statusCode,
-      isServerError && process.env.NODE_ENV === 'production'
-        ? 'Internal server error'
-        : err.message || 'Internal server error',
-      {
-        code: err.code ?? (isServerError ? 'INTERNAL_ERROR' : 'REQUEST_ERROR'),
-        errors: err.errors,
-        ...(process.env.NODE_ENV === 'development' && err.stack ? { stack: err.stack } : {}),
-      }
-    )
+    buildErrorPayload(statusCode, clientMessage, {
+      code: err.code ?? (isServerError ? 'INTERNAL_ERROR' : 'REQUEST_ERROR'),
+      errors: err.errors,
+      ...(exposeInternals && err.stack ? { stack: err.stack } : {}),
+    })
   );
 };

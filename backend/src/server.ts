@@ -59,6 +59,9 @@ const startServer = async () => {
     await connectDB();
     await autoSeedIfEmpty();
     if (config.nodeEnv !== 'test') {
+      const { repairInvalidAmbulanceGeoOnUsers } = await import('./services/devAuthFallback.js');
+      await repairInvalidAmbulanceGeoOnUsers();
+
       const { ensureHyderabadEmergencyData } = await import(
         './services/hyderabadEmergencySeedService.js'
       );

@@ -1,3 +1,20 @@
+function sanitizeClientErrorMessage(message: string, fallback: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes('database') && lower.includes('offline')) {
+    return 'Server is waking up. Wait 20 seconds and refresh — or use Try instantly on Login.';
+  }
+  if (/can't extract geo keys|invalid geojson|invalid_goejson/i.test(message)) {
+    return 'Location data is invalid. Please try again.';
+  }
+  if (
+    message.length > 200 ||
+    /objectid\(|password:|"\$2[aby]\$"|mongo(server)?error|plan executor error/i.test(message)
+  ) {
+    return fallback;
+  }
+  return message;
+}
+
 export function getApiErrorMessage(err: unknown, fallback: string): string {
   if (!err || typeof err !== 'object') return fallback;
 
@@ -12,13 +29,12 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   }
 
   if (e.data?.message) {
-    if (e.data.message.toLowerCase().includes('database') && e.data.message.toLowerCase().includes('offline')) {
-      return 'Server is waking up. Wait 20 seconds and refresh — or use Try instantly on Login.';
-    }
-    return e.data.message;
+    return sanitizeClientErrorMessage(e.data.message, fallback);
   }
 
-  if (e.data?.errors?.[0]?.message) return e.data.errors[0].message;
+  if (e.data?.errors?.[0]?.message) {
+    return sanitizeClientErrorMessage(e.data.errors[0].message, fallback);
+  }
 
   return fallback;
 }

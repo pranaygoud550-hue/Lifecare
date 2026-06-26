@@ -43,6 +43,19 @@ async function main() {
     `  /api proxy to Render: ${apiWorks ? '✓ working' : '✗ returns HTML — redeploy Vercel after vercel.json fix'}`
   );
 
+  const demoRes = await fetch(`${BACKEND}/api/auth/demo-login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone: '9876543210' }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  const demo = await demoRes.json();
+  const demoOk = demoRes.ok && demo?.success === true;
+  console.log(`\nDemo login (Try as Patient): ${demoOk ? '✓ working' : '✗ FAILED'}`);
+  if (!demoOk) {
+    console.log(`  Error: ${String(demo?.message ?? demoRes.status).slice(0, 100)}`);
+  }
+
   if (!google) {
     console.log('\n→ Add GOOGLE_PLACES_API_KEY + GOOGLE_MAPS_API_KEY to Render, then redeploy.');
   }
