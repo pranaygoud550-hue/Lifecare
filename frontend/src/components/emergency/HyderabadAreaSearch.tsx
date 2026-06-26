@@ -44,20 +44,16 @@ interface HyderabadAreaSearchProps {
 const POPULAR_IDS = [
   'madhapur',
   'gachibowli',
-  'hitech-city',
-  'kukatpally',
-  'kphb',
-  'lb-nagar',
+  'warangal',
+  'nizamabad',
+  'karimnagar',
+  'khammam',
   'secunderabad',
-  'banjara-hills',
-  'dilsukhnagar',
+  'lb-nagar',
   'miyapur',
-  'kondapur',
-  'habsiguda',
-  'nizampet',
-  'sainikpuri',
-  'kompally',
-  'medchal',
+  'siddipet',
+  'mahbubnagar',
+  'kukatpally',
 ];
 
 type StreetSuggestion = {
@@ -78,7 +74,7 @@ function resolveSuggestionLocally(suggestion: StreetSuggestion): HyderabadArea |
 export function HyderabadAreaSearch({
   value = '',
   onSelect,
-  placeholder = 'Chai Loaded, Kandlakoya, Medchal, Secunderabad…',
+  placeholder = 'Warangal, Nizamabad, Madhapur, Karimnagar, your colony…',
   className,
   inputClassName,
   label,

@@ -188,7 +188,7 @@ export function EmergencySOSView() {
       <div className="flex flex-col flex-1 p-6 max-w-lg mx-auto w-full">
         <h2 className="text-2xl font-bold text-white mb-2">Where do you need help?</h2>
         <p className="text-red-100 text-sm mb-4">
-          I Need Help is available in {HYDERABAD_SERVICE_LABEL} only.
+          I Need Help works across {HYDERABAD_SERVICE_LABEL}. Pick your city or area.
         </p>
         <HyderabadAreaSearch
           onSelect={handleAreaSelect}
@@ -206,7 +206,7 @@ export function EmergencySOSView() {
           <Loader2 className="h-12 w-12 text-white animate-spin" />
         </div>
         <h2 className="text-3xl font-bold text-white mb-4">Sending help request…</h2>
-        <p className="text-xl text-red-100">Connecting to nearest attendant in Hyderabad</p>
+        <p className="text-xl text-red-100">Connecting to nearest hospital in Telangana</p>
       </div>
     );
   }

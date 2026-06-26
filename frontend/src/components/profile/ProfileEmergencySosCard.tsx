@@ -199,7 +199,7 @@ export function ProfileEmergencySosCard() {
                   Where are you in Hyderabad?
                 </h2>
                 <p className="text-red-100 text-sm mb-4">
-                  SOS is available in {HYDERABAD_SERVICE_LABEL} only.
+                  SOS works across {HYDERABAD_SERVICE_LABEL}.
                 </p>
                 <HyderabadAreaSearch
                   onSelect={handleAreaSelect}

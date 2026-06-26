@@ -1,9 +1,9 @@
 import { config } from '../config/index.js';
 import { cacheGet, cacheSet, cacheKey } from './cacheService.js';
-import {
-  HYDERABAD_CENTER,
-  SERVICE_RADIUS_KM,
-} from '../data/hyderabadAreas.js';
+import { TELANGANA_CENTER } from '../data/hyderabadAreas.js';
+
+/** ~220 km — covers Telangana north–south for village/colony search */
+const TELANGANA_SEARCH_RADIUS_M = 220_000;
 
 export interface AddressSuggestion {
   placeId: string;
@@ -35,7 +35,7 @@ export function isAddressAutocompleteConfigured(): boolean {
 }
 
 /**
- * Uber/Rapido-style address suggestions — streets, colonies, landmarks within Hyderabad service radius.
+ * Address suggestions — villages, colonies, landmarks across Telangana.
  */
 export async function searchAddressSuggestions(input: string): Promise<AddressSuggestion[]> {
   const trimmed = input.trim();
@@ -51,10 +51,10 @@ export async function searchAddressSuggestions(input: string): Promise<AddressSu
   const baseParams = {
     input: trimmed,
     key,
-    components: 'country:in',
-    origin: `${HYDERABAD_CENTER.lat},${HYDERABAD_CENTER.lng}`,
-    location: `${HYDERABAD_CENTER.lat},${HYDERABAD_CENTER.lng}`,
-    radius: String(SERVICE_RADIUS_KM * 1000),
+    components: 'country:in|administrative_area:Telangana',
+    origin: `${TELANGANA_CENTER.lat},${TELANGANA_CENTER.lng}`,
+    location: `${TELANGANA_CENTER.lat},${TELANGANA_CENTER.lng}`,
+    radius: String(TELANGANA_SEARCH_RADIUS_M),
   };
 
   async function fetchPredictions(extra: Record<string, string> = {}) {

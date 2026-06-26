@@ -187,7 +187,7 @@ export function EmergencyDispatchStep() {
         <div>
           <p className="text-xs font-bold uppercase tracking-wide text-red-200">Medical emergency</p>
           <h2 className="text-2xl font-bold text-white">Ambulance + hospital</h2>
-          <p className="text-sm text-red-100/80 mt-1">{HYDERABAD_SERVICE_LABEL} only</p>
+          <p className="text-sm text-red-100/80 mt-1">Covers all of {HYDERABAD_SERVICE_LABEL}</p>
         </div>
       </div>
 

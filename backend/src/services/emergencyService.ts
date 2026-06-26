@@ -14,7 +14,7 @@ import {
   type GooglePlaceResult,
 } from './googlePlacesService.js';
 import { searchOsmHospitals } from './osmHospitalService.js';
-import { isWithinHyderabadServiceArea } from '../data/hyderabadAreas.js';
+import { isWithinTelanganaServiceArea } from '../data/hyderabadAreas.js';
 import {
   filterEmergencyCapableHospitals,
   isEmergencyCapableDbHospital,
@@ -321,7 +321,7 @@ export async function resolveEmergencyDispatch(
 ): Promise<EmergencyDispatchResolution | null> {
   await releaseStaleAmbulanceUnits();
 
-  const tierRadiiKm = [2, 4, 8, 15, 25, 50, 100];
+  const tierRadiiKm = [2, 4, 8, 15, 25, 50, 100, 150, 200];
 
   for (const radiusKm of tierRadiiKm) {
     const { hospitals } = await findNearbyHospitalsUnified(patientLat, patientLng, radiusKm);
@@ -557,7 +557,7 @@ export async function findNearbyHospitalsUnified(
     });
   }
 
-  const partnerBoostMeters = isWithinHyderabadServiceArea(lat, lng) ? 1200 : 500;
+  const partnerBoostMeters = isWithinTelanganaServiceArea(lat, lng) ? 1200 : 500;
 
   const hospitals = filterEmergencyCapableHospitals(
     [...merged.values()].sort((a, b) => {

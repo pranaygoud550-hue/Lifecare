@@ -35,12 +35,13 @@ import {
 } from '../services/addressAutocompleteService.js';
 import {
   areaToDisplayName,
-  isWithinHyderabadServiceArea,
+  isWithinTelanganaServiceArea,
   resolveHyderabadArea,
   searchHyderabadAreas,
   nearestHyderabadArea,
-  HYDERABAD_SERVICE_LABEL,
+  TELANGANA_SERVICE_LABEL,
 } from '../data/hyderabadAreas.js';
+import { isDbReady } from '../config/dbStatus.js';
 import { notifyEmergencySosCreated } from '../services/emergencyNotificationService.js';
 
 function resolvePatientId(body: { patientId?: string; userId?: string }): string | null {
@@ -75,10 +76,20 @@ export const createEmergencySos = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  if (!isWithinHyderabadServiceArea(patientLat, patientLng)) {
+  if (!isDbReady()) {
+    res.status(503).json({
+      success: false,
+      code: 'DATABASE_OFFLINE',
+      message:
+        'Database is reconnecting. Wait 30 seconds and try again. For real emergencies call 108.',
+    });
+    return;
+  }
+
+  if (!isWithinTelanganaServiceArea(patientLat, patientLng)) {
     res.status(400).json({
       success: false,
-      message: `Emergency SOS is available only in ${HYDERABAD_SERVICE_LABEL}. Please select a Hyderabad area.`,
+      message: `Emergency SOS is available only in ${TELANGANA_SERVICE_LABEL}. Pick your city or area.`,
     });
     return;
   }
@@ -347,10 +358,10 @@ export const getNearbyHospitals = asyncHandler(async (req: Request, res: Respons
     return;
   }
 
-  if (!isWithinHyderabadServiceArea(lat, lng)) {
+  if (!isWithinTelanganaServiceArea(lat, lng)) {
     res.status(400).json({
       success: false,
-      message: `Hospital search is limited to ${HYDERABAD_SERVICE_LABEL}. Pick a Hyderabad area.`,
+      message: `Hospital search is limited to ${TELANGANA_SERVICE_LABEL}. Pick your city or area.`,
     });
     return;
   }
@@ -366,7 +377,7 @@ export const getNearbyHospitals = asyncHandler(async (req: Request, res: Respons
       (h) =>
         h.distanceMeters <= r * 1000 &&
         h.coordinates &&
-        isWithinHyderabadServiceArea(h.coordinates.lat, h.coordinates.lng)
+        isWithinTelanganaServiceArea(h.coordinates.lat, h.coordinates.lng)
     );
     if (inTier.length > 0) {
       hospitals = inTier;
@@ -380,7 +391,7 @@ export const getNearbyHospitals = asyncHandler(async (req: Request, res: Respons
     const expanded = await findNearbyHospitalsUnified(lat, lng, 50);
     hospitals = expanded.hospitals.filter(
       (h) =>
-        h.coordinates && isWithinHyderabadServiceArea(h.coordinates.lat, h.coordinates.lng)
+        h.coordinates && isWithinTelanganaServiceArea(h.coordinates.lat, h.coordinates.lng)
     );
     source = expanded.source;
     usedRadius = 50;
@@ -402,7 +413,7 @@ export const searchHyderabadAreasHandler = asyncHandler(async (req: Request, res
   const q = String(req.query.q ?? '').trim();
   const limit = Math.min(parseInt(String(req.query.limit ?? '20'), 10) || 20, 50);
   const areas = searchHyderabadAreas(q, limit);
-  res.json({ success: true, data: { areas, serviceLabel: HYDERABAD_SERVICE_LABEL } });
+  res.json({ success: true, data: { areas, serviceLabel: TELANGANA_SERVICE_LABEL } });
 });
 
 export const searchEmergencyAddresses = asyncHandler(async (req: Request, res: Response) => {
@@ -429,7 +440,7 @@ export const searchEmergencyAddresses = asyncHandler(async (req: Request, res: R
       suggestions,
       areas,
       configured: isAddressAutocompleteConfigured(),
-      serviceLabel: HYDERABAD_SERVICE_LABEL,
+      serviceLabel: TELANGANA_SERVICE_LABEL,
     },
   });
 });
@@ -443,10 +454,10 @@ export const reverseGeocodeEmergency = asyncHandler(async (req: Request, res: Re
     return;
   }
 
-  if (!isWithinHyderabadServiceArea(lat, lng)) {
+  if (!isWithinTelanganaServiceArea(lat, lng)) {
     res.status(400).json({
       success: false,
-      message: `Your GPS location is outside ${HYDERABAD_SERVICE_LABEL}. Enter your address manually.`,
+      message: `Your GPS location is outside ${TELANGANA_SERVICE_LABEL}. Enter your city or area manually.`,
     });
     return;
   }
@@ -528,10 +539,10 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
       });
       return;
     }
-    if (!isWithinHyderabadServiceArea(fromPlace.lat, fromPlace.lng)) {
+    if (!isWithinTelanganaServiceArea(fromPlace.lat, fromPlace.lng)) {
       res.status(404).json({
         success: false,
-        message: `That location is outside ${HYDERABAD_SERVICE_LABEL}. Pick an address within the service area.`,
+        message: `That location is outside ${TELANGANA_SERVICE_LABEL}. Pick an address within Telangana.`,
       });
       return;
     }
@@ -563,20 +574,20 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
   }
 
   const lower = address.toLowerCase();
-  if (/warangal|bengaluru|bangalore|mumbai|delhi|chennai|vizag|vijayawada|pune/i.test(lower)) {
+  if (/bengaluru|bangalore|mumbai|delhi|chennai|vizag|vijayawada|pune|kolkata|kerala|karnataka/i.test(lower)) {
     res.status(400).json({
       success: false,
-      message: `Only ${HYDERABAD_SERVICE_LABEL} is supported. Pick an area like Madhapur or Gachibowli.`,
+      message: `Only ${TELANGANA_SERVICE_LABEL} is supported. Pick a city like Warangal, Nizamabad, or Hyderabad.`,
     });
     return;
   }
 
   const result = await geocodeAddress(
-    lower.includes('hyderabad') || lower.includes('telangana')
+    lower.includes('telangana') || lower.includes('hyderabad') || lower.includes('warangal')
       ? address
-      : `${address}, Hyderabad, Telangana`
+      : `${address}, Telangana`
   );
-  if (result && isWithinHyderabadServiceArea(result.lat, result.lng)) {
+  if (result && isWithinTelanganaServiceArea(result.lat, result.lng)) {
     res.json({ success: true, data: result });
     return;
   }
@@ -585,7 +596,7 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
     ? nearestHyderabadArea(result.lat, result.lng)
     : resolveHyderabadArea(address.split(',')[0]?.trim() ?? address);
 
-  if (nearest && isWithinHyderabadServiceArea(nearest.lat, nearest.lng)) {
+  if (nearest && isWithinTelanganaServiceArea(nearest.lat, nearest.lng)) {
     res.json({
       success: true,
       data: {
@@ -601,7 +612,7 @@ export const geocodeEmergencyAddress = asyncHandler(async (req: Request, res: Re
 
   res.status(404).json({
     success: false,
-    message: `Could not find that address in ${HYDERABAD_SERVICE_LABEL}. Try a nearby landmark or colony name.`,
+    message: `Could not find that address in ${TELANGANA_SERVICE_LABEL}. Try your city name or a nearby landmark.`,
   });
 });
 

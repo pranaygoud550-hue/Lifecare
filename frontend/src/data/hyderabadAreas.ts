@@ -1,21 +1,31 @@
-/** Hyderabad + outskirts service area for emergency flows */
+/** Telangana-wide emergency service area (Hyderabad + all districts) */
 
 export type HyderabadArea = {
   id: string;
   name: string;
   zone: string;
+  /** Display city / district — defaults to Hyderabad for legacy areas */
+  city?: string;
   lat: number;
   lng: number;
   aliases?: string[];
 };
 
-/** City center — used for radius checks and map bias */
+/** City center — map bias for Hyderabad metro */
 export const HYDERABAD_CENTER = { lat: 17.385, lng: 78.4867 } as const;
 
-/** ~100 km service radius (Medchal, Kompally, Secunderabad, Shamshabad, Patancheru, etc.) */
-export const SERVICE_RADIUS_KM = 100;
+/** Telangana state center — fallback bias */
+export const TELANGANA_CENTER = { lat: 17.85, lng: 79.05 } as const;
 
-/** Bounding box for quick reject + autocomplete bias */
+/** Full Telangana state bounding box */
+export const TELANGANA_BOUNDS = {
+  minLat: 15.85,
+  maxLat: 19.92,
+  minLng: 77.28,
+  maxLng: 81.78,
+} as const;
+
+/** Legacy alias — Hyderabad metro subset */
 export const HYDERABAD_BOUNDS = {
   minLat: 16.48,
   maxLat: 18.29,
@@ -23,7 +33,10 @@ export const HYDERABAD_BOUNDS = {
   maxLng: 79.38,
 } as const;
 
-export const HYDERABAD_SERVICE_LABEL = 'Hyderabad & surroundings (100 km)';
+export const SERVICE_RADIUS_KM = 100;
+
+export const TELANGANA_SERVICE_LABEL = 'Telangana';
+export const HYDERABAD_SERVICE_LABEL = TELANGANA_SERVICE_LABEL;
 
 export const HYDERABAD_AREAS: HyderabadArea[] = [
   // Central & Old City
@@ -228,6 +241,38 @@ export const HYDERABAD_AREAS: HyderabadArea[] = [
   { id: 'vanasthalipuram-x-roads', name: 'Vanasthalipuram X Roads', zone: 'East', lat: 17.3265, lng: 78.5765 },
   { id: 'west-marredpally', name: 'West Marredpally', zone: 'North', lat: 17.4485, lng: 78.5085 },
   { id: 'east-marredpally', name: 'East Marredpally', zone: 'North', lat: 17.4485, lng: 78.5185 },
+
+  // Telangana — other districts & cities
+  { id: 'warangal', name: 'Warangal', zone: 'Warangal Urban', city: 'Warangal', lat: 17.9784, lng: 79.5941, aliases: ['Hanamkonda', 'Kazipet', 'GWMC'] },
+  { id: 'hanamkonda', name: 'Hanamkonda', zone: 'Warangal Urban', city: 'Warangal', lat: 18.0067, lng: 79.5589 },
+  { id: 'kazipet', name: 'Kazipet', zone: 'Warangal Urban', city: 'Warangal', lat: 17.9667, lng: 79.5306 },
+  { id: 'nizamabad', name: 'Nizamabad', zone: 'Nizamabad Urban', city: 'Nizamabad', lat: 18.6725, lng: 78.0941 },
+  { id: 'karimnagar', name: 'Karimnagar', zone: 'Karimnagar Urban', city: 'Karimnagar', lat: 18.4386, lng: 79.1288 },
+  { id: 'khammam', name: 'Khammam', zone: 'Khammam Urban', city: 'Khammam', lat: 17.2473, lng: 80.1514 },
+  { id: 'kothagudem', name: 'Kothagudem', zone: 'Bhadradri', city: 'Kothagudem', lat: 17.5505, lng: 80.6187, aliases: ['Bhadrachalam'] },
+  { id: 'mahbubnagar', name: 'Mahbubnagar', zone: 'Mahbubnagar Urban', city: 'Mahbubnagar', lat: 16.7488, lng: 77.9977, aliases: ['Mahabubnagar'] },
+  { id: 'nalgonda', name: 'Nalgonda', zone: 'Nalgonda Urban', city: 'Nalgonda', lat: 17.0575, lng: 79.267 },
+  { id: 'miryalaguda', name: 'Miryalaguda', zone: 'Nalgonda', city: 'Miryalaguda', lat: 16.8772, lng: 79.5724 },
+  { id: 'adilabad', name: 'Adilabad', zone: 'Adilabad Urban', city: 'Adilabad', lat: 19.6641, lng: 78.532 },
+  { id: 'suryapet', name: 'Suryapet', zone: 'Suryapet Urban', city: 'Suryapet', lat: 17.1405, lng: 79.6201 },
+  { id: 'siddipet', name: 'Siddipet', zone: 'Siddipet Urban', city: 'Siddipet', lat: 17.6018, lng: 78.854 },
+  { id: 'mancherial', name: 'Mancherial', zone: 'Mancherial Urban', city: 'Mancherial', lat: 18.8728, lng: 79.4658 },
+  { id: 'ramagundam', name: 'Ramagundam', zone: 'Peddapalli', city: 'Ramagundam', lat: 18.755, lng: 79.474 },
+  { id: 'peddapalli', name: 'Peddapalli', zone: 'Peddapalli Urban', city: 'Peddapalli', lat: 18.6167, lng: 79.3721 },
+  { id: 'jagtial', name: 'Jagtial', zone: 'Jagtial Urban', city: 'Jagtial', lat: 18.7947, lng: 78.9261 },
+  { id: 'kamareddy', name: 'Kamareddy', zone: 'Kamareddy Urban', city: 'Kamareddy', lat: 18.32, lng: 78.3411 },
+  { id: 'vikarabad', name: 'Vikarabad', zone: 'Vikarabad Urban', city: 'Vikarabad', lat: 17.338, lng: 77.9042 },
+  { id: 'sangareddy', name: 'Sangareddy', zone: 'Sangareddy Urban', city: 'Sangareddy', lat: 17.6284, lng: 78.0869 },
+  { id: 'medak', name: 'Medak', zone: 'Medak Urban', city: 'Medak', lat: 18.0454, lng: 78.263 },
+  { id: 'bhongir', name: 'Bhongir', zone: 'Yadadri', city: 'Bhongir', lat: 17.5183, lng: 78.8867, aliases: ['Bhuvanagiri'] },
+  { id: 'bodhan', name: 'Bodhan', zone: 'Nizamabad', city: 'Bodhan', lat: 18.66, lng: 77.8889 },
+  { id: 'wanaparthy', name: 'Wanaparthy', zone: 'Wanaparthy Urban', city: 'Wanaparthy', lat: 16.3614, lng: 78.0687 },
+  { id: 'nagarkurnool', name: 'Nagarkurnool', zone: 'Nagarkurnool Urban', city: 'Nagarkurnool', lat: 16.4824, lng: 78.3247 },
+  { id: 'sircilla', name: 'Sircilla', zone: 'Rajanna Sircilla', city: 'Sircilla', lat: 18.3867, lng: 78.8106 },
+  { id: 'bellampalle', name: 'Bellampalle', zone: 'Mancherial', city: 'Bellampalle', lat: 19.0558, lng: 79.4931 },
+  { id: 'mahabubabad', name: 'Mahabubabad', zone: 'Mahabubabad Urban', city: 'Mahabubabad', lat: 17.5983, lng: 80.0011 },
+  { id: 'jangaon', name: 'Jangaon', zone: 'Jangaon Urban', city: 'Jangaon', lat: 17.7226, lng: 79.1521 },
+  { id: 'yadagirigutta', name: 'Yadagirigutta', zone: 'Yadadri', city: 'Yadagirigutta', lat: 17.587, lng: 78.947 },
 ];
 
 function normalize(text: string): string {
@@ -254,16 +299,18 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): num
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+export function isWithinTelanganaServiceArea(lat: number, lng: number): boolean {
+  return (
+    lat >= TELANGANA_BOUNDS.minLat &&
+    lat <= TELANGANA_BOUNDS.maxLat &&
+    lng >= TELANGANA_BOUNDS.minLng &&
+    lng <= TELANGANA_BOUNDS.maxLng
+  );
+}
+
+/** @deprecated Use isWithinTelanganaServiceArea */
 export function isWithinHyderabadServiceArea(lat: number, lng: number): boolean {
-  if (
-    lat < HYDERABAD_BOUNDS.minLat ||
-    lat > HYDERABAD_BOUNDS.maxLat ||
-    lng < HYDERABAD_BOUNDS.minLng ||
-    lng > HYDERABAD_BOUNDS.maxLng
-  ) {
-    return false;
-  }
-  return distanceKm(HYDERABAD_CENTER.lat, HYDERABAD_CENTER.lng, lat, lng) <= SERVICE_RADIUS_KM;
+  return isWithinTelanganaServiceArea(lat, lng);
 }
 
 function scoreArea(area: HyderabadArea, query: string): number {
@@ -291,9 +338,15 @@ function scoreArea(area: HyderabadArea, query: string): number {
     }
   }
 
-  if (q.includes('hyd') || q.includes('hyderabad')) score = Math.max(score, 5);
+  if (q.includes('hyd') || q.includes('hyderabad') || q.includes('telangana') || q.includes('ts'))
+    score = Math.max(score, 5);
 
   return score;
+}
+
+function areaCityLabel(area: HyderabadArea): string {
+  if (area.city) return area.city;
+  return 'Hyderabad';
 }
 
 export function searchHyderabadAreas(query: string, limit = 20): HyderabadArea[] {
@@ -326,28 +379,27 @@ export function resolveHyderabadArea(query: string): HyderabadArea | null {
   return scoreArea(top, query) >= 50 ? top : null;
 }
 
-/** Snap unknown coords to the nearest catalogued area (within ~8 km). */
+/** Snap unknown coords to the nearest catalogued area. */
 export function nearestHyderabadArea(lat: number, lng: number): HyderabadArea | null {
-  if (!isWithinHyderabadServiceArea(lat, lng)) return null;
+  if (!isWithinTelanganaServiceArea(lat, lng)) return null;
 
   let best: HyderabadArea | null = null;
   let bestKm = Infinity;
 
   for (const area of HYDERABAD_AREAS) {
-    const dLat = area.lat - lat;
-    const dLng = area.lng - lng;
-    const km = Math.sqrt(dLat * dLat + dLng * dLng) * 111;
+    const km = distanceKm(area.lat, area.lng, lat, lng);
     if (km < bestKm) {
       bestKm = km;
       best = area;
     }
   }
 
-  return bestKm <= 8 ? best : null;
+  const maxSnapKm = best && areaCityLabel(best) === 'Hyderabad' ? 12 : 80;
+  return best && bestKm <= maxSnapKm ? best : null;
 }
 
 export function areaToDisplayName(area: HyderabadArea, landmark?: string): string {
-  const base = `${area.name}, Hyderabad`;
+  const base = `${area.name}, ${areaCityLabel(area)}, Telangana`;
   const detail = landmark?.trim();
   return detail ? `${detail}, ${base}` : base;
 }

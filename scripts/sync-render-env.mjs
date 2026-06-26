@@ -89,19 +89,28 @@ async function findService() {
 }
 
 async function getEnvVars(serviceId) {
-  const rows = await renderFetch(`/services/${serviceId}/env-vars`);
   const map = new Map();
-  for (const row of rows) {
-    const ev = row.envVar || row;
-    map.set(ev.key, ev.value);
-  }
+  let cursor;
+  do {
+    const path = cursor
+      ? `/services/${serviceId}/env-vars?cursor=${encodeURIComponent(cursor)}`
+      : `/services/${serviceId}/env-vars?limit=100`;
+    const rows = await renderFetch(path);
+    for (const row of rows) {
+      const ev = row.envVar || row;
+      map.set(ev.key, ev.value);
+      cursor = row.cursor;
+    }
+    if (!rows.length) break;
+  } while (cursor);
   return map;
 }
 
-async function setEnvVar(serviceId, key, value) {
+async function setEnvVars(serviceId, entries) {
+  const payload = Object.entries(entries).map(([key, value]) => ({ key, value }));
   await renderFetch(`/services/${serviceId}/env-vars`, {
     method: 'PUT',
-    body: JSON.stringify([{ key, value }]),
+    body: JSON.stringify(payload),
   });
 }
 
@@ -117,17 +126,19 @@ async function main() {
   const service = await findService();
   console.log(`Found Render service: ${service.name} (${service.id})`);
 
-  const defaults = {
-    NODE_ENV: 'production',
+  const forceProduction = {
+    USE_MEMORY_DB: 'false',
+    ALLOW_DEMO_LOGIN: 'true',
     FRONTEND_URL: 'https://lifecare-frontend-navy.vercel.app',
     BACKEND_URL: 'https://lifecare-l42k.onrender.com',
-    ALLOW_DEMO_LOGIN: 'true',
-    USE_MEMORY_DB: 'false',
   };
 
-  const toSet = {};
+  /** Keep NODE_ENV=development on Render until Atlas connects — production skips devDeps at build time. */
+  const nodeEnv = process.env.RENDER_NODE_ENV || 'development';
+  const toSet = { ...forceProduction, NODE_ENV: nodeEnv };
   for (const key of SYNC_KEYS) {
-    const value = local[key] || defaults[key];
+    if (key in forceProduction) continue;
+    const value = local[key];
     if (value) toSet[key] = value;
   }
 
@@ -143,21 +154,13 @@ async function main() {
   }
 
   const current = await getEnvVars(service.id);
-  let updated = 0;
-  for (const [key, value] of Object.entries(toSet)) {
-    if (current.get(key) === value) {
-      console.log(`  skip ${key} (unchanged)`);
-      continue;
-    }
-    await setEnvVar(service.id, key, value);
-    console.log(`  set ${key}`);
-    updated += 1;
-  }
-
-  if (updated > 0) {
-    console.log(`\nUpdated ${updated} env var(s). Render will redeploy automatically.`);
-  } else {
+  const changed = Object.entries(toSet).filter(([key, value]) => current.get(key) !== value);
+  if (changed.length === 0) {
     console.log('\nAll env vars already up to date.');
+  } else {
+    for (const [key] of changed) console.log(`  update ${key}`);
+    await setEnvVars(service.id, toSet);
+    console.log(`\nUpdated ${changed.length} env var(s) in one request. Render will redeploy automatically.`);
   }
 
   console.log('\nVerify after deploy (~3 min):');
