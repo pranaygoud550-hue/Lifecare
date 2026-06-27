@@ -262,9 +262,7 @@ export function EmergencyDispatchStep() {
             value={savedLocation?.address ?? autoLocation?.address}
             onSelect={(sel) => void handleAreaSelect(sel)}
             inputClassName="h-12 bg-white text-lg"
-            showPopular
             showLandmark
-            showGpsButton={detectStatus === 'failed'}
           />
         </>
       )}

@@ -226,17 +226,15 @@ export function SOSButton({ emergencyType = 'other', className = '' }: SOSButton
             ) : (
               <>
                 <p id="sos-countdown-title" className="text-lg font-bold mb-2">
-                  Where are you in Hyderabad?
+                  Where are you in Telangana?
                 </p>
                 <p className="text-red-100 text-sm mb-4">
-                  GPS failed — search shop or street (e.g. Chai Loaded, Kandlakoya)
+                  GPS failed — search your city or area in Telangana
                 </p>
                 <HyderabadAreaSearch
                   onSelect={handleAreaSelect}
                   inputClassName="h-12 bg-white text-base text-slate-900"
-                  showPopular
                   showLandmark
-                  showGpsButton
                 />
               </>
             )}

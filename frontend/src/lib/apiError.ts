@@ -1,7 +1,7 @@
 function sanitizeClientErrorMessage(message: string, fallback: string): string {
   const lower = message.toLowerCase();
   if (lower.includes('database') && lower.includes('offline')) {
-    return 'Server is waking up. Wait 20 seconds and refresh — or use Try instantly on Login.';
+    return 'Server is starting up. Please wait a moment and try again.';
   }
   if (/can't extract geo keys|invalid geojson|invalid_geojson/i.test(message)) {
     return 'Location data is invalid. Please try again.';
@@ -29,11 +29,11 @@ export function getApiErrorMessage(err: unknown, fallback: string): string {
   };
 
   if (e.data?.code === 'DATABASE_OFFLINE') {
-    return 'Server is waking up. Wait 20 seconds and refresh — or use Try instantly on Login.';
+    return 'Server is starting up. Please wait a moment and try again.';
   }
 
   if (e.status === 'FETCH_ERROR' || e.error === 'TypeError: Failed to fetch') {
-    return 'Server is waking up (Render cold start). Wait 20–30 seconds and try again.';
+    return 'Server is starting up. Please wait a moment and try again.';
   }
 
   if (e.data?.message) {

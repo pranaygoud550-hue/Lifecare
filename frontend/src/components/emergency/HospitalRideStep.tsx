@@ -234,7 +234,6 @@ export function HospitalRideStep() {
               value={pickupAddress}
               onSelect={applyPickup}
               inputClassName="h-11 bg-white text-base"
-              showPopular
             />
           )}
           {pickup && (
@@ -262,7 +261,7 @@ export function HospitalRideStep() {
               Loading hospitals near you…
             </p>
           ) : !pickup ? (
-            <p className="text-sm text-amber-100">Pick your Hyderabad area above to see nearby hospitals.</p>
+            <p className="text-sm text-amber-100">Search your area above to see nearby hospitals.</p>
           ) : nearbyHospitals.length === 0 ? (
             <p className="text-sm text-amber-100">
               No hospitals found within 50 km. Search for a hospital below.

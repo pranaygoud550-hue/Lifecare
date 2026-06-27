@@ -22,16 +22,17 @@ export interface OnboardingSlide {
   accent: string;
 }
 
+/** Recruiter-friendly intro — each slide answers what LifeCare+ is and what it does. */
 export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'welcome',
     index: '01',
-    eyebrow: 'Chapter I — Why LifeCare+',
-    title: 'When health matters,',
-    highlight: 'everything matters.',
-    tagline: 'One app for your whole family’s care journey.',
+    eyebrow: 'LifeCare+ · Product overview',
+    title: 'One platform for',
+    highlight: 'complete healthcare.',
+    tagline: 'React + Node.js full-stack digital health app.',
     description:
-      'LifeCare+ unites verified doctors, emergency response, AI health screening, pharmacy, and your personal health record — designed for real life in India.',
+      'Patients book doctors, run AI health scans, order medicines, and trigger emergency ambulance dispatch — all in one PWA. Built for India with real-time video, payments, and GPS routing.',
     icon: Heart,
     gradient: 'from-[#050a12] via-[#0c1f3d] to-[#050a12]',
     glow: 'rgba(29,158,117,0.45)',
@@ -40,12 +41,12 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'sos',
     index: '02',
-    eyebrow: 'Chapter II — Emergency',
-    title: 'Every second',
-    highlight: 'counts.',
-    tagline: 'Ambulance + nearest hospital — one tap.',
+    eyebrow: 'Emergency SOS · Telangana-wide',
+    title: 'Ambulance + hospital',
+    highlight: 'in one tap.',
+    tagline: 'GPS auto-detect → nearest ER → live map.',
     description:
-      'Press SOS and we connect you to the closest emergency hospital, dispatch an ambulance to your GPS, and show a live route map until help arrives.',
+      'Press SOS: we detect your location, find the closest hospital with ambulance service via Google Places, dispatch a driver, and show a live route — no manual typing in an emergency.',
     icon: Siren,
     gradient: 'from-[#120606] via-[#3a1010] to-[#050a12]',
     glow: 'rgba(255,107,107,0.5)',
@@ -54,12 +55,12 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'mediscan',
     index: '03',
-    eyebrow: 'Chapter III — MediScan AI',
-    title: 'Catch risks',
-    highlight: 'earlier.',
-    tagline: 'AI screening — your doctor makes the call.',
+    eyebrow: 'MediScan AI · Computer vision',
+    title: 'AI screens X-rays,',
+    highlight: 'skin & retina.',
+    tagline: 'Upload → instant risk flags → clinician review.',
     description:
-      'Upload chest X-rays, skin photos, or retina scans for instant AI-assisted screening. Results sync to your profile and health vault for clinician review.',
+      'Chest X-ray, skin lesion, and retina image analysis with confidence scores. Results sync to the patient health vault — demonstrates ML integration in a real clinical workflow.',
     icon: Brain,
     gradient: 'from-[#050a12] via-[#0a1535] to-[#050a12]',
     glow: 'rgba(0,102,255,0.45)',
@@ -68,12 +69,12 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'consult',
     index: '04',
-    eyebrow: 'Chapter IV — Telehealth',
-    title: 'Real doctors.',
-    highlight: 'Real video.',
-    tagline: 'Consult from home — HD and secure.',
+    eyebrow: 'Telehealth · WebRTC video',
+    title: 'Live doctor consults',
+    highlight: 'from home.',
+    tagline: 'Book → pay with wallet → join HD video room.',
     description:
-      'Book verified specialists, join live WebRTC video consults with your doctor, and follow personalized wellness plans — prescriptions included.',
+      'Verified specialists, appointment booking, WebRTC video calls with Socket.io signaling, prescriptions, and care plans — the full telemedicine loop end to end.',
     icon: Video,
     gradient: 'from-[#050a12] via-[#0a2838] to-[#050a12]',
     glow: 'rgba(93,202,165,0.4)',
@@ -82,12 +83,12 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'pharmacy',
     index: '05',
-    eyebrow: 'Chapter V — Complete care',
-    title: 'Meds, skin care,',
-    highlight: 'delivered.',
-    tagline: 'Pharmacy + wallet + health history in sync.',
+    eyebrow: 'Pharmacy · Wallet · Records',
+    title: 'Meds delivered,',
+    highlight: 'history saved.',
+    tagline: 'E-commerce + digital health record in sync.',
     description:
-      'Order medicines and skin-care products, pay with wallet, track deliveries, and keep every scan and consult in one trusted health profile.',
+      'Browse medicines and skin-care products, checkout with an in-app wallet, track orders, and keep every scan, consult, and prescription in one unified health profile.',
     icon: Pill,
     gradient: 'from-[#050a12] via-[#102820] to-[#050a12]',
     glow: 'rgba(0,196,140,0.35)',
@@ -96,12 +97,12 @@ export const ONBOARDING_SLIDES: OnboardingSlide[] = [
   {
     id: 'start',
     index: '06',
-    eyebrow: 'Chapter VI — Your turn',
-    title: 'Your health story',
-    highlight: 'starts now.',
-    tagline: 'Try the live demo in one tap.',
+    eyebrow: 'Try it now · No signup needed',
+    title: 'Explore the',
+    highlight: 'live demo.',
+    tagline: 'Patient or Doctor — one tap, full access.',
     description:
-      'Explore as a patient or doctor — full app access, no signup. Or create your account and experience the future of digital healthcare.',
+      'Tap Try instantly below to walk through appointments, SOS, MediScan, and video consults with seeded demo data. No OTP required for the interview demo.',
     icon: Sparkles,
     gradient: 'from-[#050a12] via-[#152238] to-[#050a12]',
     glow: 'rgba(29,158,117,0.5)',

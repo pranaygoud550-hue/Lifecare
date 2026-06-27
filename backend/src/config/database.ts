@@ -35,7 +35,7 @@ let cachedAtlasUri: string | null = null;
 const MAX_RETRIES = 15;
 const PRODUCTION_RETRIES = 12;
 const RETRY_DELAY_MS = 3000;
-const ATLAS_TIMEOUT_MS = 20_000;
+const ATLAS_TIMEOUT_MS = 35_000;
 const LOCAL_TIMEOUT_MS = 8_000;
 const LOCAL_FALLBACK_URI = 'mongodb://127.0.0.1:27017/lifecare-plus';
 

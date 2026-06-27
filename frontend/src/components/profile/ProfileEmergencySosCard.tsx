@@ -196,7 +196,7 @@ export function ProfileEmergencySosCard() {
             {phase === 'pick-area' && (
               <>
                 <h2 id="profile-sos-title" className="text-xl font-bold mb-2">
-                  Where are you in Hyderabad?
+                  Where are you in Telangana?
                 </h2>
                 <p className="text-red-100 text-sm mb-4">
                   SOS works across {HYDERABAD_SERVICE_LABEL}.
@@ -204,7 +204,6 @@ export function ProfileEmergencySosCard() {
                 <HyderabadAreaSearch
                   onSelect={handleAreaSelect}
                   inputClassName="h-12 bg-white text-base text-slate-900"
-                  showPopular
                 />
               </>
             )}
@@ -239,7 +238,7 @@ export function ProfileEmergencySosCard() {
                   </div>
                 ) : (
                   <p className="text-sm text-red-100 mb-4">
-                    Hospital will be assigned from your selected Hyderabad area.
+                    Hospital will be assigned from your selected area.
                   </p>
                 )}
 

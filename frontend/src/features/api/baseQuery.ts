@@ -32,12 +32,33 @@ type RefreshPayload = {
   data?: { accessToken?: string; refreshToken?: string; message?: string };
 };
 
+const MAX_WAKE_RETRIES = 4;
+const WAKE_RETRY_MS = 5000;
+
+function isServerWakingError(error: FetchBaseQueryError): boolean {
+  if (error.status === 'FETCH_ERROR' || error.status === 'TIMEOUT_ERROR') return true;
+  if (error.status !== 503) return false;
+  const data = error.data as { code?: string } | undefined;
+  return data?.code === 'DATABASE_OFFLINE';
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
   let result = await rawBaseQuery(args, api, extraOptions);
+
+  let wakeAttempt = 0;
+  while (result.error && isServerWakingError(result.error) && wakeAttempt < MAX_WAKE_RETRIES) {
+    wakeAttempt += 1;
+    await sleep(WAKE_RETRY_MS);
+    result = await rawBaseQuery(args, api, extraOptions);
+  }
 
   if (result.error && result.error.status === 401) {
     const storedRefresh = getRefreshToken();

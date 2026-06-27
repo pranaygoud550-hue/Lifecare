@@ -96,7 +96,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
 
         {/* Tagline — 1.9s */}
         <p className="lc-splash-tagline mt-4 text-center text-base font-medium text-[#5DCAA5]">
-          Your health. Our priority.
+          SOS · AI scans · video consults · pharmacy
+        </p>
+        <p className="lc-splash-tagline mt-2 text-center text-sm text-white/50">
+          Full-stack digital health for India
         </p>
 
         {/* Micro stats — 2.3s */}

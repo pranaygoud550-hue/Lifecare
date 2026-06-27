@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import {
-  HYDERABAD_AREAS,
   HYDERABAD_SERVICE_LABEL,
   areaToDisplayName,
   resolveHyderabadArea,
@@ -35,26 +34,12 @@ interface HyderabadAreaSearchProps {
   className?: string;
   inputClassName?: string;
   label?: string;
-  showPopular?: boolean;
   showLandmark?: boolean;
   requireLandmark?: boolean;
   showGpsButton?: boolean;
+  /** Auto-detect GPS on mount when no value is set */
+  autoDetectOnMount?: boolean;
 }
-
-const POPULAR_IDS = [
-  'madhapur',
-  'gachibowli',
-  'warangal',
-  'nizamabad',
-  'karimnagar',
-  'khammam',
-  'secunderabad',
-  'lb-nagar',
-  'miyapur',
-  'siddipet',
-  'mahbubnagar',
-  'kukatpally',
-];
 
 type StreetSuggestion = {
   placeId: string;
@@ -74,14 +59,14 @@ function resolveSuggestionLocally(suggestion: StreetSuggestion): HyderabadArea |
 export function HyderabadAreaSearch({
   value = '',
   onSelect,
-  placeholder = 'Warangal, Nizamabad, Madhapur, Karimnagar, your colony…',
+  placeholder = 'Search city or area in Telangana…',
   className,
   inputClassName,
   label,
-  showPopular = true,
   showLandmark = true,
   requireLandmark = false,
   showGpsButton = true,
+  autoDetectOnMount = false,
 }: HyderabadAreaSearchProps) {
   const [query, setQuery] = useState(value);
   const [lastExternalValue, setLastExternalValue] = useState(value);
@@ -101,16 +86,15 @@ export function HyderabadAreaSearch({
   const [searching, setSearching] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const autoDetectRan = useRef(false);
 
   const [fetchSuggestions] = useLazySearchEmergencyAddressesQuery();
   const [geocodeAddress] = useLazyGeocodeEmergencyAddressQuery();
   const [reverseGeocode] = useLazyReverseGeocodeEmergencyQuery();
 
-  const localResults = useMemo(() => searchHyderabadAreas(query, 12), [query]);
-
-  const popular = useMemo(
-    () => POPULAR_IDS.map((id) => HYDERABAD_AREAS.find((a) => a.id === id)).filter(Boolean) as HyderabadArea[],
-    []
+  const localResults = useMemo(
+    () => (query.trim().length >= 2 ? searchHyderabadAreas(query, 8) : []),
+    [query]
   );
 
   useEffect(() => {
@@ -243,7 +227,7 @@ export function HyderabadAreaSearch({
       if (fallback) {
         pickArea(fallback);
       } else {
-        toast.error('Could not resolve that address. Try another suggestion or pick an area chip below.');
+        toast.error('Could not resolve that address. Try another suggestion.');
       }
     } finally {
       setGeocoding(false);
@@ -272,7 +256,7 @@ export function HyderabadAreaSearch({
       }
     } catch {
       toast.error(
-        `Could not find "${q}" in ${HYDERABAD_SERVICE_LABEL}. Try a street name, colony, or landmark.`
+        `Could not find "${q}" in ${HYDERABAD_SERVICE_LABEL}. Try a city, colony, or landmark.`
       );
     } finally {
       setGeocoding(false);
@@ -284,12 +268,24 @@ export function HyderabadAreaSearch({
     setOpen(false);
     try {
       const gps = await resolveSosLocation();
-      const res = await reverseGeocode({ lat: gps.lat, lng: gps.lng }).unwrap();
-      const data = res.data;
-      if (!data) throw new Error('No reverse geocode');
-      setQuery(data.displayName);
+      let lat = gps.lat;
+      let lng = gps.lng;
+      let displayName = gps.address;
+
+      try {
+        const res = await reverseGeocode({ lat: gps.lat, lng: gps.lng }).unwrap();
+        if (res.data?.displayName) {
+          lat = res.data.lat;
+          lng = res.data.lng;
+          displayName = res.data.displayName;
+        }
+      } catch {
+        /* GPS coords still valid */
+      }
+
+      setQuery(displayName);
       setLandmark('');
-      confirmCoords(data.lat, data.lng, data.displayName);
+      confirmCoords(lat, lng, displayName);
       if (!showLandmark) {
         setPendingPickup(null);
       }
@@ -298,12 +294,19 @@ export function HyderabadAreaSearch({
       const msg =
         err instanceof GpsLocationError
           ? err.message
-          : 'Could not detect your location. Allow GPS or type your address.';
+          : 'Could not detect your location. Allow GPS or search your area below.';
       toast.error(msg);
     } finally {
       setGeocoding(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoDetectOnMount || autoDetectRan.current || value.trim()) return;
+    autoDetectRan.current = true;
+    void handleCurrentLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- run once on mount
+  }, [autoDetectOnMount, value]);
 
   const shopSuggestions = useMemo(
     () => streetSuggestions.filter((s) => s.kind === 'establishment'),
@@ -332,15 +335,13 @@ export function HyderabadAreaSearch({
   );
 
   const canConfirm = !requireLandmark || landmark.trim().length >= 3;
-  const showDropdown = open && query.length > 0;
+  const trimmedQuery = query.trim();
+  const showDropdown = open && trimmedQuery.length >= 2;
   const hasResults = localResults.length > 0 || streetSuggestions.length > 0;
 
   return (
     <div ref={wrapperRef} className={cn('space-y-2 min-w-0', className)}>
       {label && <p className="text-sm font-medium text-inherit">{label}</p>}
-      <p className="text-xs text-inherit opacity-80 break-words">
-        Type a shop (e.g. Chai Loaded), street, or colony — nearest hospital loads when you pick.
-      </p>
 
       {showGpsButton && (
         <Button
@@ -388,7 +389,7 @@ export function HyderabadAreaSearch({
             {shopSuggestions.length > 0 && (
               <div>
                 <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-border/50">
-                  Shops & landmarks
+                  Landmarks & shops
                 </p>
                 {shopSuggestions.map(renderSuggestion)}
               </div>
@@ -403,12 +404,12 @@ export function HyderabadAreaSearch({
               </div>
             )}
 
-            {(query ? localResults : HYDERABAD_AREAS.slice(0, 14)).length > 0 && (
+            {localResults.length > 0 && (
               <div>
                 <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-border/50">
-                  {query ? 'Areas & colonies' : 'Popular areas'}
+                  Cities & areas
                 </p>
-                {(query ? localResults : HYDERABAD_AREAS.slice(0, 14)).map((area) => (
+                {localResults.map((area) => (
                   <button
                     key={area.id}
                     type="button"
@@ -425,19 +426,19 @@ export function HyderabadAreaSearch({
               </div>
             )}
 
-            {query && !searching && !hasResults && (
+            {!searching && !hasResults && (
               <p className="px-3 py-3 text-sm text-muted break-words">
-                No matches — press Enter to search &quot;{query}&quot;
+                No matches — press Enter to search &quot;{trimmedQuery}&quot;
               </p>
             )}
 
-            {query.length >= 2 && !searching && (
+            {!searching && (
               <button
                 type="button"
                 className="w-full text-left px-3 py-2.5 text-sm font-medium text-primary hover:bg-muted/80 border-t border-border/50 truncate"
                 onClick={() => void geocodeFreeText()}
               >
-                Search &quot;{query}&quot; on map
+                Search &quot;{trimmedQuery}&quot; on map
               </button>
             )}
           </div>
@@ -459,7 +460,7 @@ export function HyderabadAreaSearch({
           <Input
             value={landmark}
             onChange={(e) => setLandmark(e.target.value)}
-            placeholder="e.g. Flat 402, My Home Avatar, near metro gate"
+            placeholder="e.g. Flat 402, near metro gate"
             className={cn('h-10 bg-white/95 text-slate-900', inputClassName)}
             autoFocus
           />
@@ -487,22 +488,6 @@ export function HyderabadAreaSearch({
           >
             {landmark.trim() ? 'Update pickup details' : 'Skip — pickup confirmed'}
           </button>
-        </div>
-      )}
-
-      {showPopular && !selectedArea && !pendingPickup && (
-        <div className="flex flex-wrap gap-1.5">
-          {popular.map((area) => (
-            <button
-              key={area.id}
-              type="button"
-              onClick={() => pickArea(area)}
-              className="inline-flex items-center gap-1 rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-xs font-medium text-white hover:bg-white/25 max-w-full"
-            >
-              <MapPin className="h-3 w-3 opacity-70 shrink-0" />
-              <span className="truncate">{area.name}</span>
-            </button>
-          ))}
         </div>
       )}
     </div>

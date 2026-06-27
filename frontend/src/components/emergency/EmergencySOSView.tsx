@@ -193,7 +193,6 @@ export function EmergencySOSView() {
         <HyderabadAreaSearch
           onSelect={handleAreaSelect}
           inputClassName="h-14 text-lg bg-white"
-          showPopular
         />
       </div>
     );

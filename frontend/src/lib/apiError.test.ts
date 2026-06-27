@@ -14,7 +14,7 @@ describe('getApiErrorMessage', () => {
 
   it('maps database offline code to a friendly message', () => {
     const err = { data: { code: 'DATABASE_OFFLINE', message: 'Database is waking up...' } };
-    expect(getApiErrorMessage(err, 'Fallback')).toMatch(/waking up/i);
+    expect(getApiErrorMessage(err, 'Fallback')).toMatch(/starting up/i);
   });
 
   it('keeps short safe messages', () => {

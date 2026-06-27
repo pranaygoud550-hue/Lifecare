@@ -222,7 +222,6 @@ export function HelpTypeChooserStep() {
             onSelect={(sel) => void applyArea(sel)}
             inputClassName="h-11 bg-white text-base"
             showLandmark
-            showGpsButton={detectStatus === 'failed'}
           />
         </div>
       </details>
